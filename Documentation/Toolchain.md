@@ -39,11 +39,42 @@ compiler was GCC 6.3 with patches for Xcode and Objective-C++ compatibility.
 The `GCC_50` Xcode identifier therefore must not be read as proof that ordinary,
 unmodified GCC 5 is sufficient.
 
+## Verified on the reference PowerPC host
+
+The current reference host is Mac OS X 10.5.8 build `9L31a` on PowerPC. Xcode
+3.1.4 (`DevToolsCore-1204.0`, build `9M2809`) is installed under `/Developer`,
+with the Mac OS X 10.5 SDK, Apple GCC 4.0.1 build 5493, Apple GCC 4.2.1 build
+5577, and GNU Make 3.81.
+
+MacPorts 2.12.4 is installed under `/opt/local`. On Leopard, `port selfupdate`
+can fail while fetching the MacPorts base over HTTPS even though the ports
+catalog remains available. `sudo port sync` successfully downloads the catalog
+over rsync. The checked-in overlay in `Tools/MacPortsOverlay/` selects the
+official MacPorts GCC 6.3.0 port from 7 January 2017 while retaining the current
+tree for its dependencies. A dry-run on the reference host resolves the full
+dependency plan without selecting the unsupported current `libgcc11` runtime.
+
+Prepare the isolated configuration with:
+
+```sh
+./Scripts/prepare-macports-gcc6.sh
+```
+
+The script prints separate dry-run and installation commands. It writes only to
+ignored `Artifacts/macports/`; selecting or installing the compiler remains an
+explicit operation.
+
+Inspection of the final PowerPC application confirms that its bundled
+`libgcc_s.1.dylib` and `libstdc++.6.dylib` use `/opt/local/lib/libgcc` install
+names. The latter has compatibility version 7.0.0 and corresponds to the
+`libstdc++.6.0.22` generation shipped by GCC 6.3. This independently supports
+the project's ticket history.
+
 ## Still to obtain or verify
 
 - the exact modified GCC 6.3 source/patch set and reproducible build recipe;
-- the Xcode version and SDK combination used for the final Leopard build;
-- required MacPorts versions or archived ports;
+- whether Xcode 3.1.4 exactly matches the version used for the final release;
+- the complete MacPorts port-version set used for the final release;
 - the complete non-system dependency inventory and how each dependency was built;
 - whether the final `_2` disk image contains build metadata absent from the
   published patch archive;

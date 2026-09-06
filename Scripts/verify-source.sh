@@ -59,6 +59,9 @@ require_file Tools/Scripts/build-webkit
 verify_sha256 e87a4ffbad7fafdfab759122875aee84434de3f51fc64c361fde30a109ecb69e Vendor/LeopardWebKit/Patches/604.5.6/WebKit_604.5.6.diff
 verify_sha256 f9a9cd1e29a62e062cd2eb8da9012b7a0da0e77d585e0fc04bf7b54de9c769a4 Vendor/LeopardWebKit/Patches/604.5.6/Source/ThirdParty/ots/ots_604.5.6.diff
 verify_sha256 081f88db983cf5446c802c822355395ff3f55eddd2826a0859d1d3d2ab46e46d Vendor/LeopardWebKit/Patches/604.5.6/Source/ThirdParty/lz4/lz4_604.5.6.diff
+verify_sha256 b22946ebb6e6a44dbe5d8c251e8d1c3802220c1358635d8b5fa0d1de3e33ef65 Tools/MacPortsOverlay/ports-2017-gcc6/lang/gcc6/Portfile
+verify_sha256 6d2f0eaa4fe4beba0686b68102dc4ed3d829f912f66480e6b95a7e5c1f6185f6 Tools/MacPortsOverlay/ports-2017-gcc6/lang/gcc6/files/mp-gcc6
+verify_sha256 cc7dfbd00c2eb94f76c1277e75a9769bdbfc75e7c7179ca3383741fa7ad03f1d Tools/MacPortsOverlay/ports-2017-gcc6/_resources/port1.0/group/compiler_blacklist_versions-1.0.tcl
 
 if find "$repo_root/Source" -type d -name .svn -print | sed -n '1p' | grep . >/dev/null 2>&1; then
     echo "FAIL Subversion working-copy metadata found under Source" >&2

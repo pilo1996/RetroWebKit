@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/verify-source.sh; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -23,7 +23,7 @@ mkdir -p "$diagnostics_dir"
         fi
     done
 
-    for script in Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/test.sh Scripts/verify-source.sh; do
+    for script in Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/test.sh Scripts/verify-source.sh; do
         if sh -n "$repo_root/$script"; then
             echo "PASS syntax $script"
         else
