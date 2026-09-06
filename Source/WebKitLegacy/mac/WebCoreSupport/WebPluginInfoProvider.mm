@@ -63,8 +63,10 @@ void WebPluginInfoProvider::getPluginInfo(WebCore::Page& page, Vector<WebCore::P
     if (!page.mainFrame().loader().subframeLoader().allowPlugins())
         return;
 
-    for (WebPluginPackage *plugin in [WebPluginDatabase sharedDatabase].plugins)
-        plugins.append(plugin.pluginInfo);
+    NSEnumerator *enumerator = [[WebPluginDatabase sharedDatabase].plugins objectEnumerator];
+    WebPluginPackage *plugin;
+    while ((plugin = [enumerator nextObject]) != nil)
+        plugins.append([plugin pluginInfo]);
 
     END_BLOCK_OBJC_EXCEPTIONS;
 }

@@ -28,6 +28,7 @@
 
 #import "IntRect.h"
 #import "TileController.h"
+#import "QuartzCoreSPI.h"
 #import <wtf/MainThread.h>
 
 using namespace WebCore;
@@ -80,12 +81,14 @@ using namespace WebCore;
 {
     [super setBounds:bounds];
 
-    _tileController->tileCacheLayerBoundsChanged();
+    if (_tileController)
+        _tileController->tileCacheLayerBoundsChanged();
 }
 
 - (void)setOpaque:(BOOL)opaque
 {
-    _tileController->setTilesOpaque(opaque);
+    if (_tileController)
+        _tileController->setTilesOpaque(opaque);
 }
 
 - (BOOL)isOpaque
@@ -95,17 +98,20 @@ using namespace WebCore;
 
 - (void)setNeedsDisplay
 {
-    _tileController->setNeedsDisplay();
+    if (_tileController)
+        _tileController->setNeedsDisplay();
 }
 
 - (void)setNeedsDisplayInRect:(CGRect)rect
 {
-    _tileController->setNeedsDisplayInRect(enclosingIntRect(rect));
+    if (_tileController)
+        _tileController->setNeedsDisplayInRect(enclosingIntRect(rect));
 }
 
 - (void)setDrawsAsynchronously:(BOOL)acceleratesDrawing
 {
-    _tileController->setAcceleratesDrawing(acceleratesDrawing);
+    if (_tileController)
+        _tileController->setAcceleratesDrawing(acceleratesDrawing);
 }
 
 - (BOOL)drawsAsynchronously
@@ -135,7 +141,8 @@ using namespace WebCore;
 
 - (void)setContentsScale:(CGFloat)contentsScale
 {
-    _tileController->setContentsScale(contentsScale);
+    if (_tileController)
+        _tileController->setContentsScale(contentsScale);
 }
 
 - (CGFloat)contentsScale
@@ -157,13 +164,15 @@ using namespace WebCore;
 
 - (void)setBorderColor:(CGColorRef)borderColor
 {
-    _tileController->setTileDebugBorderColor(Color(borderColor));
+    if (_tileController)
+        _tileController->setTileDebugBorderColor(Color(borderColor));
 }
 
 - (void)setBorderWidth:(CGFloat)borderWidth
 {
     // Tiles adjoin, so halve the border width.
-    _tileController->setTileDebugBorderWidth(borderWidth / 2);
+    if (_tileController)
+        _tileController->setTileDebugBorderWidth(borderWidth / 2);
 }
 
 @end

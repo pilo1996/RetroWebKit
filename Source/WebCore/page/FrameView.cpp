@@ -2678,8 +2678,12 @@ bool FrameView::shouldUpdateCompositingLayersAfterScrolling() const
         return true;
 
     return false;
-#endif
+#else
+//    if (frame().document()->pageCacheState() == Document::InPageCache)
+//        return false;
+
     return true;
+#endif
 }
 
 void FrameView::updateCompositingLayersAfterScrolling()

@@ -29,15 +29,19 @@
 
 #import "WebViewData.h"
 
+#import "WebInspector.h"
 #import "WebKitLogging.h"
+#import "WebNodeHighlight.h"
 #import "WebPreferenceKeysPrivate.h"
 #import "WebSelectionServiceController.h"
 #import "WebViewGroup.h"
+#import "WebViewPrivate.h"
 #import <WebCore/AlternativeTextUIController.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/HistoryItem.h>
 #import <WebCore/TextIndicatorWindow.h>
 #import <WebCore/ValidationBubble.h>
+#import <objc/objc-auto.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
@@ -86,7 +90,7 @@ WebViewLayerFlushScheduler::WebViewLayerFlushScheduler(LayerFlushController* flu
 
 @implementation WebWindowVisibilityObserver
 
-- (instancetype)initWithView:(WebView *)view
+- (id)initWithView:(WebView *)view
 {
     self = [super init];
     if (!self)
@@ -129,6 +133,7 @@ WebViewLayerFlushScheduler::WebViewLayerFlushScheduler(LayerFlushController* flu
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)init 
@@ -161,7 +166,11 @@ WebViewLayerFlushScheduler::WebViewLayerFlushScheduler(LayerFlushController* flu
     _geolocationProvider = [WebGeolocationProviderIOS sharedGeolocationProvider];
 #endif
 
+#if !PLATFORM(IOS)
+    shouldCloseWithWindow = objc_collectingEnabled();
+#else
     shouldCloseWithWindow = false;
+#endif
 
     pluginDatabaseClientCount++;
 
@@ -191,7 +200,7 @@ WebViewLayerFlushScheduler::WebViewLayerFlushScheduler(LayerFlushController* flu
 #endif
     [inspector release];
     [currentNodeHighlight release];
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     [immediateActionController release];
 #endif
     [hostWindow release];
@@ -215,6 +224,18 @@ WebViewLayerFlushScheduler::WebViewLayerFlushScheduler(LayerFlushController* flu
 #endif
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+#if !PLATFORM(IOS)
+    ASSERT(!insertionPasteboard);
+#endif
+#if ENABLE(VIDEO)
+    ASSERT(!fullscreenController);
+#endif
+
+    [super finalize];
 }
 
 @end

@@ -26,7 +26,7 @@
 #ifndef MediaSelectionGroupAVFObjC_h
 #define MediaSelectionGroupAVFObjC_h
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && USE(AVFOUNDATION)
 
 #include "Timer.h"
 #include <wtf/HashMap.h>

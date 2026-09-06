@@ -23,15 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCharacterData.h>
+#import <WebKit/DOMCharacterData.h>
 
 @class DOMText;
 @class NSString;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMText : DOMCharacterData
-@property (readonly, copy) NSString *wholeText WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, copy) NSString *wholeText WEBKIT_AVAILABLE_MAC(10_5);
 
 - (DOMText *)splitText:(unsigned)offset;
-- (DOMText *)replaceWholeText:(NSString *)content WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMText *)replaceWholeText:(NSString *)content WEBKIT_AVAILABLE_MAC(10_5);
 @end

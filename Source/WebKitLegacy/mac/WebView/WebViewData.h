@@ -150,7 +150,7 @@ private:
     WebView *_view;
 }
 
-- (instancetype)initWithView:(WebView *)view;
+- (id)initWithView:(WebView *)view;
 - (void)startObserving:(NSWindow *)window;
 - (void)stopObserving:(NSWindow *)window;
 @end
@@ -183,7 +183,9 @@ private:
     WebNodeHighlight *currentNodeHighlight;
 
 #if PLATFORM(MAC)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     WebImmediateActionController *immediateActionController;
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 
 #if HAVE(TOUCH_BAR)
     RetainPtr<NSTouchBar> _currentTouchBar;
@@ -218,7 +220,9 @@ private:
     RetainPtr<NSEvent> pressureEvent;
 #endif // PLATFORM(MAC)
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RefPtr<WebCore::ValidationBubble> formValidationBubble;
+#endif
 
     BOOL shouldMaintainInactiveSelection;
 
@@ -319,6 +323,8 @@ private:
     WebCore::KeyboardUIMode _keyboardUIMode;
 
     BOOL shouldUpdateWhileOffscreen;
+
+    BOOL includesFlattenedCompositingLayersWhenDrawingToBitmap;
 
     // When this flag is set, next time a WebHTMLView draws, it needs to temporarily disable screen updates
     // so that the NSView drawing is visually synchronized with CALayer updates.

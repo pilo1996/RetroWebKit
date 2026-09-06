@@ -28,7 +28,7 @@
 #import <CoreGraphics/CGGeometry.h>
 #import <Foundation/NSObject.h>
 
-WEBCORE_EXPORT @interface WebEventRegion : NSObject <NSCopying>
+@interface WebEventRegion : NSObject <NSCopying>
 {
     CGPoint p1, p2, p3, p4;
 }

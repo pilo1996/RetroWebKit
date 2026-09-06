@@ -51,4 +51,10 @@ private:
     SessionID m_sessionID;
 };
 
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1090)
+
+inline void DiskCacheMonitor::monitorFileBackingStoreCreation(const ResourceRequest&, SessionID, CFCachedURLResponseRef) { }
+inline RefPtr<SharedBuffer> DiskCacheMonitor::tryGetFileBackedSharedBufferFromCFURLCachedResponse(CFCachedURLResponseRef) { return nullptr; }
+
+#endif
 } // namespace WebKit

@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebView.h>
-#import <WebKitLegacy/WebFramePrivate.h>
+#import <WebKit/WebView.h>
+#import <WebKit/WebFramePrivate.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if TARGET_OS_IPHONE
@@ -190,7 +190,7 @@ typedef enum {
 @property (nonatomic, retain) UIImage *dataInteractionImage;
 @property (nonatomic, assign) CGRect selectionRectInRootViewCoordinates;
 @property (nonatomic, assign) CGRect textBoundingRectInRootViewCoordinates;
-@property (nonatomic, retain) NSArray<NSValue *> *textRectsInBoundingRectCoordinates; // CGRect values
+@property (nonatomic, retain) NSArray *textRectsInBoundingRectCoordinates; // CGRect values
 @property (nonatomic, assign) CGFloat contentImageScaleFactor;
 @property (nonatomic, retain) UIImage *contentImageWithHighlight;
 @property (nonatomic, retain) UIImage *contentImage;
@@ -198,6 +198,11 @@ typedef enum {
 @property (nonatomic, assign) CGRect contentImageWithoutSelectionRectInRootViewCoordinates;
 @property (nonatomic, retain) UIColor *estimatedBackgroundColor;
 @end
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+@interface NSTextCheckingResult : NSObject
+@end
+#endif
 
 #if !TARGET_OS_IPHONE
 @interface WebController : NSTreeController {
@@ -475,7 +480,7 @@ Could be worth adding to the API.
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
 - (BOOL)_requestStartDataInteraction:(CGPoint)clientPosition globalPosition:(CGPoint)globalPosition;
 - (WebUITextIndicatorData *)_getDataInteractionData;
-@property (nonatomic, readonly, strong, getter=_dataOperationTextIndicator) WebUITextIndicatorData *dataOperationTextIndicator;
+@property (nonatomic, readonly, retain, getter=_dataOperationTextIndicator) WebUITextIndicatorData *dataOperationTextIndicator;
 @property (nonatomic, readonly) NSUInteger _dragSourceAction;
 @property (nonatomic, strong, readonly) NSString *_draggedLinkTitle;
 @property (nonatomic, strong, readonly) NSURL *_draggedLinkURL;
@@ -761,6 +766,12 @@ Could be worth adding to the API.
 - (void)setMemoryCacheDelegateCallsEnabled:(BOOL)suspend;
 - (BOOL)areMemoryCacheDelegateCallsEnabled;
 
+- (void)_setJavaScriptURLsAreAllowed:(BOOL)setJavaScriptURLsAreAllowed;
+
+#if !PLATFORM(IOS)
++ (NSCursor *)_pointingHandCursor;
+#endif
+
 // SPI for DumpRenderTree
 - (BOOL)_postsAcceleratedCompositingNotifications;
 - (void)_setPostsAcceleratedCompositingNotifications:(BOOL)flag;
@@ -776,6 +787,10 @@ Could be worth adding to the API.
 
 // Returns YES if NSView -displayRectIgnoringOpacity:inContext: will produce a faithful representation of the content.
 - (BOOL)_isSoftwareRenderable;
+// When drawing into a bitmap context, we normally flatten compositing layers (and distort 3D transforms).
+// Clients who are able to capture their own copy of the compositing layers need to be able to disable this.
+- (void)_setIncludesFlattenedCompositingLayersWhenDrawingToBitmap:(BOOL)flag;
+- (BOOL)_includesFlattenedCompositingLayersWhenDrawingToBitmap;
 
 - (void)setTracksRepaints:(BOOL)flag;
 - (BOOL)isTrackingRepaints;
@@ -916,7 +931,11 @@ Could be worth adding to the API.
 
 - (void)_setFontFallbackPrefersPictographs:(BOOL)flag;
 
-- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString forSelectedRange:(NSRange)range view:(NSView *)view completionHandler:(void (^)(NSTextCheckingResult *acceptedCandidate))completionBlock;
+#ifdef __cplusplus
+- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString forSelectedRange:(NSRange)range view:(NSView *)view completionHandler:(std::function<void (NSTextCheckingResult *)>)completionBlock;
+#else
+- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString forSelectedRange:(NSRange)range view:(NSView *)view completionHandler:(void *)completionBlock;
+#endif
 - (void)forceRequestCandidatesForTesting;
 - (BOOL)shouldRequestCandidates;
 
@@ -929,6 +948,10 @@ typedef struct WebEdgeInsets {
 
 @property (nonatomic, assign, setter=_setUnobscuredSafeAreaInsets:) WebEdgeInsets _unobscuredSafeAreaInsets;
 
+@end
+
+@interface WebView (WebWindowVisibilityObserverPrivate)
+- (void)_windowVisibilityChanged:(NSNotification *)notification;
 @end
 
 #if !TARGET_OS_IPHONE
@@ -972,6 +995,7 @@ typedef struct WebEdgeInsets {
 - (BOOL)isAutomaticDashSubstitutionEnabled;
 - (BOOL)isAutomaticTextReplacementEnabled;
 - (BOOL)isAutomaticSpellingCorrectionEnabled;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)setAutomaticQuoteSubstitutionEnabled:(BOOL)flag;
 - (void)toggleAutomaticQuoteSubstitution:(id)sender;
 - (void)setAutomaticLinkDetectionEnabled:(BOOL)flag;
@@ -982,6 +1006,7 @@ typedef struct WebEdgeInsets {
 - (void)toggleAutomaticTextReplacement:(id)sender;
 - (void)setAutomaticSpellingCorrectionEnabled:(BOOL)flag;
 - (void)toggleAutomaticSpellingCorrection:(id)sender;
+#endif
 @end
 #endif /* !TARGET_OS_IPHONE */
 
@@ -1045,6 +1070,7 @@ typedef struct WebEdgeInsets {
 - (id<WebGeolocationProvider>)_geolocationProvider;
 
 - (void)_geolocationDidChangePosition:(WebGeolocationPosition *)position;
+- (void)_geolocationDidFailWithError:(NSError *)error;
 - (void)_geolocationDidFailWithMessage:(NSString *)errorMessage;
 #if TARGET_OS_IPHONE
 - (void)_resetAllGeolocationPermission;

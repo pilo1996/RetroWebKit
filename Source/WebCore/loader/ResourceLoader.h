@@ -62,7 +62,7 @@ public:
 
     virtual bool init(const ResourceRequest&);
 
-    void deliverResponseAndData(const ResourceResponse&, RefPtr<SharedBuffer>&&);
+    WEBCORE_EXPORT void deliverResponseAndData(const ResourceResponse&, RefPtr<SharedBuffer>&&);
 
 #if PLATFORM(IOS)
     virtual bool startLoading()
@@ -158,6 +158,7 @@ protected:
     void didReceiveDataOrBuffer(const char*, unsigned, RefPtr<SharedBuffer>&&, long long encodedDataLength, DataPayloadType);
 
 #if PLATFORM(COCOA) && !USE(CFURLCONNECTION)
+    void willStopBufferingData(ResourceHandle*, RefPtr<SharedBuffer>&& buffer) override;
     NSCachedURLResponse* willCacheResponse(ResourceHandle*, NSCachedURLResponse*) override;
 #endif
 #if PLATFORM(COCOA) && USE(CFURLCONNECTION)

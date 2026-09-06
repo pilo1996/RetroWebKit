@@ -25,6 +25,7 @@
 
 // This all-in-one cpp file cuts down on template bloat to allow us to build our Windows release build.
 
+#ifdef RENDERINGALLINONE_FIRST
 #include "AutoTableLayout.cpp"
 #include "BidiRun.cpp"
 #include "BorderEdge.cpp"
@@ -62,6 +63,8 @@
 #include "RenderDetailsMarker.cpp"
 #include "RenderElement.cpp"
 #include "RenderEmbeddedObject.cpp"
+#endif
+#ifdef RENDERINGALLINONE_SECOND
 #include "RenderFileUploadControl.cpp"
 #include "RenderFlexibleBox.cpp"
 #include "RenderFlowThread.cpp"
@@ -101,6 +104,8 @@
 #include "RenderObject.cpp"
 #include "RenderProgress.cpp"
 #include "RenderQuote.cpp"
+#endif
+#ifdef RENDERINGALLINONE_THIRD
 #include "RenderRegion.cpp"
 #include "RenderRegionSet.cpp"
 #include "RenderReplaced.cpp"
@@ -150,3 +155,4 @@
 #include "TextDecorationPainter.cpp"
 #include "TextPaintStyle.cpp"
 #include "TextPainter.cpp"
+#endif

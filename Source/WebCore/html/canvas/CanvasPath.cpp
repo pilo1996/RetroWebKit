@@ -102,11 +102,11 @@ void CanvasPath::bezierCurveTo(float cp1x, float cp1y, float cp2x, float cp2y, f
     if (!hasInvertibleTransform())
         return;
     if (!m_path.hasCurrentPoint())
-        m_path.moveTo(FloatPoint(cp1x, cp1y));
+        m_path.moveTo(FloatPoint::narrowPrecision(cp1x, cp1y));
 
-    FloatPoint p1 = FloatPoint(x, y);
-    FloatPoint cp1 = FloatPoint(cp1x, cp1y);
-    FloatPoint cp2 = FloatPoint(cp2x, cp2y);
+    FloatPoint p1 = FloatPoint::narrowPrecision(x, y);
+    FloatPoint cp1 = FloatPoint::narrowPrecision(cp1x, cp1y);
+    FloatPoint cp2 = FloatPoint::narrowPrecision(cp2x, cp2y);
     if (p1 != m_path.currentPoint() || p1 != cp1 ||  p1 != cp2)
         m_path.addBezierCurveTo(cp1, cp2, p1);
 }

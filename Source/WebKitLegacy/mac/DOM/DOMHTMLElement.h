@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMElement.h>
+#import <WebKit/DOMElement.h>
 
 @class DOMHTMLCollection;
 @class NSString;
@@ -34,14 +34,14 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (copy) NSString *lang;
 @property (copy) NSString *dir;
 @property int tabIndex;
-@property (copy) NSString *accessKey WEBKIT_AVAILABLE_MAC(10_8);
+@property (copy) NSString *accessKey WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *innerText;
 @property (copy) NSString *outerText;
 @property (copy) NSString *contentEditable;
 @property (readonly) BOOL isContentEditable;
 @property (copy) NSString *idName;
-@property (readonly, strong) DOMHTMLCollection *children;
+@property (readonly, retain) DOMHTMLCollection *children;
 @property (readonly, copy) NSString *titleDisplayString WEBKIT_AVAILABLE_MAC(10_5);
 
-- (void)click WEBKIT_AVAILABLE_MAC(10_8);
+- (void)click WEBKIT_AVAILABLE_MAC(10_5);
 @end

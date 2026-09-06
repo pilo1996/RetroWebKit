@@ -215,6 +215,9 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCom
 #if CPU(MIPS)
     macroAssembler.m_assembler.relocateJumps(buffer.data(), m_code);
 #endif
+#if CPU(PPC)
+    static_cast<MacroAssemblerPPC&>(macroAssembler).finalizeAbsoluteJumps(m_code);
+#endif
 #elif CPU(ARM_THUMB2)
     copyCompactAndLinkCode<uint16_t>(macroAssembler, ownerUID, effort);
 #elif CPU(ARM64)
@@ -309,6 +312,23 @@ void LinkBuffer::dumpCode(void* code, size_t size)
     for (unsigned i = 0; i < tsize; i++)
         dataLogF("\t.short\t0x%x\n", tcode[i]);
 #elif CPU(ARM_TRADITIONAL)
+    //   gcc -c jit.s
+    //   objdump -D jit.o
+    static unsigned codeCount = 0;
+    unsigned int* tcode = static_cast<unsigned int*>(code);
+    size_t tsize = size / sizeof(unsigned int);
+    char nameBuf[128];
+    snprintf(nameBuf, sizeof(nameBuf), "_jsc_jit%u", codeCount++);
+    dataLogF("\t.globl\t%s\n"
+            "\t.align 4\n"
+            "\t.code 32\n"
+            "\t.text\n"
+            "# %p\n"
+            "%s:\n", nameBuf, code, nameBuf);
+
+    for (unsigned i = 0; i < tsize; i++)
+        dataLogF("\t.long\t0x%x\n", tcode[i]);
+#elif CPU(PPC)
     //   gcc -c jit.s
     //   objdump -D jit.o
     static unsigned codeCount = 0;

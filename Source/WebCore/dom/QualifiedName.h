@@ -53,10 +53,10 @@ public:
         const AtomicString m_namespace;
         mutable AtomicString m_localNameUpper;
 
-#if ENABLE(JIT)
+#if ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
         static ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
         static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespace); }
-#endif // ENABLE(JIT)
+#endif // ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
 
     private:
         QualifiedNameImpl(const AtomicString& prefix, const AtomicString& localName, const AtomicString& namespaceURI)
@@ -94,9 +94,9 @@ public:
     String toString() const;
 
     QualifiedNameImpl* impl() const { return m_impl.get(); }
-#if ENABLE(JIT)
+#if ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
     static ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
-#endif // ENABLE(JIT)
+#endif // ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
     
     // Init routine for globals
     static void init();

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMMediaError;
 @class DOMTimeRanges;
@@ -43,13 +43,13 @@ enum {
 
 __attribute__((visibility("default")))
 @interface DOMHTMLMediaElement : DOMHTMLElement
-@property (readonly, strong) DOMMediaError *error;
+@property (readonly, retain) DOMMediaError *error;
 @property (copy) NSString *src;
 @property (readonly, copy) NSString *currentSrc;
 @property (copy) NSString *crossOrigin;
 @property (readonly) unsigned short networkState;
 @property (copy) NSString *preload;
-@property (readonly, strong) DOMTimeRanges *buffered;
+@property (readonly, retain) DOMTimeRanges *buffered;
 @property (readonly) unsigned short readyState;
 @property (readonly) BOOL seeking;
 @property double currentTime;
@@ -57,8 +57,8 @@ __attribute__((visibility("default")))
 @property (readonly) BOOL paused;
 @property double defaultPlaybackRate;
 @property double playbackRate;
-@property (readonly, strong) DOMTimeRanges *played;
-@property (readonly, strong) DOMTimeRanges *seekable;
+@property (readonly, retain) DOMTimeRanges *played;
+@property (readonly, retain) DOMTimeRanges *seekable;
 @property (readonly) BOOL ended;
 @property BOOL autoplay;
 @property BOOL loop;

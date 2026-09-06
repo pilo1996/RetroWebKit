@@ -24,6 +24,9 @@
  */
 
 #import "config.h"
+#if CPU(PPC) || CPU(PPC64)
+#undef __APPLE_ALTIVEC__ // hack to avoid problems with Carbon headers
+#endif
 #import "KillRing.h"
 
 namespace PAL {

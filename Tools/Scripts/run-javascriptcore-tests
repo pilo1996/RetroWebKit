@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/opt/local/bin/perl -w
 
 # Copyright (C) 2005, 2013-2016 Apple Inc.  All rights reserved.
 # Copyright (C) 2007 Eric Seidel <eric@webkit.org>
@@ -109,6 +109,7 @@ my $mozillaTestsDefault = $runMozillaTests ? "will run" : " will not run";
 my $quickModeDefault = $runQuickMode ? "some" : "all";
 my $failFastDefault = $failFast ? "fail fast" : "don't fail fast";
 my $filter;
+my $disableJIT = 0;
 my $usage = <<EOF;
 Usage: $programName [options] [options to pass to build system]
   --help                        Show this help message
@@ -143,6 +144,7 @@ Usage: $programName [options] [options to pass to build system]
                                 Each environment variable should be separated by a space.
                                 e.g. \"foo=bar x=y\" (no quotes).
   --gmalloc:                    Run tests with Guard Malloc enabled (if no path is given: $gmallocDefaultPath is used)
+  --no-jit                      Turn the JIT off
 
 Environment Variables:
   - set RUN_JAVASCRIPTCORE_TESTS_TESTAPI to "true" or "false" (no quotes) to determine if we run the testapi tests.
@@ -173,6 +175,7 @@ GetOptions(
     'help' => \$showHelp,
     'env-vars=s' => \$envVars,
     'gmalloc:s' => \$gmallocPath,
+    'no-jit!' => \$disableJIT,
 );
 
 # Assume any arguments left over from GetOptions are assumed to be build arguments
@@ -212,6 +215,7 @@ if (defined($gmallocPath)) {
 
 my $productDir = jscProductDir();
 $ENV{DYLD_FRAMEWORK_PATH} = $productDir;
+$ENV{DYLD_LIBRARY_PATH} = $productDir;
 $ENV{JSCTEST_timeout} = 120 unless $ENV{JSCTEST_timeout}; # Set a 120 second timeout on all jsc tests (if environment variable not defined already).
 $ENV{TZ}="US/Pacific"; # Some tests fail if the time zone is not set to US/Pacific (<https://webkit.org/b/136363>)
 setPathForRunningWebKitApp(\%ENV) if isCygwin();
@@ -361,6 +365,10 @@ sub runJSCStressTests
     if ($filter) {
         push(@jscStressDriverCmd, "--filter");
         push(@jscStressDriverCmd, $filter);
+    }
+
+    if ($disableJIT) {
+        push(@jscStressDriverCmd, "--no-jit");
     }
 
     unshift @jscStressDriverCmd, wrapperPrefixIfNeeded() if shouldUseJhbuild();

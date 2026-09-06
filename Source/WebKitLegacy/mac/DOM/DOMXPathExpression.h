@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMNode;
 @class DOMXPathResult;
@@ -34,5 +34,5 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_5)
 @end
 
 @interface DOMXPathExpression (DOMXPathExpressionDeprecated)
-- (DOMXPathResult *)evaluate:(DOMNode *)contextNode :(unsigned short)type :(DOMXPathResult *)inResult WEBKIT_DEPRECATED_MAC(10_5, 10_5);
+- (DOMXPathResult *)evaluate:(DOMNode *)contextNode :(unsigned short)type :(DOMXPathResult *)inResult WEBKIT_DEPRECATED_MAC(10_5, 10_6);
 @end

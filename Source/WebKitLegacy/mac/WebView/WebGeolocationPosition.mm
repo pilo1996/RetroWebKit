@@ -67,7 +67,7 @@ GeolocationPosition* core(WebGeolocationPosition *position)
     if (!self)
         return nil;
     _internal = [[WebGeolocationPositionInternal alloc] initWithCoreGeolocationPosition:GeolocationPosition::create(timestamp, latitude, longitude, accuracy)];
-    return self;
+    return [self retain];
 }
 
 - (id)initWithGeolocationPosition:(RefPtr<GeolocationPosition>&&)coreGeolocationPosition
@@ -76,7 +76,7 @@ GeolocationPosition* core(WebGeolocationPosition *position)
     if (!self)
         return nil;
     _internal = [[WebGeolocationPositionInternal alloc] initWithCoreGeolocationPosition:WTFMove(coreGeolocationPosition)];
-    return self;
+    return [self retain];
 }
 
 - (void)dealloc

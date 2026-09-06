@@ -27,7 +27,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <WebKitLegacy/WebKitAvailability.h>
+#import <WebKit/WebKitAvailability.h>
 
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
@@ -97,7 +97,7 @@
     @result Returns the object that exposes the plug-in's interface.  The class of this
     object can implement methods from the WebScripting informal protocol.
 */
-@property (nonatomic, readonly, strong) id objectForWebScript;
+@property (nonatomic, readonly, retain) id objectForWebScript;
 
 /*!
     @method webPlugInMainResourceDidReceiveResponse:
@@ -106,7 +106,7 @@
     @discussion This method is only sent to the plug-in if the
     WebPlugInShouldLoadMainResourceKey argument passed to the plug-in was NO.
 */
-- (void)webPlugInMainResourceDidReceiveResponse:(NSURLResponse *)response WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webPlugInMainResourceDidReceiveResponse:(NSURLResponse *)response WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
     @method webPlugInMainResourceDidReceiveData:
@@ -115,7 +115,7 @@
     @discussion This method is only sent to the plug-in if the
     WebPlugInShouldLoadMainResourceKey argument passed to the plug-in was NO.
 */
-- (void)webPlugInMainResourceDidReceiveData:(NSData *)data WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webPlugInMainResourceDidReceiveData:(NSData *)data WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
     @method webPlugInMainResourceDidFailWithError:
@@ -124,7 +124,7 @@
     @discussion This method is only sent to the plug-in if the
     WebPlugInShouldLoadMainResourceKey argument passed to the plug-in was NO.
 */
-- (void)webPlugInMainResourceDidFailWithError:(NSError *)error WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webPlugInMainResourceDidFailWithError:(NSError *)error WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
     @method webPlugInMainResourceDidFinishLoading
@@ -133,7 +133,7 @@
     @discussion This method is only sent to the plug-in if the
     WebPlugInShouldLoadMainResourceKey argument passed to the plug-in was NO.
 */
-- (void)webPlugInMainResourceDidFinishLoading WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webPlugInMainResourceDidFinishLoading WEBKIT_AVAILABLE_MAC(10_5);
 
 #if TARGET_OS_IPHONE
 

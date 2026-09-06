@@ -23,7 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
 #import <AppKit/NSGestureRecognizer.h>
+#else
+#import "EmptyProtocolDefinitions.h"
+
+@interface NSGestureRecognizer : NSObject
+@end
+#endif
 
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -56,7 +63,7 @@
 
 @interface NSImmediateActionGestureRecognizer : NSGestureRecognizer
 
-@property (strong) id<NSImmediateActionAnimationController> animationController;
+@property (retain) id<NSImmediateActionAnimationController> animationController;
 @property (readonly) CGFloat animationProgress;
 
 @end

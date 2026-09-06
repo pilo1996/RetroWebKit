@@ -286,17 +286,18 @@ void MetaAllocator::addFreshFreeSpace(void* start, size_t sizeInBytes)
     addFreeSpace(start, sizeInBytes);
 }
 
+#ifndef NDEBUG
 size_t MetaAllocator::debugFreeSpaceSize()
 {
-#ifndef NDEBUG
     LockHolder locker(&m_lock);
     size_t result = 0;
     for (FreeSpaceNode* node = m_freeSpaceSizeMap.first(); node; node = node->successor())
         result += node->m_sizeInBytes;
     return result;
 #else
+size_t NO_RETURN MetaAllocator::debugFreeSpaceSize()
+{
     CRASH();
-    return 0;
 #endif
 }
 

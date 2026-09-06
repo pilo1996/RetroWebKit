@@ -57,13 +57,14 @@ namespace WebCore {
 // exceptions for those.
 
 #if !PLATFORM(IOS)
-static void drawFocusRingToContext(CGContextRef context, CGPathRef focusRingPath)
+static void drawFocusRingToContext(CGContextRef context, CGPathRef focusRingPath, CGColorRef color)
 {
     CGContextBeginPath(context);
     CGContextAddPath(context, focusRingPath);
-    wkDrawFocusRing(context, nullptr, 0);
+    wkDrawFocusRing(context, color, 0);
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 static bool drawFocusRingToContextAtTime(CGContextRef context, CGPathRef focusRingPath, double timeOffset)
 {
     UNUSED_PARAM(timeOffset);
@@ -71,21 +72,24 @@ static bool drawFocusRingToContextAtTime(CGContextRef context, CGPathRef focusRi
     CGContextAddPath(context, focusRingPath);
     return wkDrawFocusRingAtTime(context, std::numeric_limits<double>::max());
 }
+#endif
 #endif // !PLATFORM(IOS)
 
-void GraphicsContext::drawFocusRing(const Path& path, float /* width */, float /* offset */, const Color&)
+void GraphicsContext::drawFocusRing(const Path& path, float /* width */, float /* offset */, const Color& color)
 {
 #if PLATFORM(MAC)
     if (paintingDisabled() || path.isNull())
         return;
 
-    drawFocusRingToContext(platformContext(), path.platformPath());
+    CGColorRef colorRef = color.isValid() ? cachedCGColor(color) : 0;
+
+    drawFocusRingToContext(platformContext(), path.platformPath(), colorRef);
 #else
     UNUSED_PARAM(path);
 #endif
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 void GraphicsContext::drawFocusRing(const Path& path, double timeOffset, bool& needsRedraw)
 {
     if (paintingDisabled() || path.isNull())
@@ -107,7 +111,7 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, double timeO
 }
 #endif
 
-void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color&)
+void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color& color)
 {
 #if !PLATFORM(IOS)
     if (paintingDisabled())
@@ -117,7 +121,9 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
     for (auto& rect : rects)
         CGPathAddRect(focusRingPath.get(), 0, CGRectInset(rect, -offset, -offset));
 
-    drawFocusRingToContext(platformContext(), focusRingPath.get());
+    CGColorRef colorRef = color.isValid() ? cachedCGColor(color) : 0;
+
+    drawFocusRingToContext(platformContext(), focusRingPath.get(), colorRef);
 #else
     UNUSED_PARAM(rects);
     UNUSED_PARAM(offset);
@@ -283,11 +289,20 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& point, float w
         // FIXME: Rather than getting the NSImage and then picking the CGImage from it, we should do what iOS does and
         // just load the CGImage in the first place.
         NSRect dotRect = NSMakeRect(offsetPoint.x(), offsetPoint.y(), patternWidth, patternHeight);
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        CGImageRef cgImage = [(NSBitmapImageRep *)[image bestRepresentationForDevice:nil] CGImage];
+#else
         CGImageRef cgImage = [image CGImageForProposedRect:&dotRect context:[NSGraphicsContext graphicsContextWithGraphicsPort:context flipped:YES] hints:nullptr];
+#endif
         CGContextClipToRect(context, destinationRect);
         CGContextDrawTiledImage(context, NSRectToCGRect(dotRect), cgImage);
     } else {
-        CGContextSetFillColorWithColor(context, [fallbackColor CGColor]);
+        NSInteger numberOfComponents = [fallbackColor numberOfComponents];
+        CGFloat components[numberOfComponents];
+        CGColorSpaceRef colorSpace = [[fallbackColor colorSpace] CGColorSpace];
+        [fallbackColor getComponents:(CGFloat *)&components];
+        RetainPtr<CGColorRef> cgColor = adoptCF(CGColorCreate(colorSpace, components));
+        CGContextSetFillColorWithColor(context, cgColor.get());
         CGContextFillRect(context, destinationRect);
     }
 #else
@@ -308,10 +323,18 @@ CGColorSpaceRef linearRGBColorSpaceRef()
     RetainPtr<NSData> iccProfileData = adoptNS([[NSData alloc] initWithContentsOfFile:iccProfilePath.get()]);
 
     if (iccProfileData)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         linearSRGBSpace = CGColorSpaceCreateWithICCProfile((CFDataRef)iccProfileData.get());
 #pragma clang diagnostic pop
+#else
+    {
+        RetainPtr<CGDataProviderRef> profileDataProvider = adoptCF(CGDataProviderCreateWithCFData((CFDataRef)iccProfileData.get()));
+        CGFloat ranges[] = {0.0f, 255.0f, 0.0f, 255.0f, 0.0f, 255.0f};
+        return CGColorSpaceCreateICCBased(3, ranges, profileDataProvider.get(), linearSRGBSpace);
+    }
+#endif
 
     // If we fail to load the linearized sRGB ICC profile, fall back to sRGB.
     if (!linearSRGBSpace)

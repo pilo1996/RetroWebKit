@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMStyleSheet;
 @class NSString;
@@ -40,6 +40,6 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (copy) NSString *rev;
 @property (copy) NSString *target;
 @property (copy) NSString *type;
-@property (readonly, strong) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
+@property (readonly, retain) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
 @property (readonly, copy) NSURL *absoluteLinkURL WEBKIT_AVAILABLE_MAC(10_5);
 @end

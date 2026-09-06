@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCharacterData.h>
+#import <WebKit/DOMCharacterData.h>
 
 @class DOMStyleSheet;
 @class NSString;
@@ -31,5 +31,5 @@
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMProcessingInstruction : DOMCharacterData
 @property (readonly, copy) NSString *target;
-@property (readonly, strong) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
+@property (readonly, retain) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
 @end

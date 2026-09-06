@@ -192,7 +192,12 @@ NSString *NSAccessibilityEnhancedUserInterfaceAttribute = @"AXEnhancedUserInterf
     [super dealloc];
 }
 
-- (void)setWebFrameView:(WebFrameView *)v
+- (void)finalize
+{
+    [super finalize];
+}
+
+- (void)setWebFrameView:(WebFrameView *)v 
 { 
     [v retain];
     [webFrameView release];
@@ -611,7 +616,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
             return PaintBehaviorNormal;
     }
     
-    return PaintBehaviorFlattenCompositingLayers | PaintBehaviorSnapshotting;
+    return ([getWebView(self) _includesFlattenedCompositingLayersWhenDrawingToBitmap] ? PaintBehaviorFlattenCompositingLayers : PaintBehaviorNormal) | PaintBehaviorSnapshotting;
 }
 
 - (void)_drawRect:(NSRect)rect contentsOnly:(BOOL)contentsOnly
@@ -1080,6 +1085,9 @@ static WebFrameLoadType toWebFrameLoadType(FrameLoadType frameLoadType)
     case FrameLoadType::ReloadExpiredOnly:
         ASSERT_NOT_REACHED();
         return WebFrameLoadTypeReload;
+    default:
+        ASSERT_NOT_REACHED();
+        return WebFrameLoadTypeStandard;
     }
 }
 
@@ -1164,6 +1172,16 @@ static WebFrameLoadType toWebFrameLoadType(FrameLoadType frameLoadType)
 - (unsigned)_pendingFrameUnloadEventCount
 {
     return _private->coreFrame->document()->domWindow()->pendingUnloadEventListeners();
+}
+
+- (void)_setIsDisconnected:(bool)isDisconnected
+{
+    ASSERT_NOT_REACHED();
+}
+
+- (void)_setExcludeFromTextSearch:(bool)exclude
+{
+    ASSERT_NOT_REACHED();
 }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
@@ -2198,10 +2216,10 @@ static WebFrameLoadType toWebFrameLoadType(FrameLoadType frameLoadType)
     if (!AXObjectCache::accessibilityEnabled()) {
         AXObjectCache::enableAccessibility();
 #if !PLATFORM(IOS)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
         AXObjectCache::setEnhancedUserInterfaceAccessibility([[NSApp accessibilityAttributeValue:NSAccessibilityEnhancedUserInterfaceAttribute] boolValue]);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 #endif
     }
     
@@ -2366,13 +2384,13 @@ static WebFrameLoadType toWebFrameLoadType(FrameLoadType frameLoadType)
 
 @implementation WebFrame
 
-- (instancetype)init
+- (id)init
 {
     return nil;
 }
 
 // Should be deprecated.
-- (instancetype)initWithName:(NSString *)name webFrameView:(WebFrameView *)view webView:(WebView *)webView
+- (id)initWithName:(NSString *)name webFrameView:(WebFrameView *)view webView:(WebView *)webView
 {
     return nil;
 }
@@ -2385,6 +2403,14 @@ static WebFrameLoadType toWebFrameLoadType(FrameLoadType frameLoadType)
     [_private release];
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    if (_private && _private->includedInWebKitStatistics)
+        --WebFrameCount;
+
+    [super finalize];
 }
 
 - (NSString *)name

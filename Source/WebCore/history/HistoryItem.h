@@ -41,7 +41,7 @@
 #endif
 
 #if PLATFORM(COCOA)
-#import <wtf/RetainPtr.h>
+#include <wtf/RetainPtr.h>
 typedef struct objc_object* id;
 #endif
 
@@ -144,6 +144,7 @@ public:
     void setChildItem(Ref<HistoryItem>&&);
     WEBCORE_EXPORT HistoryItem* childItemWithTarget(const String&);
     HistoryItem* childItemWithDocumentSequenceNumber(long long number);
+    WEBCORE_EXPORT HistoryItem* targetItem();
     WEBCORE_EXPORT const Vector<Ref<HistoryItem>>& children() const;
     WEBCORE_EXPORT bool hasChildren() const;
     void clearChildren();
@@ -210,6 +211,8 @@ private:
     HistoryItem(const HistoryItem&);
 
     bool hasSameDocumentTree(HistoryItem& otherItem) const;
+
+    HistoryItem* findTargetItem();
 
     String m_urlString;
     String m_originalURLString;

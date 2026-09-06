@@ -392,7 +392,7 @@ static void computeBacktrackingInformation(SelectorFragmentList& selectorFragmen
 
 SelectorCompilationStatus compileSelector(const CSSSelector* lastSelector, JSC::VM* vm, SelectorContext selectorContext, JSC::MacroAssemblerCodeRef& codeRef)
 {
-    if (!vm->canUseJIT())
+    if (!vm->canUseRegExpJIT())
         return SelectorCompilationStatus::CannotCompile;
     SelectorCodeGenerator codeGenerator(lastSelector, selectorContext);
     return codeGenerator.compile(codeRef);
@@ -1696,6 +1696,14 @@ inline bool SelectorCodeGenerator::generatePrologue()
     prologueRegister.append(callFrameRegister);
     m_prologueStackReferences = m_stackAllocator.push(prologueRegister);
     return true;
+#elif CPU(PPC)
+    // Save the link and condition registers in the caller's linkage area
+    m_assembler.m_assembler.x_mflr(JSC::PPCRegisters::r0);
+    m_assembler.m_assembler.stw(JSC::PPCRegisters::r0, JSC::MacroAssembler::stackPointerRegister, 8);
+    m_assembler.m_assembler.mfcr(JSC::PPCRegisters::r0);
+    m_assembler.m_assembler.stw(JSC::PPCRegisters::r0, JSC::MacroAssembler::stackPointerRegister, 4);
+    // Don't allocate a stack frame; we'll operate in the red zone (the 224 bytes below the stack pointer)
+    return true;
 #endif
     return false;
 }
@@ -1711,6 +1719,13 @@ inline void SelectorCodeGenerator::generateEpilogue(StackAllocator& stackAllocat
 #elif CPU(X86_64) && CSS_SELECTOR_JIT_DEBUGGING
     Vector<JSC::MacroAssembler::RegisterID, 1> prologueRegister({ callFrameRegister });
     stackAllocator.pop(m_prologueStackReferences, prologueRegister);
+#elif CPU(PPC)
+    UNUSED_PARAM(stackAllocator);
+    // Restore link and condition registers from the caller's linkage area
+    m_assembler.m_assembler.lwz(JSC::PPCRegisters::r0, JSC::MacroAssembler::stackPointerRegister, 4);
+    m_assembler.m_assembler.x_mtcr(JSC::PPCRegisters::r0);
+    m_assembler.m_assembler.lwz(JSC::PPCRegisters::r0, JSC::MacroAssembler::stackPointerRegister, 8);
+    m_assembler.m_assembler.x_mtlr(JSC::PPCRegisters::r0);
 #else
     UNUSED_PARAM(stackAllocator);
 #endif
@@ -2021,6 +2036,13 @@ void SelectorCodeGenerator::generateElementMatchesSelectorList(Assembler::JumpLi
     }
 }
 
+#if !ENABLE(JIT)
+static inline Assembler::Jump testIsElementFlagOnNode(Assembler::ResultCondition condition, Assembler& assembler, Assembler::RegisterID nodeAddress)
+{
+    return assembler.branchTest32(condition, Assembler::Address(nodeAddress, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsElement()));
+}
+#endif
+
 void SelectorCodeGenerator::generateRightmostTreeWalker(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
 {
     generateElementMatching(failureCases, failureCases, fragment);
@@ -2038,7 +2060,11 @@ void SelectorCodeGenerator::generateWalkToParentElement(Assembler::JumpList& fai
     //         failure
     generateWalkToParentNode(targetRegister);
     failureCases.append(m_assembler.branchTestPtr(Assembler::Zero, targetRegister));
+#if ENABLE(JIT)
     failureCases.append(DOMJIT::branchTestIsElementFlagOnNode(m_assembler, Assembler::Zero, targetRegister));
+#else
+    failureCases.append(testIsElementFlagOnNode(Assembler::Zero, m_assembler, targetRegister));
+#endif
 }
 
 void SelectorCodeGenerator::generateParentElementTreeWalker(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
@@ -2091,7 +2117,11 @@ inline void SelectorCodeGenerator::generateWalkToNextAdjacentElement(Assembler::
     Assembler::Label loopStart = m_assembler.label();
     m_assembler.loadPtr(Assembler::Address(workRegister, Node::nextSiblingMemoryOffset()), workRegister);
     failureCases.append(m_assembler.branchTestPtr(Assembler::Zero, workRegister));
+#if ENABLE(JIT)
     DOMJIT::branchTestIsElementFlagOnNode(m_assembler, Assembler::Zero, workRegister).linkTo(loopStart, &m_assembler);
+#else
+    testIsElementFlagOnNode(Assembler::Zero, m_assembler, workRegister).linkTo(loopStart, &m_assembler);
+#endif
 }
 
 inline void SelectorCodeGenerator::generateWalkToPreviousAdjacentElement(Assembler::JumpList& failureCases, Assembler::RegisterID workRegister)
@@ -2099,7 +2129,11 @@ inline void SelectorCodeGenerator::generateWalkToPreviousAdjacentElement(Assembl
     Assembler::Label loopStart = m_assembler.label();
     m_assembler.loadPtr(Assembler::Address(workRegister, Node::previousSiblingMemoryOffset()), workRegister);
     failureCases.append(m_assembler.branchTestPtr(Assembler::Zero, workRegister));
+#if ENABLE(JIT)
     DOMJIT::branchTestIsElementFlagOnNode(m_assembler, Assembler::Zero, workRegister).linkTo(loopStart, &m_assembler);
+#else
+    testIsElementFlagOnNode(Assembler::Zero, m_assembler, workRegister).linkTo(loopStart, &m_assembler);
+#endif
 }
 
 void SelectorCodeGenerator::generateWalkToPreviousAdjacent(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
@@ -2304,6 +2338,14 @@ Assembler::Jump SelectorCodeGenerator::jumpIfNotResolvingStyle(Assembler::Regist
     return branchOnResolvingMode(Assembler::NotEqual, SelectorChecker::Mode::ResolvingStyle, checkingContext);
 }
 
+#if !ENABLE(JIT)
+static void getDocument(Assembler& assembler, Assembler::RegisterID element, Assembler::RegisterID output)
+{
+    assembler.loadPtr(Assembler::Address(element, Node::treeScopeMemoryOffset()), output);
+    assembler.loadPtr(Assembler::Address(output, TreeScope::documentScopeMemoryOffset()), output);
+}
+#endif
+
 void SelectorCodeGenerator::generateSpecialFailureInQuirksModeForActiveAndHoverIfNeeded(Assembler::JumpList& failureCases, const SelectorFragment& fragment)
 {
     if (fragment.onlyMatchesLinksInQuirksMode) {
@@ -2313,14 +2355,18 @@ void SelectorCodeGenerator::generateSpecialFailureInQuirksModeForActiveAndHoverI
         // Only quirks mode restrict :hover and :active.
         static_assert(sizeof(DocumentCompatibilityMode) == 1, "We generate a byte load/test for the compatibility mode.");
         LocalRegister documentAddress(m_registerAllocator);
+#if ENABLE(JIT)
         DOMJIT::loadDocument(m_assembler, elementAddressRegister, documentAddress);
+#else
+        getDocument(m_assembler, elementAddressRegister, documentAddress);
+#endif
         failureCases.append(m_assembler.branchTest8(Assembler::NonZero, Assembler::Address(documentAddress, Document::compatibilityModeMemoryOffset()), Assembler::TrustedImm32(static_cast<std::underlying_type<DocumentCompatibilityMode>::type>(DocumentCompatibilityMode::QuirksMode))));
 
         isLink.link(&m_assembler);
     }
 }
 
-#if CPU(ARM_THUMB2) && !CPU(APPLE_ARMV7S)
+#if (CPU(ARM_THUMB2) && !CPU(APPLE_ARMV7S)) || CPU(PPC)
 // FIXME: This could be implemented in assembly to avoid a function call, and we know the divisor at jit-compile time.
 static int moduloHelper(int dividend, int divisor)
 {
@@ -2340,7 +2386,7 @@ Assembler::Jump SelectorCodeGenerator::modulo(Assembler::ResultCondition conditi
     m_assembler.m_assembler.sdiv<32>(resultRegister, inputDividend, divisorRegister);
     m_assembler.mul32(divisorRegister, resultRegister);
     return m_assembler.branchSub32(condition, inputDividend, resultRegister, resultRegister);
-#elif CPU(ARM_THUMB2) && !CPU(APPLE_ARMV7S)
+#elif (CPU(ARM_THUMB2) && !CPU(APPLE_ARMV7S)) || CPU(PPC)
     LocalRegisterWithPreference divisorRegister(m_registerAllocator, JSC::GPRInfo::argumentGPR1);
     m_assembler.move(Assembler::TrustedImm32(divisor), divisorRegister);
     FunctionCall functionCall(m_assembler, m_registerAllocator, m_stackAllocator, m_functionCalls);
@@ -2646,6 +2692,13 @@ void SelectorCodeGenerator::generateElementLinkMatching(Assembler::JumpList& fai
         generateElementIsLink(failureCases);
 }
 
+#if !ENABLE(JIT)
+static inline Assembler::Jump testIsHTMLFlagOnNode(Assembler::ResultCondition condition, Assembler& assembler, Assembler::RegisterID nodeAddress)
+{
+    return assembler.branchTest32(condition, Assembler::Address(nodeAddress, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsHTML()));
+}
+#endif
+
 static inline bool canMatchStyleAttribute(const SelectorFragment& fragment)
 {
     for (unsigned i = 0; i < fragment.attributes.size(); ++i) {
@@ -2788,7 +2841,11 @@ void SelectorCodeGenerator::generateElementAttributeMatching(Assembler::JumpList
         m_assembler.move(Assembler::TrustedImmPtr(canonicalLocalName), localNameToMatch);
     else {
         m_assembler.move(Assembler::TrustedImmPtr(canonicalLocalName), localNameToMatch);
+#if ENABLE(JIT)
         Assembler::Jump elementIsHTML = DOMJIT::branchTestIsHTMLFlagOnNode(m_assembler, Assembler::NonZero, elementAddressRegister);
+#else
+        Assembler::Jump elementIsHTML = testIsHTMLFlagOnNode(Assembler::NonZero, m_assembler, elementAddressRegister);
+#endif
         m_assembler.move(Assembler::TrustedImmPtr(localName), localNameToMatch);
         elementIsHTML.link(&m_assembler);
     }
@@ -2951,7 +3008,8 @@ void SelectorCodeGenerator::generateElementAttributeValueMatching(Assembler::Jum
 
 static inline Assembler::Jump testIsHTMLClassOnDocument(Assembler::ResultCondition condition, Assembler& assembler, Assembler::RegisterID documentAddress)
 {
-    return assembler.branchTest32(condition, Assembler::Address(documentAddress, Document::documentClassesMemoryOffset()), Assembler::TrustedImm32(Document::isHTMLDocumentClassFlag()));
+    COMPILE_ASSERT((sizeof(DocumentClassFlags) == 1), We_generate_a_byte_load_test_for_the_class_flags);
+    return assembler.branchTest8(condition, Assembler::Address(documentAddress, Document::documentClassesMemoryOffset()), Assembler::TrustedImm32(static_cast<DocumentClassFlags>(Document::isHTMLDocumentClassFlag())));
 }
 
 void SelectorCodeGenerator::generateElementAttributeValueExactMatching(Assembler::JumpList& failureCases, Assembler::RegisterID currentAttributeAddress, const AtomicString& expectedValue, AttributeCaseSensitivity valueCaseSensitivity)
@@ -2970,11 +3028,19 @@ void SelectorCodeGenerator::generateElementAttributeValueExactMatching(Assembler
         // If the element is an HTML element, in a HTML dcoument (not including XHTML), value matching is case insensitive.
         // Taking the contrapositive, if we find the element is not HTML or is not in a HTML document, the condition above
         // sould be sufficient and we can fail early.
+#if ENABLE(JIT)
         failureCases.append(DOMJIT::branchTestIsHTMLFlagOnNode(m_assembler, Assembler::Zero, elementAddressRegister));
+#else
+        failureCases.append(testIsHTMLFlagOnNode(Assembler::Zero, m_assembler, elementAddressRegister));
+#endif
 
         {
             LocalRegister document(m_registerAllocator);
+#if ENABLE(JIT)
             DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
+#else
+            getDocument(m_assembler, elementAddressRegister, document);
+#endif
             failureCases.append(testIsHTMLClassOnDocument(Assembler::Zero, m_assembler, document));
         }
 
@@ -3020,7 +3086,11 @@ void SelectorCodeGenerator::generateElementAttributeFunctionCallValueMatching(As
     }
     case AttributeCaseSensitivity::HTMLLegacyCaseInsensitive: {
         Assembler::JumpList shouldUseCaseSensitiveComparison;
+#if ENABLE(JIT)
         shouldUseCaseSensitiveComparison.append(DOMJIT::branchTestIsHTMLFlagOnNode(m_assembler, Assembler::Zero, elementAddressRegister));
+#else
+        shouldUseCaseSensitiveComparison.append(testIsHTMLFlagOnNode(Assembler::Zero, m_assembler, elementAddressRegister));
+#endif
         {
             LocalRegister scratchRegister(m_registerAllocator);
             // scratchRegister = pointer to treeScope.
@@ -3106,7 +3176,11 @@ static void jumpIfElementIsNotEmpty(Assembler& assembler, RegisterAllocator& reg
     Assembler::Label loopStart(assembler.label());
     Assembler::Jump noMoreChildren = assembler.branchTestPtr(Assembler::Zero, currentChild);
 
+#if ENABLE(JIT)
     notEmptyCases.append(DOMJIT::branchTestIsElementFlagOnNode(assembler, Assembler::NonZero, currentChild));
+#else
+    notEmptyCases.append(testIsElementFlagOnNode(Assembler::NonZero, assembler, currentChild));
+#endif
 
     {
         Assembler::Jump skipTextNodeCheck = assembler.branchTest32(Assembler::Zero, Assembler::Address(currentChild, Node::nodeFlagsMemoryOffset()), Assembler::TrustedImm32(Node::flagIsText()));
@@ -3401,10 +3475,18 @@ inline void SelectorCodeGenerator::generateElementHasTagName(Assembler::JumpList
             failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, Assembler::Address(qualifiedNameImpl, QualifiedName::QualifiedNameImpl::localNameMemoryOffset()), constantRegister));
         } else {
             Assembler::JumpList caseSensitiveCases;
+#if ENABLE(JIT)
             caseSensitiveCases.append(DOMJIT::branchTestIsHTMLFlagOnNode(m_assembler, Assembler::Zero, elementAddressRegister));
+#else
+            caseSensitiveCases.append(testIsHTMLFlagOnNode(Assembler::Zero, m_assembler, elementAddressRegister));
+#endif
             {
                 LocalRegister document(m_registerAllocator);
+#if ENABLE(JIT)
                 DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
+#else
+                getDocument(m_assembler, elementAddressRegister, document);
+#endif
                 caseSensitiveCases.append(testIsHTMLClassOnDocument(Assembler::Zero, m_assembler, document));
             }
 
@@ -3762,7 +3844,11 @@ void SelectorCodeGenerator::generateRequestedPseudoElementEqualsToSelectorPseudo
 void SelectorCodeGenerator::generateElementIsRoot(Assembler::JumpList& failureCases)
 {
     LocalRegister document(m_registerAllocator);
+#if ENABLE(JIT)
     DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
+#else
+    getDocument(m_assembler, elementAddressRegister, document);
+#endif
     failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, Assembler::Address(document, Document::documentElementMemoryOffset()), elementAddressRegister));
 }
 
@@ -3776,8 +3862,13 @@ void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& fail
 
     Assembler::Jump scopeIsNotNull = m_assembler.branchTestPtr(Assembler::NonZero, scope);
 
+#if ENABLE(JIT)
     DOMJIT::loadDocument(m_assembler, elementAddressRegister, scope);
     DOMJIT::loadDocumentElement(m_assembler, scope, scope);
+#else
+    getDocument(m_assembler, elementAddressRegister, scope);
+    m_assembler.loadPtr(Assembler::Address(scope, Document::documentElementMemoryOffset()), scope);
+#endif
 
     scopeIsNotNull.link(&m_assembler);
     failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, scope, elementAddressRegister));
@@ -3786,7 +3877,11 @@ void SelectorCodeGenerator::generateElementIsScopeRoot(Assembler::JumpList& fail
 void SelectorCodeGenerator::generateElementIsTarget(Assembler::JumpList& failureCases)
 {
     LocalRegister document(m_registerAllocator);
+#if ENABLE(JIT)
     DOMJIT::loadDocument(m_assembler, elementAddressRegister, document);
+#else
+    getDocument(m_assembler, elementAddressRegister, document);
+#endif
     failureCases.append(m_assembler.branchPtr(Assembler::NotEqual, Assembler::Address(document, Document::cssTargetMemoryOffset()), elementAddressRegister));
 }
 

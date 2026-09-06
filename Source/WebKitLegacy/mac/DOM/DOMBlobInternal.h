@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMBlob.h>
+#import <WebKit/DOMBlob.h>
 
 namespace WebCore {
 class Blob;

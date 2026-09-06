@@ -41,7 +41,7 @@ enum NoResultTag { NoResult };
 typedef MacroAssembler::RegisterID GPRReg;
 #define InvalidGPRReg ((::JSC::GPRReg)-1)
 
-#if ENABLE(JIT)
+#if ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
 
 #if USE(JSVALUE64)
 class JSValueRegs {
@@ -822,6 +822,82 @@ public:
 };
 
 #endif // CPU(MIPS)
+
+#if CPU(PPC)
+#define NUMBER_OF_ARGUMENT_REGISTERS 8u
+
+class GPRInfo {
+public:
+    typedef GPRReg RegisterType;
+    static const unsigned numberOfRegisters = 9;
+    static const unsigned numberOfArgumentRegisters = NUMBER_OF_ARGUMENT_REGISTERS;
+
+    // regT0 must be v0 for returning a 32-bit value.
+    // regT1 must be v1 for returning a pair of 32-bit value.
+    // regT3 must be saved in the callee, so use an S register.
+
+    // Temporary registers.
+    static const GPRReg regT0 = PPCRegisters::r3;
+    static const GPRReg regT1 = PPCRegisters::r4;
+    static const GPRReg regT2 = PPCRegisters::r5;
+    static const GPRReg regT3 = PPCRegisters::r6;
+    static const GPRReg regT4 = PPCRegisters::r7;
+    static const GPRReg regT5 = PPCRegisters::r8;
+    static const GPRReg regT6 = PPCRegisters::r9;
+    static const GPRReg regT7 = PPCRegisters::r10;
+    static const GPRReg regT8 = PPCRegisters::r2;
+    // These registers match the baseline JIT.
+    static const GPRReg cachedResultRegister = regT0;
+    static const GPRReg cachedResultRegister2 = regT1;
+    static const GPRReg callFrameRegister = PPCRegisters::r13;
+    // These constants provide the names for the general purpose argument & return value registers.
+    static const GPRReg argumentGPR0 = regT0;
+    static const GPRReg argumentGPR1 = regT1;
+    static const GPRReg argumentGPR2 = regT2;
+    static const GPRReg argumentGPR3 = regT3;
+    static const GPRReg argumentGPR4 = regT4;
+    static const GPRReg argumentGPR5 = regT5;
+    static const GPRReg argumentGPR6 = regT6;
+    static const GPRReg argumentGPR7 = regT7;
+    static const GPRReg nonArgGPR0 = regT8;
+    static const GPRReg returnValueGPR = regT0;
+    static const GPRReg returnValueGPR2 = regT1;
+    static const GPRReg nonPreservedNonReturnGPR = regT8;
+
+    static GPRReg toRegister(unsigned index)
+    {
+        ASSERT(index < numberOfRegisters);
+        static const GPRReg registerForIndex[numberOfRegisters] = { regT0, regT1, regT2, regT3, regT4, regT5, regT6, regT7, regT8 };
+        return registerForIndex[index];
+    }
+
+    static unsigned toIndex(GPRReg reg)
+    {
+        ASSERT(reg != InvalidGPRReg);
+        ASSERT(reg < 11);
+        static const unsigned indexForRegister[11] = {
+            InvalidIndex, InvalidIndex, 8, 0, 1, 2, 3, 4, 5, 6, 7};
+        unsigned result = indexForRegister[reg];
+        return result;
+    }
+
+    static const char* debugName(GPRReg reg)
+    {
+        ASSERT(reg != InvalidGPRReg);
+        ASSERT(reg < 32);
+        static const char* nameForRegister[32] = {
+            "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
+            "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+            "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23",
+            "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31"
+        };
+        return nameForRegister[reg];
+    }
+
+    static const unsigned InvalidIndex = 0xffffffff;
+};
+
+#endif // CPU(PPC)
 
 // The baseline JIT uses "accumulator" style execution with regT0 (for 64-bit)
 // and regT0 + regT1 (for 32-bit) serving as the accumulator register(s) for

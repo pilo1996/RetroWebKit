@@ -55,6 +55,10 @@ namespace JSC { typedef MacroAssemblerX86 MacroAssemblerBase; };
 #include "MacroAssemblerX86_64.h"
 namespace JSC { typedef MacroAssemblerX86_64 MacroAssemblerBase; };
 
+#elif CPU(PPC)
+#include "MacroAssemblerPPC.h"
+namespace JSC { typedef MacroAssemblerPPC MacroAssemblerBase; };
+
 #else
 #error "The MacroAssembler is not supported on this platform."
 #endif
@@ -124,7 +128,7 @@ public:
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
-#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL) || CPU(X86_64) || CPU(MIPS)
+#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL) || CPU(X86_64) || CPU(MIPS) || CPU(PPC)
     using MacroAssemblerBase::branchPtr;
 #endif
     using MacroAssemblerBase::branchSub32;
@@ -403,7 +407,7 @@ public:
         branchTestPtr(cond, reg).linkTo(target, this);
     }
 
-#if !CPU(ARM_THUMB2) && !CPU(ARM64)
+#if !CPU(ARM_THUMB2) && !CPU(ARM64) && !CPU(PPC)
     PatchableJump patchableBranchPtr(RelationalCondition cond, Address left, TrustedImmPtr right = TrustedImmPtr(0))
     {
         return PatchableJump(branchPtr(cond, left, right));

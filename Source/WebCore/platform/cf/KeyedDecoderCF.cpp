@@ -39,7 +39,7 @@ std::unique_ptr<KeyedDecoder> KeyedDecoder::decoder(const uint8_t* data, size_t 
 KeyedDecoderCF::KeyedDecoderCF(const uint8_t* data, size_t size)
 {
     auto cfData = adoptCF(CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, data, size, kCFAllocatorNull));
-    auto cfPropertyList = adoptCF(CFPropertyListCreateWithData(kCFAllocatorDefault, cfData.get(), kCFPropertyListImmutable, nullptr, nullptr));
+    auto cfPropertyList = adoptCF(CFPropertyListCreateFromXMLData(kCFAllocatorDefault, cfData.get(), kCFPropertyListImmutable, nullptr));
 
     if (dynamic_cf_cast<CFDictionaryRef>(cfPropertyList.get()))
         m_rootDictionary = adoptCF(static_cast<CFDictionaryRef>(cfPropertyList.leakRef()));

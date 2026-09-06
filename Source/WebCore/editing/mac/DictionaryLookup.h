@@ -59,7 +59,9 @@ public:
     WEBCORE_EXPORT static void showPopup(const DictionaryPopupInfo&, NSView *, const WTF::Function<void(TextIndicator&)>& textIndicatorInstallationCallback, const WTF::Function<FloatRect(FloatRect)>& rootViewToViewConversionCallback = nullptr);
     WEBCORE_EXPORT static void hidePopup();
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     WEBCORE_EXPORT static PlatformAnimationController animationControllerForPopup(const DictionaryPopupInfo&, NSView *, const WTF::Function<void(TextIndicator&)>& textIndicatorInstallationCallback, const WTF::Function<FloatRect(FloatRect)>& rootViewToViewConversionCallback = nullptr);
+#endif
 };
 
 } // namespace WebCore

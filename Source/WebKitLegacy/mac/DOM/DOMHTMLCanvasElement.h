@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_5)
 @interface DOMHTMLCanvasElement : DOMHTMLElement

@@ -23,6 +23,7 @@
 
 #include <utility>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/ObjcRuntimeExtras.h>
 #include <wtf/text/AtomicStringImpl.h>
 #include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/WTFString.h>

@@ -31,6 +31,10 @@
 #include <AvailabilityMacros.h>
 #include <CoreFoundation/CoreFoundation.h>
 
+#ifndef TARGET_OS_IPHONE
+#define TARGET_OS_IPHONE 0
+#endif
+
 #if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED < 101100
 /* To support availability macros that mention newer OS X versions when building on older OS X versions,
    we provide our own definitions of the underlying macros that the availability macros expand to. We're
@@ -64,6 +68,13 @@
 
 #ifndef AVAILABLE_MAC_OS_X_VERSION_10_10_AND_LATER
 #define AVAILABLE_MAC_OS_X_VERSION_10_10_AND_LATER
+#endif
+
+#ifndef CF_AVAILABLE
+#define CF_AVAILABLE(_mac, _ios)
+#endif
+#ifndef CF_ENUM_AVAILABLE
+#define CF_ENUM_AVAILABLE(_mac, _ios)
 #endif
 
 #endif /* !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED < 101100 */

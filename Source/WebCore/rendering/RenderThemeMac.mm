@@ -27,6 +27,7 @@
 #import "CSSValueList.h"
 #import "ColorMac.h"
 #import "CoreGraphicsSPI.h"
+#import "CoreTextSPI.h"
 #import "Document.h"
 #import "Element.h"
 #import "FileList.h"
@@ -76,9 +77,11 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/StdLibExtras.h>
+#import <wtf/text/Base64.h>
 #import <wtf/text/StringBuilder.h>
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
+#import <CoreGraphics/CoreGraphics.h>
 #import <math.h>
 
 #if ENABLE(METER_ELEMENT)
@@ -173,9 +176,11 @@ static const double progressAnimationNumFrames = 256;
 @implementation WebCoreRenderThemeBundle
 @end
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 @interface NSSearchFieldCell()
 @property (getter=isCenteredLook) BOOL centeredLook;
 @end
+#endif
 
 namespace WebCore {
 
@@ -300,7 +305,14 @@ String RenderThemeMac::mediaControlsBase64StringForIconNameAndType(const String&
 
     String directory = "modern-media-controls/images";
     NSBundle *bundle = [NSBundle bundleForClass:[WebCoreRenderThemeBundle class]];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     return [[NSData dataWithContentsOfFile:[bundle pathForResource:iconName ofType:iconType inDirectory:directory]] base64EncodedStringWithOptions:0];
+#else
+    NSData *data = [NSData dataWithContentsOfFile:[bundle pathForResource:iconName ofType:iconType inDirectory:directory]];
+    Vector<char> base64Data;
+    base64Encode([data bytes], [data length], base64Data);
+    return String(base64Data.data(), base64Data.size());
+#endif
 #else
     return emptyString();
 #endif
@@ -516,8 +528,12 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID) const
         color = convertNSColorToColor([NSColor keyboardFocusIndicatorColor]);
         break;
     case CSSValueActivebuttontext:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
         // There is no corresponding NSColor for this so we use a hard coded value.
         color = Color::white;
+#else
+        color = convertNSColorToColor([NSColor controlTextColor]);
+#endif
         break;
     case CSSValueActivecaption:
         color = convertNSColorToColor([NSColor windowFrameTextColor]);
@@ -611,6 +627,7 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID) const
     case CSSValueWindowtext:
         color = convertNSColorToColor([NSColor windowFrameTextColor]);
         break;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     case CSSValueAppleWirelessPlaybackTargetActive:
         color = convertNSColorToColor([NSColor systemBlueColor]);
         break;
@@ -641,6 +658,7 @@ Color RenderThemeMac::systemColor(CSSValueID cssValueID) const
     case CSSValueAppleSystemYellow:
         color = convertNSColorToColor([NSColor systemYellowColor]);
         break;
+#endif
     default:
         break;
     }
@@ -715,7 +733,7 @@ void RenderThemeMac::adjustRepaintRect(const RenderObject& renderer, FloatRect& 
 
     if (part == MenulistPart) {
         setPopupButtonCellState(renderer, IntSize(rect.size()));
-        IntSize size = popupButtonSizes()[[popupButton() controlSize]];
+        IntSize size = popupButtonSizes()[(NSControlSize)[popupButton() controlSize]];
         size.setHeight(size.height() * zoomLevel);
         size.setWidth(rect.width());
         rect = inflateRect(rect, size, popupButtonMargins(), zoomLevel);
@@ -887,6 +905,22 @@ bool RenderThemeMac::paintTextField(const RenderObject& o, const PaintInfo& pain
         adjustedPaintRect.inflateX(1 / transform.xScale());
         adjustedPaintRect.inflateY(1 / transform.yScale());
     }
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    bool useNSTextFieldCell = o.style().hasAppearance()
+        && o.style().visitedDependentColor(CSSPropertyBackgroundColor) == Color::white
+        && !o.style().hasBackgroundImage();
+
+    // We do not use NSTextFieldCell to draw styled text fields on Lion and SnowLeopard because
+    // there are a number of bugs on those platforms that require NSTextFieldCell to be in charge
+    // of painting its own background. We need WebCore to paint styled backgrounds, so we'll use
+    // this WebCoreSystemInterface function instead.
+    if (!useNSTextFieldCell) {
+        wkDrawBezeledTextFieldCell(adjustedPaintRect, isEnabled(o) && !isReadOnlyControl(o));
+        return false;
+    }
+#endif
+
     NSTextFieldCell *textField = this->textField();
 
     GraphicsContextStateSaver stateSaver(paintInfo.context());
@@ -922,7 +956,7 @@ const int* RenderThemeMac::popupButtonMargins() const
         { 0, 3, 2, 3 },
         { 0, 1, 0, 1 }
     };
-    return margins[[popupButton() controlSize]];
+    return margins[(NSControlSize)[popupButton() controlSize]];
 }
 
 const IntSize* RenderThemeMac::popupButtonSizes() const
@@ -956,7 +990,7 @@ bool RenderThemeMac::paintMenuList(const RenderObject& renderer, const PaintInfo
     NSPopUpButtonCell* popupButton = this->popupButton();
 
     float zoomLevel = renderer.style().effectiveZoom();
-    IntSize size = popupButtonSizes()[[popupButton controlSize]];
+    IntSize size = popupButtonSizes()[(NSControlSize)[popupButton controlSize]];
     size.setHeight(size.height() * zoomLevel);
     size.setWidth(rect.width());
 
@@ -966,6 +1000,11 @@ bool RenderThemeMac::paintMenuList(const RenderObject& renderer, const PaintInfo
         inflatedRect = inflateRect(rect, size, popupButtonMargins(), zoomLevel);
 
     GraphicsContextStateSaver stateSaver(paintInfo.context());
+
+    // Before Yosemite we did not want the cell to ever draw outside the given rectangle.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 101000
+    paintInfo.context().clip(inflatedRect);
+#endif
 
     if (zoomLevel != 1.0f) {
         inflatedRect.setWidth(inflatedRect.width() / zoomLevel);
@@ -1074,10 +1113,15 @@ NSLevelIndicatorCell* RenderThemeMac::levelIndicatorFor(const RenderMeter& rende
     }
 
     [cell setLevelIndicatorStyle:levelIndicatorStyleFor(style.appearance())];
+    // FIXME: Remove the call to setBaseWritingDirection once __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100 is always true.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     [cell setUserInterfaceLayoutDirection:style.isLeftToRightDirection() ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
+#else
+    [cell setBaseWritingDirection:style.isLeftToRightDirection() ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft];
+#endif
     [cell setMinValue:element->min()];
     [cell setMaxValue:element->max()];
-    [cell setObjectValue:@(value)];
+    [cell setObjectValue:[NSNumber numberWithDouble:value]];
 
     return cell;
 }
@@ -1472,12 +1516,17 @@ void RenderThemeMac::setPopupButtonCellState(const RenderObject& o, const IntSiz
     // Set the control size based off the rectangle we're painting into.
     setControlSize(popupButton, popupButtonSizes(), buttonSize, o.style().effectiveZoom());
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     popupButton.userInterfaceLayoutDirection = o.style().direction() == LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft;
+#endif
 
     // Update the various states we respond to.
     updateCheckedState(popupButton, o);
     updateEnabledState(popupButton, o);
     updatePressedState(popupButton, o);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    updateFocusedState(popupButton, o);
+#endif
 }
 
 void RenderThemeMac::paintCellAndSetFocusedElementNeedsRepaintIfNecessary(NSCell* cell, const RenderObject& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
@@ -1713,7 +1762,7 @@ void RenderThemeMac::adjustSearchFieldStyle(StyleResolver& styleResolver, Render
 
 bool RenderThemeMac::paintSearchFieldCancelButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto adjustedCancelButtonRect = [this, &box] (const FloatRect& localBoundsForCancelButton) -> FloatRect
+    auto adjustedCancelButtonRect = [&] (const FloatRect& localBoundsForCancelButton) -> FloatRect
     {
         IntSize cancelButtonSizeBasedOnFontSize = sizeForSystemFont(box.style(), cancelButtonSizes());
         FloatSize diff = localBoundsForCancelButton.size() - FloatSize(cancelButtonSizeBasedOnFontSize);
@@ -1855,7 +1904,7 @@ void RenderThemeMac::adjustSearchFieldResultsButtonStyle(StyleResolver&, RenderS
 
 bool RenderThemeMac::paintSearchFieldResultsButton(const RenderBox& box, const PaintInfo& paintInfo, const IntRect& r)
 {
-    auto adjustedResultButtonRect = [this, &box] (const FloatRect& localBounds) -> FloatRect
+    auto adjustedResultButtonRect = [&] (const FloatRect& localBounds) -> FloatRect
     {
         IntSize buttonSize = sizeForSystemFont(box.style(), resultsButtonSizes());
         buttonSize.expand(resultsArrowWidth, 0);
@@ -2022,7 +2071,13 @@ NSPopUpButtonCell* RenderThemeMac::popupButton() const
         m_popupButton = adoptNS([[NSPopUpButtonCell alloc] initTextCell:@"" pullsDown:NO]);
         [m_popupButton.get() setUsesItemFromMenu:NO];
         [m_popupButton.get() setFocusRingType:NSFocusRingTypeExterior];
-        [m_popupButton setUserInterfaceLayoutDirection:NSUserInterfaceLayoutDirectionLeftToRight];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+        // We don't want the app's UI layout direction to affect the appearance of popup buttons in
+        // web content, which has its own layout direction.
+        // FIXME: Make this depend on the directionality of the select element, once the rest of the
+        // rendering code can account for the popup arrows appearing on the other side.
+        [m_popupButton.get() setUserInterfaceLayoutDirection:NSUserInterfaceLayoutDirectionLeftToRight];
+#endif
     }
 
     return m_popupButton.get();
@@ -2036,7 +2091,9 @@ NSSearchFieldCell* RenderThemeMac::search() const
         [m_search.get() setBezeled:YES];
         [m_search.get() setEditable:YES];
         [m_search.get() setFocusRingType:NSFocusRingTypeExterior];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
         [m_search.get() setCenteredLook:NO];
+#endif
     }
 
     return m_search.get();
@@ -2081,10 +2138,15 @@ NSTextFieldCell* RenderThemeMac::textField() const
         [m_textField.get() setBezeled:YES];
         [m_textField.get() setEditable:YES];
         [m_textField.get() setFocusRingType:NSFocusRingTypeExterior];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+        [m_textField.get() setDrawsBackground:YES];
+        [m_textField.get() setBackgroundColor:[NSColor whiteColor]];
+#else
         // Post-Lion, WebCore can be in charge of paintinng the background thanks to
         // the workaround in place for <rdar://problem/11385461>, which is implemented
         // above as _coreUIDrawOptionsWithFrame.
         [m_textField.get() setDrawsBackground:NO];
+#endif
     }
 
     return m_textField.get();
@@ -2104,6 +2166,15 @@ String RenderThemeMac::fileListNameForWidth(const FileList* fileList, const Font
         return StringTruncator::rightTruncate(multipleFileUploadText(fileList->length()), width, font);
 
     return StringTruncator::centerTruncate(strToTruncate, width, font);
+}
+
+bool RenderThemeMac::defaultButtonHasAnimation() const
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    return false;
+#else
+    return true;
+#endif
 }
 
 #if ENABLE(SERVICE_CONTROLS)
@@ -2252,10 +2323,12 @@ static NSColor *titleTextColorForAttachment(const RenderAttachment& attachment)
 
 void AttachmentLayout::addTitleLine(CTLineRef line, CGFloat& yOffset, Vector<CGPoint> origins, CFIndex lineIndex, const RenderAttachment& attachment)
 {
-    CGRect lineBounds = CTLineGetBoundsWithOptions(line, 0);
+    CGFloat ascent, descent, leading;
+    CGFloat width = CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
+    CGFloat height = ascent + descent + leading;
     CGFloat trailingWhitespaceWidth = CTLineGetTrailingWhitespaceWidth(line);
-    CGFloat lineWidthIgnoringTrailingWhitespace = lineBounds.size.width - trailingWhitespaceWidth;
-    CGFloat lineHeight = CGCeiling(lineBounds.size.height);
+    CGFloat lineWidthIgnoringTrailingWhitespace = width - trailingWhitespaceWidth;
+    CGFloat lineHeight = CGCeiling(height);
 
     // Center the line relative to the icon.
     CGFloat xOffset = (attachmentIconBackgroundSize / 2) - (lineWidthIgnoringTrailingWhitespace / 2);
@@ -2294,17 +2367,17 @@ void AttachmentLayout::layOutTitle(const RenderAttachment& attachment)
     if (title.isEmpty())
         return;
 
-    NSDictionary *textAttributes = @{
-        (id)kCTFontAttributeName: (id)font.get(),
-        (id)kCTForegroundColorAttributeName: titleTextColorForAttachment(attachment)
-    };
+    NSDictionary *textAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+        (const objc_object *)font.get(), (const objc_object *)kCTFontAttributeName,
+        titleTextColorForAttachment(attachment), (const objc_object *)kCTForegroundColorAttributeName,
+        nil];
     RetainPtr<NSAttributedString> attributedTitle = adoptNS([[NSAttributedString alloc] initWithString:title attributes:textAttributes]);
     RetainPtr<CTFramesetterRef> titleFramesetter = adoptCF(CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributedTitle.get()));
 
     CFRange fitRange;
     CGSize titleTextSize = CTFramesetterSuggestFrameSizeWithConstraints(titleFramesetter.get(), CFRangeMake(0, 0), nullptr, CGSizeMake(attachmentTitleMaximumWidth, CGFLOAT_MAX), &fitRange);
 
-    RetainPtr<CGPathRef> titlePath = adoptCF(CGPathCreateWithRect(CGRectMake(0, 0, titleTextSize.width, titleTextSize.height), nullptr));
+    RetainPtr<CGPathRef> titlePath = adoptCF(CGPathCreateWithRect(CGRectMake(0, 0, std::max(titleTextSize.width, 12.0f), titleTextSize.height), nullptr));
     RetainPtr<CTFrameRef> titleFrame = adoptCF(CTFramesetterCreateFrame(titleFramesetter.get(), fitRange, titlePath.get(), nullptr));
 
     CFArrayRef ctLines = CTFrameGetLines(titleFrame.get());
@@ -2330,10 +2403,11 @@ void AttachmentLayout::layOutTitle(const RenderAttachment& attachment)
     // Combine it into one last line, and center-truncate it.
     CTLineRef firstRemainingLine = (CTLineRef)CFArrayGetValueAtIndex(ctLines, lineIndex);
     CFIndex remainingRangeStart = CTLineGetStringRange(firstRemainingLine).location;
-    NSRange remainingRange = NSMakeRange(remainingRangeStart, [attributedTitle length] - remainingRangeStart);
-    NSAttributedString *remainingString = [attributedTitle attributedSubstringFromRange:remainingRange];
+    NSRange remainingRange = NSMakeRange(remainingRangeStart, [attributedTitle.get() length] - remainingRangeStart);
+    NSAttributedString *remainingString = [attributedTitle.get() attributedSubstringFromRange:remainingRange];
     RetainPtr<CTLineRef> remainingLine = adoptCF(CTLineCreateWithAttributedString((CFAttributedStringRef)remainingString));
-    RetainPtr<NSAttributedString> ellipsisString = adoptNS([[NSAttributedString alloc] initWithString:@"\u2026" attributes:textAttributes]);
+    const static UniChar u[] = { 0x2026 };
+    RetainPtr<NSAttributedString> ellipsisString = adoptNS([[NSAttributedString alloc] initWithString:(const NSString*)CFStringCreateWithCharactersNoCopy(NULL, u, 1, kCFAllocatorNull) attributes:textAttributes]);
     RetainPtr<CTLineRef> ellipsisLine = adoptCF(CTLineCreateWithAttributedString((CFAttributedStringRef)ellipsisString.get()));
     RetainPtr<CTLineRef> truncatedLine = adoptCF(CTLineCreateTruncatedLine(remainingLine.get(), attachmentTitleMaximumWidth, kCTLineTruncationMiddle, ellipsisLine.get()));
 
@@ -2351,17 +2425,19 @@ void AttachmentLayout::layOutSubtitle(const RenderAttachment& attachment)
 
     CFStringRef language = 0; // By not specifying a language we use the system language.
     RetainPtr<CTFontRef> font = adoptCF(CTFontCreateUIFontForLanguage(kCTFontUIFontSystem, attachmentSubtitleFontSize, language));
-    NSDictionary *textAttributes = @{
-        (id)kCTFontAttributeName: (id)font.get(),
-        (id)kCTForegroundColorAttributeName: (NSColor *)cachedCGColor(attachmentSubtitleTextColor())
-    };
+    NSDictionary *textAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+        (const objc_object *)font.get(), (const objc_object *)kCTFontAttributeName,
+        (NSColor *)cachedCGColor(attachmentSubtitleTextColor()), (const objc_object *)kCTForegroundColorAttributeName,
+        nil];
     RetainPtr<NSAttributedString> attributedSubtitleText = adoptNS([[NSAttributedString alloc] initWithString:subtitleText attributes:textAttributes]);
     subtitleLine = adoptCF(CTLineCreateWithAttributedString((CFAttributedStringRef)attributedSubtitleText.get()));
 
-    CGRect lineBounds = CTLineGetBoundsWithOptions(subtitleLine.get(), 0);
+    CGFloat ascent, descent, leading;
+    CGFloat width = CTLineGetTypographicBounds(subtitleLine.get(), &ascent, &descent, &leading);
+    CGFloat height = ascent + descent + leading;
 
     // Center the line relative to the icon.
-    CGFloat xOffset = (attachmentIconBackgroundSize / 2) - (lineBounds.size.width / 2);
+    CGFloat xOffset = (attachmentIconBackgroundSize / 2) - (width / 2);
     CGFloat yOffset = 0;
 
     if (!lines.isEmpty())
@@ -2370,7 +2446,7 @@ void AttachmentLayout::layOutSubtitle(const RenderAttachment& attachment)
         yOffset = attachmentIconBackgroundSize + attachmentIconToTitleMargin;
 
     LabelLine labelLine;
-    subtitleTextRect = FloatRect(xOffset, yOffset, lineBounds.size.width, lineBounds.size.height);
+    subtitleTextRect = FloatRect(xOffset, yOffset, width, height);
 }
 
 AttachmentLayout::AttachmentLayout(const RenderAttachment& attachment)
@@ -2444,9 +2520,11 @@ static RefPtr<Icon> iconForAttachment(const RenderAttachment& attachment)
         } else {
             auto attachmentTypeCF = attachmentType.createCFString();
             RetainPtr<CFStringRef> UTI;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
             if (isDeclaredUTI(attachmentTypeCF.get()))
                 UTI = attachmentTypeCF;
             else
+#endif
                 UTI = UTIFromMIMEType(attachmentTypeCF.get());
 
             if (auto icon = Icon::createIconForUTI(UTI.get()))

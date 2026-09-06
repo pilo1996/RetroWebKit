@@ -39,6 +39,8 @@
 
 namespace WebCore {
 
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
+
 // The maximum number of seconds we'll try to wait for a resource to be disk cached before we forget the request.
 static const double diskCacheMonitorTimeout = 20;
 
@@ -60,10 +62,13 @@ void DiskCacheMonitor::monitorFileBackingStoreCreation(const ResourceRequest& re
     new DiskCacheMonitor(request, sessionID, cachedResponse); // Balanced by delete and unique_ptr in the blocks set up in the constructor, one of which is guaranteed to run.
 }
 
+#endif
+
 DiskCacheMonitor::DiskCacheMonitor(const ResourceRequest& request, SessionID sessionID, CFCachedURLResponseRef cachedResponse)
     : m_resourceRequest(request)
     , m_sessionID(sessionID)
 {
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
     ASSERT(isMainThread());
 
     // Set up a delayed callback to cancel this monitor if the resource hasn't been cached yet.
@@ -112,6 +117,9 @@ DiskCacheMonitor::DiskCacheMonitor(const ResourceRequest& request, SessionID ses
     auto blockToRun = block;
 #endif
     _CFCachedURLResponseSetBecameFileBackedCallBackBlock(cachedResponse, blockToRun, dispatch_get_main_queue());
+#else
+    UNUSED_PARAM(cachedResponse);
+#endif
 }
 
 void DiskCacheMonitor::resourceBecameFileBacked(SharedBuffer& fileBackedBuffer)

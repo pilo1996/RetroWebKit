@@ -31,9 +31,12 @@
 #include "CommonCryptoDERUtilities.h"
 #include "CommonCryptoUtilities.h"
 #include "JsonWebKey.h"
+#include "NotImplemented.h"
 #include <wtf/text/Base64.h>
 
 namespace WebCore {
+
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 static const unsigned char InitialOctetEC = 0x04; // Per Section 2.3.3 of http://www.secg.org/sec1-v2.pdf
 // OID id-ecPublicKey 1.2.840.10045.2.1.
@@ -389,6 +392,122 @@ Vector<uint8_t> CryptoKeyEC::platformExportPkcs8() const
 
     return result;
 }
+
+#else
+
+Vector<uint8_t> CryptoKeyEC::platformExportRaw() const
+{
+    notImplemented();
+
+    return Vector<uint8_t>();
+}
+
+std::optional<CryptoKeyPair> CryptoKeyEC::platformGeneratePair(CryptoAlgorithmIdentifier identifier, NamedCurve curve, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return std::nullopt;
+}
+
+RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportRaw(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(keyData);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return nullptr;
+}
+
+RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportJWKPublic(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(x);
+    UNUSED_PARAM(y);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return nullptr;
+}
+
+RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportJWKPrivate(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& x, Vector<uint8_t>&& y, Vector<uint8_t>&& d, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(x);
+    UNUSED_PARAM(y);
+    UNUSED_PARAM(d);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return nullptr;
+}
+
+void CryptoKeyEC::platformAddFieldElements(JsonWebKey& jwk) const
+{
+    notImplemented();
+    UNUSED_PARAM(jwk);
+}
+
+RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportSpki(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(keyData);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return nullptr;
+}
+
+Vector<uint8_t> CryptoKeyEC::platformExportSpki() const
+{
+    notImplemented();
+
+    return Vector<uint8_t>();
+}
+
+RefPtr<CryptoKeyEC> CryptoKeyEC::platformImportPkcs8(CryptoAlgorithmIdentifier identifier, NamedCurve curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap usages)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(curve);
+    UNUSED_PARAM(keyData);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usages);
+
+    return nullptr;
+}
+
+Vector<uint8_t> CryptoKeyEC::platformExportPkcs8() const
+{
+    notImplemented();
+
+    return Vector<uint8_t>();
+}
+
+CryptoKeyEC::~CryptoKeyEC()
+{
+    notImplemented();
+}
+
+size_t CryptoKeyEC::keySizeInBits() const
+{
+    notImplemented();
+    return 0;
+}
+
+#endif
 
 } // namespace WebCore
 

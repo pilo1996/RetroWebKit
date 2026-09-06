@@ -23,9 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKit/WKWebProcessPlugIn.h>
-
 #if WK_API_ENABLED
+
+#import <WebKit/WKWebProcessPlugIn.h>
 
 @interface MiniBrowserWebProcessPlugIn : NSObject <WKWebProcessPlugIn>
 

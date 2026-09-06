@@ -152,6 +152,7 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             [array.get() addObject:filter];
             break;
         }
+#else
         case FilterOperation::BLUR: {
             const auto& blurOperation = downcast<BlurFilterOperation>(filterOperation);
             CAFilter *filter = [CAFilter filterWithType:kCAFilterGaussianBlur];
@@ -164,7 +165,6 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             [array.get() addObject:filter];
             break;
         }
-#else
         case FilterOperation::GRAYSCALE: {
             const auto& colorMatrixOperation = downcast<BasicColorMatrixFilterOperation>(filterOperation);
             CIFilter* filter = [CIFilter filterWithName:@"CIColorMonochrome"];
@@ -227,7 +227,7 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             [filter setValue:[CIVector vectorWithX:0 Y:multiplier Z:0 W:0] forKey:@"inputGVector"];
             [filter setValue:[CIVector vectorWithX:0 Y:0 Z:multiplier W:0] forKey:@"inputBVector"];
             [filter setValue:[CIVector vectorWithX:0 Y:0 Z:0 W:1] forKey:@"inputAVector"];
-            [filter setValue:[CIVector vectorWithX:op->amount() Y:op->amount() Z:op->amount() W:0] forKey:@"inputBiasVector"];
+            [filter setValue:[CIVector vectorWithX:componentTransferOperation.amount() Y:componentTransferOperation.amount() Z:componentTransferOperation.amount() W:0] forKey:@"inputBiasVector"];
             [filter setName:filterName];
             [array.get() addObject:filter];
             break;
@@ -264,16 +264,6 @@ void PlatformCAFilters::setFiltersOnLayer(PlatformLayer* layer, const FilterOper
             CIFilter* filter = [CIFilter filterWithName:@"CIColorControls"];
             [filter setDefaults];
             [filter setValue:[NSNumber numberWithFloat:componentTransferOperation.amount()] forKey:@"inputContrast"];
-            [filter setName:filterName];
-            [array.get() addObject:filter];
-            break;
-        }
-        case FilterOperation::BLUR: {
-            // FIXME: For now we ignore stdDeviationY.
-            const auto& blurOperation = downcast<BlurFilterOperation>(filterOperation);
-            CIFilter* filter = [CIFilter filterWithName:@"CIGaussianBlur"];
-            [filter setDefaults];
-            [filter setValue:[NSNumber numberWithFloat:floatValueForLength(blurOperation.stdDeviation(), 0)] forKey:@"inputRadius"];
             [filter setName:filterName];
             [array.get() addObject:filter];
             break;
@@ -317,7 +307,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
         if (operation)
             amount = downcast<BasicColorMatrixFilterOperation>(*operation).amount();
         
-        value = [NSNumber numberWithDouble:amount];
+        value = (id)[NSNumber numberWithDouble:amount];
         break;
     }
     case FilterOperation::SEPIA: {
@@ -356,7 +346,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
         if (operation)
             amount = downcast<BasicColorMatrixFilterOperation>(*operation).amount();
         
-        value = [NSNumber numberWithDouble:amount];
+        value = (id)[NSNumber numberWithDouble:amount];
         break;
     }
     case FilterOperation::HUE_ROTATE: {
@@ -367,7 +357,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
             amount = downcast<BasicColorMatrixFilterOperation>(*operation).amount();
         
         amount = deg2rad(amount);
-        value = [NSNumber numberWithDouble:amount];
+        value = (id)[NSNumber numberWithDouble:amount];
         break;
     }
     case FilterOperation::INVERT: {
@@ -442,7 +432,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
         if (operation)
             amount = downcast<BasicComponentTransferFilterOperation>(*operation).amount();
         
-        value = [NSNumber numberWithDouble:amount];
+        value = (id)[NSNumber numberWithDouble:amount];
 #endif
         break;
     }
@@ -453,7 +443,7 @@ RetainPtr<NSValue> PlatformCAFilters::filterValueForOperation(const FilterOperat
         if (operation)
             amount = floatValueForLength(downcast<BlurFilterOperation>(*operation).stdDeviation(), 0);
         
-        value = [NSNumber numberWithDouble:amount];
+        value = (id)[NSNumber numberWithDouble:amount];
         break;
     }
     default:

@@ -57,8 +57,8 @@
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebCoreURLResponse.h>
-#import <WebKitLegacy/DOMHTML.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOMHTML.h>
+#import <WebKit/DOMPrivate.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
@@ -127,6 +127,8 @@ static inline WebDataSourcePrivate* toPrivate(void* privateAttribute)
     toPrivate(_private)->representationFinishedLoading = NO;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCClass, NSArray *supportTypes)
 {
     NSEnumerator *enumerator = [supportTypes objectEnumerator];
@@ -144,6 +146,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     Class repClass;
     return [WebView _viewClass:nil andRepresentationClass:&repClass forMIMEType:MIMEType allowingPlugins:allowPlugins] ? repClass : nil;
 }
+#pragma GCC diagnostic pop
 @end
 
 @implementation WebDataSource (WebPrivate)
@@ -156,6 +159,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         WTF::initializeMainThreadToProcessMainThread();
         RunLoop::initializeMainRunLoop();
 #endif
+        WebCoreObjCFinalizeOnMainThread(self);
     }
 }
 
@@ -167,7 +171,9 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 - (void)_addSubframeArchives:(NSArray *)subframeArchives
 {
     // FIXME: This SPI is poor, poor design. Can we come up with another solution for those who need it?
-    for (WebArchive *archive in subframeArchives)
+    NSEnumerator *enumerator = [subframeArchives objectEnumerator];
+    WebArchive *archive = nil;
+    while ((archive = [enumerator nextObject]) != nil)
         toPrivate(_private)->loader->addAllArchiveResources(*[archive _coreLegacyWebArchive]);
 }
 
@@ -176,7 +182,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 - (NSFileWrapper *)_fileWrapperForURL:(NSURL *)URL
 {
     if ([URL isFileURL])
-        return [[[NSFileWrapper alloc] initWithURL:[URL URLByResolvingSymlinksInPath] options:0 error:nullptr] autorelease];
+        return [[[NSFileWrapper alloc] initWithPath:[[URL path] stringByResolvingSymlinksInPath]] autorelease];
 
     if (auto resource = [self subresourceForURL:URL])
         return [resource _fileWrapperRepresentation];
@@ -427,7 +433,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
 @implementation WebDataSource
 
-- (instancetype)initWithRequest:(NSURLRequest *)request
+- (id)initWithRequest:(NSURLRequest *)request
 {
     return [self _initWithDocumentLoader:WebDocumentLoaderMac::create(request, SubstituteData())];
 }
@@ -449,6 +455,16 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     delete toPrivate(_private);
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    if (toPrivate(_private) && toPrivate(_private)->includedInWebKitStatistics)
+        --WebDataSourceCount;
+
+    delete toPrivate(_private);
+
+    [super finalize];
 }
 
 - (NSData *)data
@@ -540,11 +556,11 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 {
     auto coreSubresources = toPrivate(_private)->loader->subresources();
     auto subresources = adoptNS([[NSMutableArray alloc] initWithCapacity:coreSubresources.size()]);
-    for (auto& coreSubresource : coreSubresources) {
+    for (const auto& coreSubresource : coreSubresources) {
         if (auto resource = adoptNS([[WebResource alloc] _initWithCoreResource:coreSubresource.copyRef()]))
-            [subresources addObject:resource.get()];
+            [subresources.get() addObject:resource.get()];
     }
-    return subresources.autorelease();
+    return (NSArray *)subresources.autorelease();
 }
 
 - (WebResource *)subresourceForURL:(NSURL *)URL

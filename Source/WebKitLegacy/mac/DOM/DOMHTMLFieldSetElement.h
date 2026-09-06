@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLFormElement;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLFieldSetElement : DOMHTMLElement
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @end

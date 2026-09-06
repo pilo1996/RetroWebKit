@@ -26,11 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebKitErrors.h>
+#import <WebKit/WebKitErrors.h>
 
 #import "WebLocalizableStringsInternal.h"
-#import <WebKitLegacy/WebKitErrorsPrivate.h>
-#import <WebKitLegacy/WebNSURLExtras.h>
+#import <WebKit/WebKitErrorsPrivate.h>
+#import <WebKit/WebNSURLExtras.h>
 
 #import <pthread.h>
 
@@ -117,7 +117,11 @@ static NSMutableDictionary *descriptions = nil;
         [userInfo setObject:localizedDescription forKey:NSLocalizedDescriptionKey];
     if (contentURL) {
         [userInfo setObject:contentURL forKey:@"NSErrorFailingURLKey"];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        [userInfo setObject:[contentURL _web_userVisibleString] forKey:NSErrorFailingURLStringKey];
+#else
         [userInfo setObject:[contentURL _web_userVisibleString] forKey:NSURLErrorFailingURLStringErrorKey];
+#endif
     }
     if (pluginPageURL) {
         [userInfo setObject:[pluginPageURL _web_userVisibleString] forKey:WebKitErrorPlugInPageURLStringKey];

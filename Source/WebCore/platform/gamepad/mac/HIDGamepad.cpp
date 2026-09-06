@@ -94,7 +94,7 @@ void HIDGamepad::initElements()
 void HIDGamepad::initElementsFromArray(CFArrayRef elements)
 {
     for (CFIndex i = 0, count = CFArrayGetCount(elements); i < count; ++i) {
-        IOHIDElementRef element = (IOHIDElementRef)CFArrayGetValueAtIndex(elements, i);
+        IOHIDElementRef element = (IOHIDElementRef)const_cast<void*>(CFArrayGetValueAtIndex(elements, i));
         if (CFGetTypeID(element) != IOHIDElementGetTypeID())
             continue;
 

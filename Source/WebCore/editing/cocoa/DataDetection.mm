@@ -58,7 +58,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 static RetainPtr<DDActionContext> detectItemAtPositionWithRange(VisiblePosition position, RefPtr<Range> contextRange, FloatRect& detectedDataBoundingBox, RefPtr<Range>& detectedDataRange)
 {

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLTableCaptionElement.h>
+#import <WebKit/DOMHTMLTableCaptionElement.h>
 
 namespace WebCore {
 class HTMLTableCaptionElement;

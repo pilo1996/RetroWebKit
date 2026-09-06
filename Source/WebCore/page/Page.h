@@ -432,6 +432,9 @@ public:
     WEBCORE_EXPORT void setMemoryCacheClientCallsEnabled(bool);
     bool areMemoryCacheClientCallsEnabled() const { return m_areMemoryCacheClientCallsEnabled; }
 
+    WEBCORE_EXPORT void setJavaScriptURLsAreAllowed(bool);
+    bool javaScriptURLsAreAllowed() const;
+
     // Don't allow more than a certain number of frames in a page.
     // This seems like a reasonable upper bound, and otherwise mutually
     // recursive frameset pages can quickly bring the program to its knees
@@ -718,6 +721,8 @@ private:
 
     Pagination m_pagination;
     bool m_paginationLineGridEnabled { false };
+
+    bool m_javaScriptURLsAreAllowed;
 
     String m_userStyleSheetPath;
     mutable String m_userStyleSheet;

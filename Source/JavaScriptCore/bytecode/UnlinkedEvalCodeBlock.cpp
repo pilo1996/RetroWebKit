@@ -26,7 +26,7 @@
 #include "config.h"
 #include "UnlinkedEvalCodeBlock.h"
 
-#include "JSCellInlines.h"
+#include "HeapCellInlines.h"
 
 namespace JSC {
 

@@ -34,6 +34,7 @@
 #import "WebElementDictionary.h"
 #import "WebFrame.h"
 #import "WebFrameInternal.h"
+#import "WebFrameView.h"
 #import "WebHTMLView.h"
 #import "WebHTMLViewInternal.h"
 #import "WebKitVersionChecks.h"
@@ -59,7 +60,7 @@
 #import <WebCore/SharedBuffer.h>
 #import <WebCore/RuntimeApplicationChecks.h>
 #import <WebCore/URL.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOMPrivate.h>
 
 using namespace WebCore;
 
@@ -274,9 +275,11 @@ void WebContextMenuClient::showContextMenu()
     // Show the contextual menu for this event.
     bool isServicesMenu;
     if (NSMenu *menu = contextMenuForEvent(event, view, isServicesMenu)) {
+#if ENABLE(SERVICE_CONTROLS)
         if (isServicesMenu)
             [menu popUpMenuPositioningItem:nil atLocation:[view convertPoint:point toView:nil] inView:view];
         else
+#endif
             [NSMenu popUpContextMenu:menu withEvent:event forView:view];
     }
 }

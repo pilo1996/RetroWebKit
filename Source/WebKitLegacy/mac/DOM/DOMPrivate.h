@@ -24,9 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOM.h>
-#import <WebKitLegacy/WebAutocapitalizeTypes.h>
-#import <WebKitLegacy/WebDOMOperationsPrivate.h>
+#import <WebKit/DOM.h>
+#import <WebKit/WebAutocapitalizeTypes.h>
+#import <WebKit/WebDOMOperationsPrivate.h>
 
 #if TARGET_OS_IPHONE
 #import <CoreText/CoreText.h>
@@ -98,9 +98,13 @@
 
 @interface DOMHTMLInputElement (FormAutoFillTransition)
 - (BOOL)_isTextField;
+#if !TARGET_OS_IPHONE
+- (NSRect)_rectOnScreen; // bounding box of the text field, in screen coordinates
+#endif
+- (void)_replaceCharactersInRange:(NSRange)targetRange withString:(NSString *)replacementString selectingFromIndex:(int)index;
+- (NSRange)_selectedRange;
 @end
 
-#if TARGET_OS_IPHONE
 // These changes are necessary to detect whether a form input was modified by a user
 // or javascript
 @interface DOMHTMLInputElement (FormPromptAdditions)
@@ -110,7 +114,6 @@
 @interface DOMHTMLTextAreaElement (FormPromptAdditions)
 - (BOOL)_isEdited;
 @end
-#endif // TARGET_OS_IPHONE
 
 @interface DOMHTMLSelectElement (FormAutoFillTransition)
 - (void)_activateItemAtIndex:(int)index;

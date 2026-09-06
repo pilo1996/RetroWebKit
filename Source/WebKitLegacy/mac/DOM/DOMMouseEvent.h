@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMUIEvent.h>
+#import <WebKit/DOMUIEvent.h>
 
 @class DOMAbstractView;
 @class DOMNode;
@@ -41,13 +41,13 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (readonly) BOOL altKey;
 @property (readonly) BOOL metaKey;
 @property (readonly) unsigned short button;
-@property (readonly, strong) id <DOMEventTarget> relatedTarget;
+@property (readonly, retain) id <DOMEventTarget> relatedTarget;
 @property (readonly) int offsetX WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int offsetY WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int x WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int y WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMNode *fromElement WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMNode *toElement WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMNode *fromElement WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMNode *toElement WEBKIT_AVAILABLE_MAC(10_5);
 
 - (void)initMouseEvent:(NSString *)type canBubble:(BOOL)canBubble cancelable:(BOOL)cancelable view:(DOMAbstractView *)view detail:(int)detail screenX:(int)screenX screenY:(int)screenY clientX:(int)clientX clientY:(int)clientY ctrlKey:(BOOL)ctrlKey altKey:(BOOL)altKey shiftKey:(BOOL)shiftKey metaKey:(BOOL)metaKey button:(unsigned short)button relatedTarget:(id <DOMEventTarget>)relatedTarget WEBKIT_AVAILABLE_MAC(10_5);
 @end

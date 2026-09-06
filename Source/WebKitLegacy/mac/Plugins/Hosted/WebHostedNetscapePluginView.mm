@@ -76,6 +76,7 @@ extern "C" {
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
     WKSendUserChangeNotifications();
 }
 
@@ -154,6 +155,7 @@ extern "C" {
 
     if (acceleratedCompositingEnabled && _proxy->rendererType() == UseAcceleratedCompositing) {
         // FIXME: This code can be shared between WebHostedNetscapePluginView and WebNetscapePluginView.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         // Since this layer isn't going to be inserted into a view, we need to create another layer and flip its geometry
         // in order to get the coordinate system right.
         RetainPtr<CALayer> realPluginLayer = adoptNS(_pluginLayer.leakRef());
@@ -164,6 +166,7 @@ extern "C" {
 
         realPluginLayer.get().autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
         [_pluginLayer.get() addSublayer:realPluginLayer.get()];
+#endif
 
         // Eagerly enter compositing mode, since we know we'll need it. This avoids firing setNeedsStyleRecalc()
         // for iframes that contain composited plugins at bad times. https://bugs.webkit.org/show_bug.cgi?id=39033

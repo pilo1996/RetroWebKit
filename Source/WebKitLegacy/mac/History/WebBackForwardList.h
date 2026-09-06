@@ -79,19 +79,19 @@
     @property backItem
     @abstract The entry right before the current entry, or nil if there isn't one.
 */
-@property (nonatomic, readonly, strong) WebHistoryItem *backItem;
+@property (nonatomic, readonly, retain) WebHistoryItem *backItem;
 
 /*!
     @property currentItem
     @abstract Returns the current entry.
 */
-@property (nonatomic, readonly, strong) WebHistoryItem *currentItem;
+@property (nonatomic, readonly, retain) WebHistoryItem *currentItem;
 
 /*!
     @property forwardItem
     @abstract The entry right after the current entry, or nil if there isn't one.
 */
-@property (nonatomic, readonly, strong) WebHistoryItem *forwardItem;
+@property (nonatomic, readonly, retain) WebHistoryItem *forwardItem;
 
 /*!
     @method backListWithLimit:

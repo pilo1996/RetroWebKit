@@ -26,15 +26,16 @@
 #import "config.h"
 
 #import "WebActionDisablingCALayerDelegate.h"
+#import <mutex>
 #import <QuartzCore/QuartzCore.h>
 
 @implementation WebActionDisablingCALayerDelegate
 
-+ (instancetype)shared
++ (id)shared
 {
     static WebActionDisablingCALayerDelegate *controller;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static std::once_flag onceToken;
+    std::call_once(onceToken, []{
         controller = [[WebActionDisablingCALayerDelegate alloc] init];
     });
     return controller;

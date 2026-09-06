@@ -122,3 +122,8 @@ typedef float CGFloat;
 #endif
 
 #endif
+
+// Having defined __APPLE_ALTIVEC__ without the header included confuses the header MachineExceptions.h from CarbonCore framework
+#if !defined(_ALTIVEC_H) && defined(__APPLE_ALTIVEC__)
+#undef __APPLE_ALTIVEC__
+#endif

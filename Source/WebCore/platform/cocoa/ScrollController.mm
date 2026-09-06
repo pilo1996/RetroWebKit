@@ -41,6 +41,31 @@
 
 #if ENABLE(RUBBER_BANDING) || ENABLE(CSS_SCROLL_SNAP)
 
+#if PLATFORM(MAC) && ENABLE(RUBBER_BANDING)
+static NSTimeInterval systemUptime()
+{
+    if ([[NSProcessInfo processInfo] respondsToSelector:@selector(systemUptime)])
+        return [[NSProcessInfo processInfo] systemUptime];
+
+    // Get how long system has been up. Found by looking getting "boottime" from the kernel.
+    static struct timeval boottime = {0, 0};
+    if (!boottime.tv_sec) {
+        int mib[2] = {CTL_KERN, KERN_BOOTTIME};
+        size_t size = sizeof(boottime);
+        if (-1 == sysctl(mib, 2, &boottime, &size, 0, 0))
+            boottime.tv_sec = 0;
+    }
+    struct timeval now;
+    if (boottime.tv_sec && -1 != gettimeofday(&now, 0)) {
+        struct timeval uptime;
+        timersub(&now, &boottime, &uptime);
+        NSTimeInterval result = uptime.tv_sec + (uptime.tv_usec / 1E+6);
+        return result;
+    }
+    return 0;
+}
+#endif
+
 namespace WebCore {
 
 #if ENABLE(RUBBER_BANDING)
@@ -50,6 +75,32 @@ static const float rubberbandMinimumRequiredDeltaBeforeStretch = 10;
 #endif
 
 #if PLATFORM(MAC)
+#if ENABLE(RUBBER_BANDING)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+static const float rubberbandStiffness = 20;
+static const float rubberbandAmplitude = 0.31f;
+static const float rubberbandPeriod = 1.6f;
+
+static float elasticDeltaForTimeDelta(float initialPosition, float initialVelocity, float elapsedTime)
+{
+    float amplitude = rubberbandAmplitude;
+    float period = rubberbandPeriod;
+    float criticalDampeningFactor = expf((-elapsedTime * rubberbandStiffness) / period);
+
+    return (initialPosition + (-initialVelocity * elapsedTime * amplitude)) * criticalDampeningFactor;
+}
+
+static float elasticDeltaForReboundDelta(float delta)
+{
+    float stiffness = std::max(rubberbandStiffness, 1.0f);
+    return delta / stiffness;
+}
+
+static float reboundDeltaForElasticDelta(float delta)
+{
+    return delta * rubberbandStiffness;
+}
+#else
 static float elasticDeltaForTimeDelta(float initialPosition, float initialVelocity, float elapsedTime)
 {
     return wkNSElasticDeltaForTimeDelta(initialPosition, initialVelocity, elapsedTime);
@@ -64,6 +115,7 @@ static float reboundDeltaForElasticDelta(float delta)
 {
     return wkNSReboundDeltaForElasticDelta(delta);
 }
+#endif
 
 static float scrollWheelMultiplier()
 {
@@ -75,6 +127,7 @@ static float scrollWheelMultiplier()
     }
     return multiplier;
 }
+#endif
 #endif
 
 static ScrollEventAxis otherScrollEventAxis(ScrollEventAxis axis)
@@ -101,6 +154,7 @@ bool ScrollController::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
     if (!processWheelEventForScrollSnap(wheelEvent))
         return false;
 #endif
+#if ENABLE(RUBBER_BANDING)
     if (wheelEvent.phase() == PlatformWheelEventPhaseBegan) {
         // First, check if we should rubber-band at all.
         if (m_client.pinnedInDirection(FloatSize(-wheelEvent.deltaX(), 0))
@@ -278,6 +332,7 @@ bool ScrollController::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
         m_ignoreMomentumScrolls = false;
         m_lastMomentumScrollTimestamp = 0;
     }
+#endif
 
     return true;
 }
@@ -402,7 +457,7 @@ void ScrollController::stopSnapRubberbandTimer()
 
 void ScrollController::snapRubberBand()
 {
-    CFTimeInterval timeDelta = [NSProcessInfo processInfo].systemUptime - m_lastMomentumScrollTimestamp;
+    CFTimeInterval timeDelta = systemUptime() - m_lastMomentumScrollTimestamp;
     if (m_lastMomentumScrollTimestamp && timeDelta >= scrollVelocityZeroingTimeout)
         m_momentumVelocity = FloatSize();
 
@@ -585,7 +640,11 @@ void ScrollController::scrollSnapTimerFired()
     bool isAnimationComplete;
     auto animationOffset = m_scrollSnapState->currentAnimatedScrollOffset(isAnimationComplete);
     auto currentOffset = m_client.scrollOffset();
+#if ENABLE(SMOOTH_SCROLLING)
     m_client.immediateScrollByWithoutContentEdgeConstraints(FloatSize(animationOffset.x() - currentOffset.x(), animationOffset.y() - currentOffset.y()));
+#else
+    m_client.scrollToOffsetWithoutAnimation(currentOffset + animationOffset);
+#endif
     if (isAnimationComplete) {
         m_scrollSnapState->transitionToDestinationReachedState();
         stopScrollSnapTimer();

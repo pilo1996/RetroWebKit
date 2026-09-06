@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMRGBColor.h>
+#import <WebKit/DOMRGBColor.h>
 
 namespace WebCore {
 class DeprecatedCSSOMRGBColor;

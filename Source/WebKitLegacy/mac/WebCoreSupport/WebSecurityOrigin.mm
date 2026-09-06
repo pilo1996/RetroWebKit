@@ -69,6 +69,12 @@ using namespace WebCore;
     return reinterpret_cast<SecurityOrigin*>(_private)->host();
 }
 
+// Deprecated. Use host instead. This needs to stay here until we ship a new Safari.
+- (NSString *)domain
+{
+    return [self host];
+}
+
 - (NSString *)databaseIdentifier
 {
     return SecurityOriginData::fromSecurityOrigin(*reinterpret_cast<SecurityOrigin*>(_private)).databaseIdentifier();
@@ -110,6 +116,13 @@ using namespace WebCore;
     if (_databaseQuotaManager)
         [(NSObject *)_databaseQuotaManager release];
     [super dealloc];
+}
+
+- (void)finalize
+{
+    if (_private)
+        reinterpret_cast<SecurityOrigin*>(_private)->deref();
+    [super finalize];
 }
 
 @end

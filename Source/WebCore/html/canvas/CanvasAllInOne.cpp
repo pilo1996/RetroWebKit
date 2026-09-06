@@ -1,0 +1,55 @@
+/*
+ *  CanvasAllInOne.cpp
+ *  WebCore
+ *
+ *  Created by Tobias & Sarah Netzel on 01.04.12.
+ *  Copyright 2012 __MyCompanyName__. All rights reserved.
+ *
+ */
+
+
+#include "ANGLEInstancedArrays.cpp"
+#include "CanvasGradient.cpp"
+#include "CanvasPath.cpp"
+#include "CanvasPattern.cpp"
+#include "CanvasRenderingContext.cpp"
+#include "CanvasRenderingContext2D.cpp"
+#include "CanvasStyle.cpp"
+#include "EXTTextureFilterAnisotropic.cpp"
+#include "OESElementIndexUint.cpp"
+#include "OESStandardDerivatives.cpp"
+#include "OESTextureFloat.cpp"
+#include "OESTextureFloatLinear.cpp"
+#include "OESTextureHalfFloat.cpp"
+#include "OESTextureHalfFloatLinear.cpp"
+#include "OESVertexArrayObject.cpp"
+#include "WebGLBuffer.cpp"
+#include "WebGLCompressedTextureATC.cpp"
+#include "WebGLCompressedTexturePVRTC.cpp"
+#include "WebGLCompressedTextureS3TC.cpp"
+#include "WebGLContextEvent.cpp"
+#include "WebGLContextGroup.cpp"
+#include "WebGLContextObject.cpp"
+#include "WebGLDebugRendererInfo.cpp"
+#include "WebGLDebugShaders.cpp"
+#include "WebGLDepthTexture.cpp"
+#include "WebGLDrawBuffers.cpp"
+#include "WebGLExtension.cpp"
+#include "WebGLLoseContext.cpp"
+#include "WebGLObject.cpp"
+#include "WebGLProgram.cpp"
+#include "WebGLQuery.cpp"
+#include "WebGLRenderbuffer.cpp"
+#include "WebGLRenderingContext.cpp"
+#include "WebGLRenderingContextBase.cpp"
+#include "WebGLSampler.cpp"
+#include "WebGLShader.cpp"
+#include "WebGLShaderPrecisionFormat.cpp"
+#include "WebGLSharedObject.cpp"
+#include "WebGLSync.cpp"
+#include "WebGLTexture.cpp"
+#include "WebGLTransformFeedback.cpp"
+#include "WebGLUniformLocation.cpp"
+#include "WebGLVertexArrayObject.cpp"
+#include "WebGLVertexArrayObjectBase.cpp"
+#include "WebGLVertexArrayObjectOES.cpp"

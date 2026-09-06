@@ -26,7 +26,7 @@
 #import "config.h"
 #import "PasteboardWriter.h"
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
 #import "NSPasteboardSPI.h"
 #import "PasteboardWriterData.h"

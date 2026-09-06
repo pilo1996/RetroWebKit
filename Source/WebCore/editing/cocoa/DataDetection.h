@@ -27,11 +27,13 @@
 
 #if ENABLE(DATA_DETECTION)
 
-#import <wtf/RefPtr.h>
-#import <wtf/RetainPtr.h>
-#import <wtf/text/WTFString.h>
+#include <wtf/RefPtr.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/text/WTFString.h>
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 OBJC_CLASS DDActionContext;
+#endif
 OBJC_CLASS NSArray;
 OBJC_CLASS NSDictionary;
 
@@ -57,7 +59,7 @@ enum DataDetectorTypes {
 
 class DataDetection {
 public:
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     WEBCORE_EXPORT static RetainPtr<DDActionContext> detectItemAroundHitTestResult(const HitTestResult&, FloatRect& detectedDataBoundingBox, RefPtr<Range>& detectedDataRange);
 #endif
     WEBCORE_EXPORT static NSArray *detectContentInRange(RefPtr<Range>& contextRange, DataDetectorTypes, NSDictionary *context);

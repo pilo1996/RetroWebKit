@@ -85,6 +85,7 @@ void jettisonExpensiveObjectsOnTopLevelNavigation()
 
 void registerMemoryReleaseNotifyCallbacks()
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
         int dummy;
@@ -96,6 +97,7 @@ void registerMemoryReleaseNotifyCallbacks()
             GCController::singleton().garbageCollectNow();
         });
     });
+#endif
 }
 
 } // namespace WebCore

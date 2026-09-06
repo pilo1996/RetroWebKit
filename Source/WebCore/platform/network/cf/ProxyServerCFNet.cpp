@@ -35,6 +35,16 @@
 #include <CFNetwork/CFNetwork.h>
 #endif
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <wtf/SoftLinking.h>
+
+SOFT_LINK_FRAMEWORK_IN_UMBRELLA(CoreServices, CFNetwork)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+SOFT_LINK(CFNetwork, CFNetworkCopySystemProxySettings, CFDictionaryRef, (), ())
+#pragma GCC diagnostic pop
+#endif
+
 namespace WebCore {
 
 static void processProxyServers(Vector<ProxyServer>& proxyServers, CFArrayRef proxies, CFURLRef url);

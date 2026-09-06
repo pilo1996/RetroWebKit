@@ -224,7 +224,7 @@ void Widget::paint(GraphicsContext& p, const IntRect& r, SecurityOriginPaintPoli
     NSScrollView *scrollView = 0;
     if ([innerView conformsToProtocol:@protocol(WebCoreFrameScrollView)]) {
         ASSERT([innerView isKindOfClass:[NSScrollView class]]);
-        NSScrollView *scrollView = static_cast<NSScrollView *>(innerView);
+        scrollView = static_cast<NSScrollView *>(innerView);
         // -copiesOnScroll will return NO whenever the content view is not fully opaque.
         if ([scrollView drawsBackground] && ![[scrollView contentView] copiesOnScroll])
             [scrollView setDrawsBackground:NO];

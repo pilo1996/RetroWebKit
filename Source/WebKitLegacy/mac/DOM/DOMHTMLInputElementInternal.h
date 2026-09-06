@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLInputElement.h>
+#import <WebKit/DOMHTMLInputElement.h>
 
 namespace WebCore {
 class HTMLInputElement;

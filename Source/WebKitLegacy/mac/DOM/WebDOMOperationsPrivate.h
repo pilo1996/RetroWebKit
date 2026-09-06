@@ -26,14 +26,14 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebDOMOperations.h>
+#import <WebKit/WebDOMOperations.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if TARGET_OS_IPHONE
-#import <WebKitLegacy/WAKAppKitStubs.h>
-#else
+#import <WebKit/WAKAppKitStubs.h>
+#elsif __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #import <AppKit/NSEvent.h>
-#import <WebKitLegacy/DOMWheelEvent.h>
+#import <WebKit/DOMWheelEvent.h>
 #endif
 
 @interface DOMElement (WebDOMElementOperationsPrivate)
@@ -50,7 +50,7 @@
 - (NSRect)_renderRect:(bool *)isReplaced;
 @end
 
-typedef BOOL (^WebArchiveSubframeFilter)(WebFrame* subframe);
+typedef std::function<BOOL (WebFrame* subframe)> WebArchiveSubframeFilter;
 
 @interface DOMNode (WebDOMNodeOperationsPrivate)
 - (WebArchive *)webArchiveByFilteringSubframes:(WebArchiveSubframeFilter)webArchiveSubframeFilter;
@@ -61,7 +61,7 @@ typedef BOOL (^WebArchiveSubframeFilter)(WebFrame* subframe);
 #endif
 @end
 
-#if !TARGET_OS_IPHONE
+#if !TARGET_OS_IPHONE && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 @interface DOMWheelEvent (WebDOMWheelEventOperationsPrivate)
 - (NSEventPhase)_phase;
 - (NSEventPhase)_momentumPhase;

@@ -29,16 +29,33 @@
 #import "config.h"
 #import "FileSystem.h"
 
+#import "EmptyProtocolDefinitions.h"
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+enum {
+    NSFileWriteFileExistsError = 516
+};
+#endif
+
 @interface WebFileManagerDelegate : NSObject <NSFileManagerDelegate>
 @end
 
 @implementation WebFileManagerDelegate
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtURL:(NSURL *)srcURL toURL:(NSURL *)dstURL
+#else
+- (BOOL)fileManager:(NSFileManager *)fileManager shouldProceedAfterError:(NSError *)error movingItemAtPath:(NSString *)srcPath toPath:(NSString *)dstPath;
+#endif
 {
     UNUSED_PARAM(fileManager);
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     UNUSED_PARAM(srcURL);
-    UNUSED_PARAM(dstURL);    
+    UNUSED_PARAM(dstURL);
+#else
+    UNUSED_PARAM(srcPath);
+    UNUSED_PARAM(dstPath);
+#endif
     return error.code == NSFileWriteFileExistsError;
 }
 
@@ -85,9 +102,13 @@ bool moveFile(const String& oldPath, const String& newPath)
     // Overwrite existing files.
     auto manager = adoptNS([[NSFileManager alloc] init]);
     auto delegate = adoptNS([[WebFileManagerDelegate alloc] init]);
-    [manager setDelegate:delegate.get()];
+    [manager.get() setDelegate:delegate.get()];
     
-    return [manager moveItemAtURL:[NSURL fileURLWithPath:oldPath] toURL:[NSURL fileURLWithPath:newPath] error:nil];
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    return [manager.get() moveItemAtURL:[NSURL fileURLWithPath:(NSString*)oldPath] toURL:[NSURL fileURLWithPath:(NSString*)newPath] error:nil];
+#else
+    return [manager.get() moveItemAtPath:(NSString*)oldPath toPath:(NSString*)newPath error:nil];
+#endif
 }
 
 bool getVolumeFreeSpace(const String& path, uint64_t& freeSpace)

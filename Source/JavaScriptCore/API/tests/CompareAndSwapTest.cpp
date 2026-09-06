@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CompareAndSwapTest.h"
 
+#include <cstring>
 #include <functional>
 #include <stdio.h>
 #include <wtf/Atomics.h>

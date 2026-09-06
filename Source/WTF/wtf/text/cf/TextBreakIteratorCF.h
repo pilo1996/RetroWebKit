@@ -23,6 +23,8 @@
 #include <wtf/Optional.h>
 #include <wtf/spi/cf/CFStringSPI.h>
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+
 namespace WTF {
 
 class TextBreakIteratorCF {
@@ -89,3 +91,5 @@ private:
 };
 
 }
+
+#endif

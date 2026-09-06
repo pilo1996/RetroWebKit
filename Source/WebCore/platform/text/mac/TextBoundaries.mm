@@ -28,7 +28,14 @@
 
 #import <CoreFoundation/CFStringTokenizer.h>
 #import <Foundation/Foundation.h>
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
 #import <unicode/ubrk.h>
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
 #import <unicode/uchar.h>
 #import <unicode/ustring.h>
 #import <unicode/utypes.h>
@@ -251,7 +258,7 @@ int findNextWordFromIndex(StringView text, int position, bool forward)
             }
             StringView shortText(text.characters16() + startPosition, length);
             RetainPtr<NSAttributedString> attributedString = adoptNS([[NSAttributedString alloc] initWithString:shortText.createNSStringWithoutCopying().get()]);
-            int result = [attributedString nextWordFromIndex:length forward:forward];
+            int result = [attributedString.get() nextWordFromIndex:length forward:forward];
             if (result && (result != 1 || !U16_IS_TRAIL(shortText[0])))
                 return startPosition + result;
         }

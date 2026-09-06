@@ -26,9 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCore.h>
-#import <WebKitLegacy/DOMHTML.h>
-#import <WebKitLegacy/DOMRange.h>
+#import <WebKit/DOMCore.h>
+#import <WebKit/DOMHTML.h>
+#import <WebKit/DOMRange.h>
 
 @class WebArchive;
 @class WebFrame;
@@ -39,7 +39,7 @@
     @property webArchive
     @abstract A WebArchive representing the node and the children of the node.
 */
-@property (nonatomic, readonly, strong) WebArchive *webArchive;
+@property (nonatomic, readonly, retain) WebArchive *webArchive;
 
 @end
 
@@ -49,7 +49,7 @@
     @property webFrame
     @abstract The frame of the DOM document.
 */
-@property (nonatomic, readonly, strong) WebFrame *webFrame;
+@property (nonatomic, readonly, retain) WebFrame *webFrame;
 
 /*!
     @method URLWithAttributeString:
@@ -68,7 +68,7 @@
     @property webArchive
     @abstract A WebArchive representing the range.
 */
-@property (nonatomic, readonly, strong) WebArchive *webArchive;
+@property (nonatomic, readonly, retain) WebArchive *webArchive;
 
 /*!
     @property markupString
@@ -84,7 +84,7 @@
     @property contentFrame
     @abstract The content frame of the element.
 */
-@property (nonatomic, readonly, strong) WebFrame *contentFrame;
+@property (nonatomic, readonly, retain) WebFrame *contentFrame;
 
 @end
 
@@ -94,7 +94,7 @@
     @property contentFrame
     @abstract Returns the content frame of the element.
 */
-@property (nonatomic, readonly, strong) WebFrame *contentFrame;
+@property (nonatomic, readonly, retain) WebFrame *contentFrame;
 
 @end
 
@@ -106,6 +106,6 @@
     @discussion Returns non-nil only if the object represents a child frame
     such as if the data of the object is HTML content.
 */
-@property (nonatomic, readonly, strong) WebFrame *contentFrame;
+@property (nonatomic, readonly, retain) WebFrame *contentFrame;
 
 @end

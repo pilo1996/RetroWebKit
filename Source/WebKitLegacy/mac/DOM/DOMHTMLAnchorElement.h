@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class NSString;
 @class NSURL;
@@ -39,7 +39,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (copy) NSString *shape;
 @property (copy) NSString *target;
 @property (copy) NSString *type;
-@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_8);
+@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_6);
 @property (readonly, copy) NSString *text WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSURL *absoluteLinkURL WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *href;

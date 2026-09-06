@@ -38,6 +38,8 @@
 #define NULL ((void *)0)
 #endif
 
+#include <wtf/Platform.h>
+
 #import <stddef.h>
 #import <stdio.h>
 #import <fcntl.h>
@@ -81,16 +83,38 @@ typedef float CGFloat;
 #else
 #import <Foundation/Foundation.h>
 #endif
+
+#ifndef CF_ENUM
+#define CF_ENUM(_type, _name) _type _name; enum
+#endif
+#ifndef CF_OPTIONS
+#define CF_OPTIONS(_type, _name) _type _name; enum
+#endif
+#ifndef CF_ENUM_DEPRECATED
+#define CF_ENUM_DEPRECATED(_macIntro, _macDep, _iosIntro, _iosDep)
+#endif
+#ifndef CF_ENUM_AVAILABLE
+#define CF_ENUM_AVAILABLE(_mac, _ios)
+#endif
+#ifndef NS_ENUM   
+#define NS_ENUM(_type, _name) _type _name; enum
 #endif
 
-#include <wtf/Platform.h>
+#endif
+
 #include <wtf/ExportMacros.h>
 #include <runtime/JSExportMacros.h>
 #include <WebCore/PlatformExportMacros.h>
+#include <WebCore/EmptyProtocolDefinitions.h>
 
 /* Work around bug with C++ library that screws up Objective-C++ when exception support is disabled. */
+#ifdef __OBJC__
+#ifdef __cplusplus
+#include <ios>
+#endif
 #undef try
 #undef catch
+#endif
 
 #ifdef __cplusplus
 #include <wtf/FastMalloc.h>

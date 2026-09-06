@@ -33,9 +33,12 @@
 SOFT_LINK_FRAMEWORK(QTKit)
 SOFT_LINK_CONSTANT(QTKit, QTIndefiniteTime, QTTime)
 SOFT_LINK_CONSTANT(QTKit, QTZeroTime, QTTime)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 SOFT_LINK(QTKit, QTTimeCompare, NSComparisonResult, (QTTime time, QTTime otherTime), (time, otherTime))
 SOFT_LINK(QTKit, QTMakeTime, QTTime, (long long timeValue, long timeScale), (timeValue, timeScale))
 SOFT_LINK(QTKit, QTMakeTimeWithTimeInterval, QTTime, (NSTimeInterval timeInterval), (timeInterval))
+#pragma GCC diagnostic pop
 
 namespace WebCore {
 
@@ -53,12 +56,12 @@ QTTime toQTTime(const MediaTime& mediaTime)
     if (!mediaTime)
         return getQTZeroTime();
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     if (mediaTime.hasDoubleValue())
         return QTMakeTimeWithTimeInterval(mediaTime.toDouble());
     return QTMakeTime(mediaTime.timeValue(), mediaTime.timeScale());
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
 
 }

@@ -25,18 +25,32 @@
 
 #pragma once
 
+#if !USE(CFURLCONNECTION)
+
+#include "EmptyProtocolDefinitions.h"
+#include <wtf/RetainPtr.h>
+
 namespace WebCore {
 class ResourceHandle;
 }
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+@interface NSGZipDecoder : NSObject
+-(id)init;
+-(NSData*)decodeData:(NSData*)data;
+-(BOOL)isFinishedDecoding;
+@end
+#endif
 
 @protocol WebCoreResourceLoaderDelegate
 - (void)detachHandle;
 @end
 
-#if !USE(CFURLCONNECTION)
-
 @interface WebCoreResourceHandleAsDelegate : NSObject <NSURLConnectionDelegate, WebCoreResourceLoaderDelegate> {
     WebCore::ResourceHandle* m_handle;
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    RetainPtr<NSGZipDecoder> m_nsGZipDecoder;
+#endif
 }
 - (id)initWithHandle:(WebCore::ResourceHandle*)handle;
 @end

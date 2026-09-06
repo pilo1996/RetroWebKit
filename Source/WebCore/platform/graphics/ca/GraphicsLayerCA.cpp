@@ -76,6 +76,8 @@
 #pragma warning(disable: 4701)
 #endif
 
+#define HAVE_MODERN_QUARTZCORE !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+
 namespace WebCore {
 
 // The threshold width or height above which a tiled layer will be used. This should be
@@ -209,6 +211,7 @@ static void getTransformFunctionValue(const TransformOperation* transformOp, Tra
     }
 }
 
+#if HAVE_MODERN_QUARTZCORE
 static PlatformCAAnimation::ValueFunctionType getValueFunctionNameForTransformOperation(TransformOperation::OperationType transformType)
 {
     // Use literal strings to avoid link-time dependency on those symbols.
@@ -241,6 +244,7 @@ static PlatformCAAnimation::ValueFunctionType getValueFunctionNameForTransformOp
         return PlatformCAAnimation::NoValueFunction;
     }
 }
+#endif
 
 static ASCIILiteral propertyIdToString(AnimatedPropertyID property)
 {
@@ -301,7 +305,7 @@ bool GraphicsLayer::supportsLayerType(Type type)
     case Type::Scrolling:
         return true;
     case Type::Shape:
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && HAVE_MODERN_QUARTZCORE
         // FIXME: we can use shaper layers on Windows when PlatformCALayerCocoa::setShapePath() etc are implemented.
         return true;
 #else
@@ -319,7 +323,7 @@ bool GraphicsLayer::supportsBackgroundColorContent()
 
 bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
     return true;
 #else
     return false;
@@ -411,6 +415,9 @@ void GraphicsLayerCA::initialize(Type layerType)
         break;
     }
     m_layer = createPlatformCALayer(platformLayerType, this);
+#if !HAVE_MODERN_QUARTZCORE
+    setContentsOrientation(defaultContentsOrientation());
+#endif
     noteLayerPropertyChanged(ContentsScaleChanged);
 }
 
@@ -1109,6 +1116,50 @@ void GraphicsLayerCA::setContentsToImage(Image* image)
         m_uncorrectedContentsImage = WTFMove(newImage);
         m_pendingContentsImage = m_uncorrectedContentsImage;
 
+#if PLATFORM(MAC) && (__MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+        // Downscale the image if necessary; on 10.5 both width and height must not be greater than 2046
+        size_t width = CGImageGetWidth(m_uncorrectedContentsImage.get());
+        size_t height = CGImageGetHeight(m_uncorrectedContentsImage.get());
+        if (width > 2046 || height > 2046) {
+            float scale = 1.0f;
+            if (width > 2046) {
+                scale = 2046.0f / width;
+            }
+            if (height * scale > 2046.0f) {
+                scale = 2046.0f / height;
+            }
+            width *= scale;
+            height *= scale;
+
+            // create context, keeping original image properties
+            CGRect bounds = CGRectMake(0, 0, width, height);
+            CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(m_uncorrectedContentsImage.get());
+            switch (bitmapInfo & kCGBitmapAlphaInfoMask) {
+                case kCGImageAlphaFirst:
+                    bitmapInfo &= ~kCGImageAlphaFirst;                
+                    bitmapInfo |= kCGImageAlphaPremultipliedFirst;
+                    break;
+                case kCGImageAlphaLast:
+                    bitmapInfo &= ~kCGImageAlphaLast;
+                    bitmapInfo |= kCGImageAlphaPremultipliedLast;
+                    break;
+            }
+            size_t bytesPerRow = CGImageGetBytesPerRow(m_uncorrectedContentsImage.get());
+            auto bitmapData = adoptMallocPtr(static_cast<uint8_t*>(fastMalloc(bytesPerRow * bounds.size.height)));
+            auto bitmapContext = adoptCF(CGBitmapContextCreate(bitmapData.get(), bounds.size.width, bounds.size.height,
+                CGImageGetBitsPerComponent(m_uncorrectedContentsImage.get()),
+                bytesPerRow,
+                CGImageGetColorSpace(m_uncorrectedContentsImage.get()),
+                bitmapInfo));
+
+            if (bitmapContext) {
+                // draw image to context (resizing it)
+                CGContextDrawImage(bitmapContext.get(), bounds, m_uncorrectedContentsImage.get());
+                // extract resulting image from context
+                m_pendingContentsImage = adoptCF(CGBitmapContextCreateImage(bitmapContext.get()));
+            }
+        }
+#endif
         m_contentsLayerPurpose = ContentsLayerForImage;
         if (!m_contentsLayer)
             noteSublayersChanged();
@@ -1958,6 +2009,9 @@ void GraphicsLayerCA::updateGeometry(float pageScaleFactor, const FloatPoint& po
             cloneLayer->setAnchorPoint(scaledAnchorPoint);
         }
     }
+
+    // Contents transform may depend on height.
+    updateContentsTransform();
 }
 
 void GraphicsLayerCA::updateTransform()
@@ -2972,17 +3026,30 @@ bool GraphicsLayerCA::createTransformAnimationsFromKeyframes(const KeyframeValue
     int listIndex = validateTransformOperations(valueList, hasBigRotation);
     const TransformOperations* operations = (listIndex >= 0) ? &static_cast<const TransformAnimationValue&>(valueList.at(listIndex)).value() : 0;
 
+#if HAVE_MODERN_QUARTZCORE
+    bool supportsValueFunction = true;
+#else
+    bool supportsValueFunction = false;
+#endif
+    // We need to fall back to software animation if we don't have setValueFunction:, and
+    // we would need to animate each incoming transform function separately. This is the
+    // case if we have a rotation >= 180 or we have more than one transform function.
+    if ((hasBigRotation || (operations && operations->size() > 1)) && !supportsValueFunction)
+        return false;
+
     bool validMatrices = true;
 
     // If function lists don't match we do a matrix animation, otherwise we do a component hardware animation.
-    bool isMatrixAnimation = listIndex < 0;
+    // Also, we can't do component animation unless we have valueFunction, so we need to do matrix animation
+    // if that's not true as well.
+    bool isMatrixAnimation = listIndex < 0 || !supportsValueFunction;
     int numAnimations = isMatrixAnimation ? 1 : operations->size();
 
 #if PLATFORM(IOS)
     bool reverseAnimationList = false;
 #else
     bool reverseAnimationList = true;
-#if !PLATFORM(WIN)
+#if !PLATFORM(WIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         // Old versions of Core Animation apply animations in reverse order (<rdar://problem/7095638>) so we need to flip the list.
         // to be non-additive. For binary compatibility, the current version of Core Animation preserves this behavior for applications linked
         // on or before Snow Leopard.
@@ -3039,7 +3106,7 @@ bool GraphicsLayerCA::appendToUncommittedAnimations(const KeyframeValueList& val
             valuesOK = setFilterAnimationEndpoints(valueList, animation, caAnimation.get(), animationIndex, internalFilterPropertyIndex);
         }
         
-        ASSERT(valuesOK);
+        ASSERT_UNUSED(valuesOK, valuesOK);
 
         m_uncomittedAnimations.append(LayerPropertyAnimation(caAnimation.releaseNonNull(), animationName, valueList.property(), animationIndex, internalFilterPropertyIndex, timeOffset));
     }
@@ -3261,9 +3328,11 @@ bool GraphicsLayerCA::setTransformAnimationEndpoints(const KeyframeValueList& va
     // for a timing function. Even in the reversing animation case, the first keyframe provides the timing function.
     basicAnim->setTimingFunction(&timingFunctionForAnimationValue(valueList.at(0), *animation), !forwards);
 
+#if HAVE_MODERN_QUARTZCORE
     auto valueFunction = getValueFunctionNameForTransformOperation(transformOpType);
     if (valueFunction != PlatformCAAnimation::NoValueFunction)
         basicAnim->setValueFunction(valueFunction);
+#endif
 
     return true;
 }
@@ -3327,9 +3396,11 @@ bool GraphicsLayerCA::setTransformAnimationKeyframes(const KeyframeValueList& va
         
     keyframeAnim->setTimingFunctions(timingFunctions, !forwards);
 
+#if HAVE_MODERN_QUARTZCORE
     PlatformCAAnimation::ValueFunctionType valueFunction = getValueFunctionNameForTransformOperation(transformOpType);
     if (valueFunction != PlatformCAAnimation::NoValueFunction)
         keyframeAnim->setValueFunction(valueFunction);
+#endif
 
     return true;
 }
@@ -3691,6 +3762,15 @@ void GraphicsLayerCA::changeLayerTypeTo(PlatformCALayer::LayerType newLayerType)
 
     m_usingBackdropLayerType = isCustomBackdropLayerType(newLayerType);
 
+#if !HAVE_MODERN_QUARTZCORE
+    if (isTiledLayer) {
+        // Tiled layer has issues with flipped coordinates.
+        setContentsOrientation(CompositingCoordinatesTopDown);
+    } else {
+        setContentsOrientation(GraphicsLayerCA::defaultContentsOrientation());
+    }
+#endif
+
     m_layer->adoptSublayers(*oldLayer);
 
 #ifdef VISIBLE_TILE_WASH
@@ -3742,7 +3822,25 @@ void GraphicsLayerCA::changeLayerTypeTo(PlatformCALayer::LayerType newLayerType)
 
 GraphicsLayer::CompositingCoordinatesOrientation GraphicsLayerCA::defaultContentsOrientation() const
 {
+#if !HAVE_MODERN_QUARTZCORE
+    // Older QuartzCore does not support -geometryFlipped, so we manually flip the root
+    // layer geometry, and then flip the contents of each layer back so that the CTM for CG
+    // is unflipped, allowing it to do the correct font auto-hinting.
+    return CompositingCoordinatesBottomUp;
+#else
     return CompositingCoordinatesTopDown;
+#endif
+}
+
+void GraphicsLayerCA::updateContentsTransform()
+{
+#if !HAVE_MODERN_QUARTZCORE
+    if (contentsOrientation() == CompositingCoordinatesBottomUp) {
+        CGAffineTransform contentsTransform = CGAffineTransformMakeScale(1, -1);
+        contentsTransform = CGAffineTransformTranslate(contentsTransform, 0, -m_layer->bounds().size().height());
+        m_layer->setContentsTransform(contentsTransform);
+    }
+#endif
 }
 
 void GraphicsLayerCA::setupContentsLayer(PlatformCALayer* contentsLayer)
@@ -4030,6 +4128,11 @@ void GraphicsLayerCA::setOpacityInternal(float accumulatedOpacity)
 
 void GraphicsLayerCA::updateOpacityOnLayer()
 {
+#if !HAVE_MODERN_QUARTZCORE
+    // Distribute opacity either to our own layer or to our children. We pass in the 
+    // contribution from our parent(s).
+    distributeOpacity(parent() ? parent()->accumulatedOpacity() : 1);
+#else
     primaryLayer()->setOpacity(m_opacity);
 
     if (LayerMap* layerCloneMap = primaryLayerClones()) {
@@ -4040,6 +4143,7 @@ void GraphicsLayerCA::updateOpacityOnLayer()
             clone.value->setOpacity(m_opacity);
         }
     }
+#endif
 }
 
 void GraphicsLayerCA::setIsViewportConstrained(bool isViewportConstrained)

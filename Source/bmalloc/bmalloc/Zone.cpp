@@ -25,6 +25,7 @@
 
 #include "Sizes.h"
 #include "Zone.h"
+#include <cstring>
 
 namespace bmalloc {
 

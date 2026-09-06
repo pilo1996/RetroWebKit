@@ -136,6 +136,7 @@ my $currentSVNRevision;
 my $didLoadIPhoneSimulatorNotification;
 my $nmPath;
 my $osXVersion;
+my $targetOsXVersion;
 my $iosVersion;
 my $generateDsym;
 my $isCMakeBuild;
@@ -336,15 +337,20 @@ sub determineArchitecture
         if ($architecture) {
             chomp $architecture;
         } else {
-            if (not defined $xcodeSDK or $xcodeSDK =~ /^(\/$|macosx)/) {
-                my $supports64Bit = `sysctl -n hw.optional.x86_64`;
-                chomp $supports64Bit;
-                $architecture = 'x86_64' if $supports64Bit;
-            } elsif ($xcodeSDK =~ /^iphonesimulator/) {
-                $architecture = 'x86_64';
-            } elsif ($xcodeSDK =~ /^iphoneos/) {
-                $architecture = 'arm64';
+            if (isLeopard()) {
+                $architecture = `arch`;
+            } else {
+                if (not defined $xcodeSDK or $xcodeSDK =~ /^(\/$|macosx)/) {
+                    my $supports64Bit = `sysctl -n hw.optional.x86_64`;
+                    chomp $supports64Bit;
+                    $architecture = 'x86_64' if $supports64Bit;
+                } elsif ($xcodeSDK =~ /^iphonesimulator/) {
+                    $architecture = 'x86_64';
+                } elsif ($xcodeSDK =~ /^iphoneos/) {
+                    $architecture = 'arm64';
+                }
             }
+            chomp $architecture;
         }
     } elsif (isCMakeBuild()) {
         if (isCrossCompilation()) {
@@ -443,7 +449,7 @@ sub argumentsForConfiguration()
     push(@args, '--release') if ($configuration =~ "^Release");
     push(@args, '--ios-device') if (defined $xcodeSDK && $xcodeSDK =~ /^iphoneos/);
     push(@args, '--ios-simulator') if (defined $xcodeSDK && $xcodeSDK =~ /^iphonesimulator/);
-    push(@args, '--32-bit') if ($architecture ne "x86_64" and !isWin64());
+    push(@args, '--32-bit') if ($architecture ne "x86_64" and !isWin64() && $architecture ne "ppc64");
     push(@args, '--64-bit') if (isWin64());
     push(@args, '--gtk') if isGtk();
     push(@args, '--wpe') if isWPE();
@@ -865,6 +871,8 @@ sub passedArchitecture
 sub architecture()
 {
     determineArchitecture();
+    $architecture = 'ppc' if $architecture eq 'ppc7400';
+    $architecture = 'ppc' if $architecture eq 'ppc970';
     return $architecture;
 }
 
@@ -1427,6 +1435,56 @@ sub osXVersion()
     return $osXVersion;
 }
 
+sub determineTargetOSXVersion()
+{
+    return if $targetOsXVersion;
+
+    if (!isDarwin()) {
+        $targetOsXVersion = -1;
+        return;
+    }
+
+    my $version;
+    for my $i (0 .. $#ARGV) {
+        my $opt = $ARGV[$i];
+        if ($opt =~ /^TARGET_MAC_OS_X_VERSION_MAJOR=(.*)/i) {
+            $version = $1;
+        }
+    }
+
+    if (!$version) {
+        $targetOsXVersion = osXVersion();
+        return;
+    }
+
+    $targetOsXVersion = {
+            "major" => substr($version, 0, 2),
+            "minor" => substr($version, 2, 1),
+            "subminor" => substr($version, 3, 2),
+    };
+}
+
+sub targetOsXVersion()
+{
+    determineTargetOSXVersion();
+    return $targetOsXVersion;
+}
+
+sub isLeopard()
+{
+    return isDarwin() && osXVersion()->{"minor"} == 5;
+}
+
+sub isSnowLeopard()
+{
+    return isDarwin() && osXVersion()->{"minor"} == 6;
+}
+
+sub isLion()
+{
+    return isDarwin() && osXVersion()->{"minor"} == 7;
+}
+
 sub determineIOSVersion()
 {
     return if $iosVersion;
@@ -1553,18 +1611,19 @@ sub checkRequiredSystemConfig
 {
     if (isDarwin()) {
         chomp(my $productVersion = `sw_vers -productVersion`);
-        if (eval "v$productVersion" lt v10.10.5) {
+        if (eval "v$productVersion" lt v10.5) {
             print "*************************************************************\n";
-            print "OS X Yosemite v10.10.5 or later is required to build WebKit.\n";
+            print "Mac OS X Version 10.5.0 or later is required to build WebKit.\n";
             print "You have " . $productVersion . ", thus the build will most likely fail.\n";
             print "*************************************************************\n";
         }
         determineXcodeVersion();
-        if (eval "v$xcodeVersion" lt v7.0) {
+        if (eval "v$xcodeVersion" lt v3.1) {
             print "*************************************************************\n";
-            print "Xcode 7.0 or later is required to build WebKit.\n";
+            print "Xcode 3.1 or later is required to build WebKit.\n";
             print "You have an earlier version of Xcode, thus the build will\n";
-            print "most likely fail. The latest Xcode is available from the App Store.\n";
+            print "most likely fail.  The latest Xcode is available from the web:\n";
+            print "http://developer.apple.com/tools/xcode\n";
             print "*************************************************************\n";
         }
     }

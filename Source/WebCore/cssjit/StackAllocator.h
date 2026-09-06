@@ -55,6 +55,7 @@ public:
         : m_assembler(assembler)
         , m_offsetFromTop(0)
         , m_hasFunctionCallPadding(false)
+        , m_frameSize(0)
     {
     }
 
@@ -78,7 +79,9 @@ public:
     {
         RELEASE_ASSERT(!m_hasFunctionCallPadding);
         StackReferenceVector stackReferences;
+#if !CPU(PPC)
         unsigned oldOffsetFromTop = m_offsetFromTop;
+#endif
 #if CPU(ARM64)
         for (unsigned i = 0; i < count - 1; i += 2) {
             m_offsetFromTop += stackUnitInBytes();
@@ -92,10 +95,15 @@ public:
 #else
         for (unsigned i = 0; i < count; ++i) {
             m_offsetFromTop += stackUnitInBytes();
+#if CPU(PPC)
+            RELEASE_ASSERT(m_offsetFromTop <= 224);
+#endif
             stackReferences.append(StackReference(m_offsetFromTop));
         }
 #endif
+#if !CPU(PPC)
         m_assembler.addPtrNoFlags(JSC::MacroAssembler::TrustedImm32(-(m_offsetFromTop - oldOffsetFromTop)), JSC::MacroAssembler::stackPointerRegister);
+#endif
         return stackReferences;
     }
 
@@ -129,8 +137,14 @@ public:
     StackReference push(JSC::MacroAssembler::RegisterID registerID)
     {
         RELEASE_ASSERT(!m_hasFunctionCallPadding);
+#if !CPU(PPC)
         m_assembler.pushToSave(registerID);
+#endif
         m_offsetFromTop += stackUnitInBytes();
+#if CPU(PPC)
+        RELEASE_ASSERT(m_offsetFromTop <= 224);
+        m_assembler.m_assembler.stw(registerID, JSC::MacroAssembler::stackPointerRegister, -m_offsetFromTop);
+#endif
         return StackReference(m_offsetFromTop);
     }
 
@@ -165,8 +179,13 @@ public:
         RELEASE_ASSERT(stackReference == m_offsetFromTop);
         RELEASE_ASSERT(!m_hasFunctionCallPadding);
         RELEASE_ASSERT(m_offsetFromTop >= stackUnitInBytes());
+#if CPU(PPC)
+        m_assembler.m_assembler.lwz(registerID, JSC::MacroAssembler::stackPointerRegister, -m_offsetFromTop);
+#endif
         m_offsetFromTop -= stackUnitInBytes();
+#if !CPU(PPC)
         m_assembler.popToRestore(registerID);
+#endif
     }
 
     void popAndDiscardUpTo(StackReference stackReference)
@@ -175,7 +194,9 @@ public:
         RELEASE_ASSERT(positionBeforeStackReference < m_offsetFromTop);
 
         unsigned stackDelta = m_offsetFromTop - positionBeforeStackReference;
+#if !CPU(PPC)
         m_assembler.addPtr(JSC::MacroAssembler::TrustedImm32(stackDelta), JSC::MacroAssembler::stackPointerRegister);
+#endif
         m_offsetFromTop -= stackDelta;
     }
 
@@ -188,6 +209,18 @@ public:
             m_hasFunctionCallPadding = true;
             m_assembler.addPtrNoFlags(JSC::MacroAssembler::TrustedImm32(-stackUnitInBytes()), JSC::MacroAssembler::stackPointerRegister);
         }
+#elif CPU(PPC)
+        // Transform the part of the red zone we were using until now into a stack frame
+        RELEASE_ASSERT(!m_frameSize);
+        m_frameSize = m_offsetFromTop
+                           + 24 /* linkage area */
+                           + 8 /* parameter area for up to 2 arguments */;
+        // Frames should be 16-byte aligned. Round up if we're short.
+        if (m_offsetFromTop & 15) {
+            m_frameSize = (((m_frameSize >> 4) + 1) << 4);
+        }
+        m_assembler.m_assembler.x_li32(JSC::PPCRegisters::r0, -(m_frameSize));
+        m_assembler.m_assembler.stwux(JSC::MacroAssembler::stackPointerRegister, JSC::MacroAssembler::stackPointerRegister, JSC::PPCRegisters::r0); 
 #endif
     }
 
@@ -198,6 +231,12 @@ public:
             m_assembler.addPtrNoFlags(JSC::MacroAssembler::TrustedImm32(stackUnitInBytes()), JSC::MacroAssembler::stackPointerRegister);
             m_hasFunctionCallPadding = false;
         }
+#elif CPU(PPC)
+        // Deconstruct the stack frame and continue working in the red zone
+        RELEASE_ASSERT(m_frameSize);
+        m_assembler.m_assembler.x_li32(JSC::PPCRegisters::r0, m_frameSize);
+        m_assembler.m_assembler.add(JSC::MacroAssembler::stackPointerRegister, JSC::MacroAssembler::stackPointerRegister, JSC::PPCRegisters::r0);
+        m_frameSize = 0;
 #endif
     }
 
@@ -255,8 +294,13 @@ private:
 
     unsigned offsetToStackReference(StackReference stackReference)
     {
+#if !CPU(PPC)
         RELEASE_ASSERT(m_offsetFromTop >= stackReference);
         return m_offsetFromTop - stackReference;
+#else
+        RELEASE_ASSERT(stackReference <= 224);
+        return 0 - stackReference;
+#endif
     }
 
     void reset()
@@ -268,6 +312,7 @@ private:
     JSC::MacroAssembler& m_assembler;
     unsigned m_offsetFromTop;
     bool m_hasFunctionCallPadding;
+    unsigned m_frameSize;
 };
 
 } // namespace WebCore

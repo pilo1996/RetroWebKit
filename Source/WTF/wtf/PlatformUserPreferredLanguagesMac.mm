@@ -91,7 +91,7 @@ static String httpStyleLanguageCode(NSString *language)
     CFBundleGetLocalizationInfoForLocalization((CFStringRef)language, &languageCode, &regionCode, &scriptCode, &stringEncoding);
     RetainPtr<CFStringRef> preferredLanguageCode = adoptCF(CFBundleCopyLocalizationForLocalizationInfo(languageCode, regionCode, scriptCode, stringEncoding));
     if (preferredLanguageCode)
-        language = (NSString *)preferredLanguageCode.get();
+        language = const_cast<NSString *>((const NSString *)preferredLanguageCode.get());
 
     // Turn a '_' into a '-' if it appears after a 2-letter language code
     if ([language length] >= 3 && [language characterAtIndex:2] == '_') {
@@ -106,8 +106,8 @@ static String httpStyleLanguageCode(NSString *language)
 Vector<String> platformUserPreferredLanguages()
 {
 #if PLATFORM(MAC)
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static std::once_flag onceToken;
+    std::call_once(onceToken, []{
         [[NSDistributedNotificationCenter defaultCenter] addObserver:[WTFLanguageChangeObserver self] selector:@selector(languagePreferencesDidChange:) name:@"AppleLanguagePreferencesChangedNotification" object:nil];
     });
 #endif
@@ -124,7 +124,7 @@ Vector<String> platformUserPreferredLanguages()
             userPreferredLanguages.append("en");
         else {
             for (CFIndex i = 0; i < languageCount; i++)
-                userPreferredLanguages.append(httpStyleLanguageCode((NSString *)CFArrayGetValueAtIndex(languages.get(), i)));
+                userPreferredLanguages.append(httpStyleLanguageCode((const NSString *)CFArrayGetValueAtIndex(languages.get(), i)));
         }
     }
 

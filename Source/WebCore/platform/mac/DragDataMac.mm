@@ -165,7 +165,9 @@ bool DragData::containsFiles() const
     platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
     for (auto& type : types) {
         auto cfType = type.createCFString();
-        for (NSString *fileType in supportedFileTypes) {
+        NSEnumerator *enumerator = [supportedFileTypes objectEnumerator];
+        NSString *fileType;
+        while ((fileType = [enumerator nextObject])) {
             if (UTTypeConformsTo(cfType.get(), (CFStringRef)fileType))
                 return true;
         }

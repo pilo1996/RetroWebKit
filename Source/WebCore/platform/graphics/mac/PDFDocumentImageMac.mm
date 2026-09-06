@@ -56,7 +56,7 @@ void PDFDocumentImage::createPDFDocument()
 
 void PDFDocumentImage::computeBoundsForCurrentPage()
 {
-    PDFPage *pdfPage = [m_document pageAtIndex:0];
+    PDFPage *pdfPage = [m_document.get() pageAtIndex:0];
 
     m_cropBox = [pdfPage boundsForBox:kPDFDisplayBoxCropBox];
     m_rotationDegrees = [pdfPage rotation];
@@ -64,7 +64,7 @@ void PDFDocumentImage::computeBoundsForCurrentPage()
 
 unsigned PDFDocumentImage::pageCount() const
 {
-    return [m_document pageCount];
+    return [m_document.get() pageCount];
 }
 
 void PDFDocumentImage::drawPDFPage(GraphicsContext& context)
@@ -76,10 +76,10 @@ void PDFDocumentImage::drawPDFPage(GraphicsContext& context)
     bool allowsSmoothing = CGContextGetAllowsFontSmoothing(context.platformContext());
     bool allowsSubpixelQuantization = CGContextGetAllowsFontSubpixelQuantization(context.platformContext());
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [[m_document pageAtIndex:0] drawWithBox:kPDFDisplayBoxCropBox];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
+    [[m_document.get() pageAtIndex:0] drawWithBox:kPDFDisplayBoxCropBox];
+CLANG_PRAGMA(diagnostic pop)
 
     CGContextSetAllowsFontSmoothing(context.platformContext(), allowsSmoothing);
     CGContextSetAllowsFontSubpixelQuantization(context.platformContext(), allowsSubpixelQuantization);

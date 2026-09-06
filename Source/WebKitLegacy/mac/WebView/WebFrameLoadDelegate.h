@@ -28,7 +28,7 @@
 
 #import <Foundation/Foundation.h>
 #import <JavaScriptCore/JSBase.h>
-#import <WebKitLegacy/WebKitAvailability.h>
+#import <WebKit/WebKitAvailability.h>
 
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>

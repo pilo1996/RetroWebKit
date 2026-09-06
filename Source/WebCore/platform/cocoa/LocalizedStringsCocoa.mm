@@ -50,7 +50,7 @@ NSString *localizedNSString(NSString *key)
 String localizedString(const char* key)
 {
     RetainPtr<CFStringRef> keyString = adoptCF(CFStringCreateWithCStringNoCopy(0, key, kCFStringEncodingUTF8, kCFAllocatorNull));
-    return localizedNSString((NSString *)keyString.get());
+    return localizedNSString((const NSString *)keyString.get());
 }
 
 String copyImageUnknownFileLabel()
@@ -66,8 +66,12 @@ String contextMenuItemTagSearchInSpotlight()
 
 String contextMenuItemTagSearchWeb()
 {
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
     auto searchProviderName = adoptCF(wkCopyDefaultSearchProviderDisplayName());
     return formatLocalizedString(WEB_UI_STRING("Search with %@", "Search with search provider context menu item with provider name inserted"), searchProviderName.get());
+#else
+    return WEB_UI_STRING("Search with Google", "Search with Google context menu item");
+#endif
 }
 
 String contextMenuItemTagShowFonts()

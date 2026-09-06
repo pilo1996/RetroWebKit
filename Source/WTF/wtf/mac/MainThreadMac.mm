@@ -31,8 +31,11 @@
 
 #import <CoreFoundation/CoreFoundation.h>
 #import <Foundation/NSThread.h>
+#if COMPILER_SUPPORTS(BLOCKS)
 #import <dispatch/dispatch.h>
+#endif
 #import <stdio.h>
+#import <wtf/AutodrainedPool.h>
 #import <wtf/Assertions.h>
 #import <wtf/HashSet.h>
 #import <wtf/Threading.h>
@@ -88,7 +91,16 @@ void initializeMainThreadPlatform()
 void initializeMainThreadToProcessMainThreadPlatform()
 {
     if (!pthread_main_np())
+#if COMPILER(GCC) && !COMPILER(CLANG)
+    {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#endif
         NSLog(@"WebKit Threading Violation - initial use of WebKit from a secondary thread.");
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+    }
+#endif
 
     ASSERT(!staticMainThreadCaller);
     staticMainThreadCaller = [[JSWTFMainThreadCaller alloc] init];
@@ -96,6 +108,13 @@ void initializeMainThreadToProcessMainThreadPlatform()
     mainThreadEstablishedAsPthreadMain = true;
     mainThreadPthread = 0;
     mainThreadNSThread = nil;
+
+    if (![NSThread isMultiThreaded]) {
+        [NSThread detachNewThreadSelector:@selector(class)
+                                 toTarget:[NSObject class]
+                               withObject:nil];
+        ASSERT([NSThread isMultiThreaded]);
+    }
 }
 #endif // !USE(WEB_THREAD)
 
@@ -104,7 +123,8 @@ static void timerFired(CFRunLoopTimerRef timer, void*)
     CFRelease(timer);
     isTimerPosted = false;
 
-    @autoreleasepool {
+    {
+        AutodrainedPool pool;        
         WTF::dispatchFunctionsFromMainThread();
     }
 }
@@ -139,6 +159,7 @@ void scheduleDispatchFunctionsOnMainThread()
     [staticMainThreadCaller performSelector:@selector(call) onThread:mainThreadNSThread withObject:nil waitUntilDone:NO];
 }
 
+#if COMPILER_SUPPORTS(BLOCKS)
 void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
 {
 #if USE(WEB_THREAD)
@@ -149,6 +170,7 @@ void callOnWebThreadOrDispatchAsyncOnMainThread(void (^block)())
 #endif
     dispatch_async(dispatch_get_main_queue(), block);
 }
+#endif
 
 #if USE(WEB_THREAD)
 static bool webThreadIsUninitializedOrLockedOrDisabled()

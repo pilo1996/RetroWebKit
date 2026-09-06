@@ -141,6 +141,8 @@ Notification* core(WebNotification *notification)
             return @"ltr";
         case Notification::Direction::Rtl:
             return @"rtl";
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
     }
 #else
     return nil;

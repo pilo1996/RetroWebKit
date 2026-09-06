@@ -27,10 +27,13 @@
 #define NetworkExtensionContentFilter_h
 
 #include "PlatformContentFilter.h"
-#include <objc/NSObjCRuntime.h>
 #include <wtf/Compiler.h>
-#include <wtf/OSObjectPtr.h>
 #include <wtf/RetainPtr.h>
+
+#if HAVE(NETWORK_EXTENSION)
+
+#include <objc/NSObjCRuntime.h>
+#include <wtf/OSObjectPtr.h>
 
 enum NEFilterSourceStatus : NSInteger;
 
@@ -70,5 +73,7 @@ private:
 };
 
 } // namespace WebCore
+
+#endif
 
 #endif // NetworkExtensionContentFilter_h

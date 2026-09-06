@@ -26,8 +26,8 @@
 #ifndef VideoTextureCopierCV_h
 #define VideoTextureCopierCV_h
 
-#import "GraphicsContext3D.h"
-#import <wtf/UnsafePointer.h>
+#include "GraphicsContext3D.h"
+#include <wtf/UnsafePointer.h>
 
 typedef struct __CVBuffer* CVImageBufferRef;
 typedef struct __CVBuffer* CVPixelBufferRef;

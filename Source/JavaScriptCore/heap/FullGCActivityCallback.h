@@ -46,7 +46,7 @@ protected:
     bool m_didGCRecently { false };
 };
 
-inline RefPtr<FullGCActivityCallback> GCActivityCallback::createFullTimer(Heap* heap)
+ALWAYS_INLINE RefPtr<FullGCActivityCallback> GCActivityCallback::createFullTimer(Heap* heap)
 {
     return s_shouldCreateGCTimer ? adoptRef(new FullGCActivityCallback(heap)) : nullptr;
 }

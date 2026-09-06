@@ -26,6 +26,8 @@
 #import "config.h"
 #import "MediaSampleAVFObjC.h"
 
+#if USE(AVFOUNDATION)
+
 #import "PixelBufferConformerCV.h"
 #import <runtime/JSCInlines.h>
 #import <runtime/TypedArrayInlines.h>
@@ -297,3 +299,5 @@ RefPtr<JSC::Uint8ClampedArray> MediaSampleAVFObjC::getRGBAImageData() const
 }
 
 }
+
+#endif

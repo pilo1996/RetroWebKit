@@ -84,10 +84,10 @@ using namespace WebCore;
 {
     NSRect scrollFrame = NSMakeRect(0, 0, 100, 100);
     NSRect tableFrame = NSZeroRect;    
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     tableFrame.size = [NSScrollView contentSizeForFrameSize:scrollFrame.size hasHorizontalScroller:NO hasVerticalScroller:YES borderType:NSNoBorder];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
     NSTableColumn *column = [[NSTableColumn alloc] init];
     [column setWidth:tableFrame.size.width];
     [column setEditable:NO];
@@ -131,10 +131,10 @@ using namespace WebCore;
 
     NSRect windowFrame;
     NSPoint wordStart = topLeft;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     windowFrame.origin = [[_view window] convertBaseToScreen:[_htmlView convertPoint:wordStart toView:nil]];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
     windowFrame.size.height = numberToShow * [_tableView rowHeight] + (numberToShow + 1) * [_tableView intercellSpacing].height;
     windowFrame.origin.y -= windowFrame.size.height;
     NSDictionary *attributes = [NSDictionary dictionaryWithObjectsAndKeys:[NSFont systemFontOfSize:12.0f], NSFontAttributeName, nil];
@@ -149,10 +149,10 @@ using namespace WebCore;
     }
     windowFrame.size.width = 100;
     if (maxIndex >= 0) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         maxWidth = ceilf([NSScrollView frameSizeForContentSize:NSMakeSize(maxWidth, 100.0f) hasHorizontalScroller:NO hasVerticalScroller:YES borderType:NSNoBorder].width);
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         maxWidth = ceilf([NSWindow frameRectForContentRect:NSMakeRect(0.0f, 0.0f, maxWidth, 100.0f) styleMask:NSWindowStyleMaskBorderless].size.width);
         maxWidth += 5.0f;
         windowFrame.size.width = std::max(maxWidth, windowFrame.size.width);

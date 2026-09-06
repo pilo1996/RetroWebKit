@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebBackForwardList.h>
+#import <WebKit/WebBackForwardList.h>
 #import <wtf/Ref.h>
 
 class BackForwardList;

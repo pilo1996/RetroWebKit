@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
-#import <WebKitLegacy/DOMCore.h>
-#import <WebKitLegacy/DOMDocument.h>
-#import <WebKitLegacy/DOMRangeException.h>
+#import <WebKit/DOMObject.h>
+#import <WebKit/DOMCore.h>
+#import <WebKit/DOMDocument.h>
+#import <WebKit/DOMRangeException.h>
 
 @class DOMDocumentFragment;
 @class DOMNode;
@@ -46,12 +46,12 @@ enum {
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMRange : DOMObject
-@property (readonly, strong) DOMNode *startContainer;
+@property (readonly, retain) DOMNode *startContainer;
 @property (readonly) int startOffset;
-@property (readonly, strong) DOMNode *endContainer;
+@property (readonly, retain) DOMNode *endContainer;
 @property (readonly) int endOffset;
 @property (readonly) BOOL collapsed;
-@property (readonly, strong) DOMNode *commonAncestorContainer;
+@property (readonly, retain) DOMNode *commonAncestorContainer;
 @property (readonly, copy) NSString *text WEBKIT_AVAILABLE_MAC(10_5);
 
 - (void)setStart:(DOMNode *)refNode offset:(int)offset WEBKIT_AVAILABLE_MAC(10_5);

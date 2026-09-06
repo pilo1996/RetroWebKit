@@ -53,15 +53,15 @@
 #import <wtf/SoftLinking.h>
 
 #if PLATFORM(IOS)
-SOFT_LINK_PRIVATE_FRAMEWORK(WebKitLegacy)
+SOFT_LINK_PRIVATE_FRAMEWORK(WebKit)
 #endif
 
 #if PLATFORM(MAC)
-SOFT_LINK_FRAMEWORK_IN_UMBRELLA(WebKit, WebKitLegacy)
+SOFT_LINK_FRAMEWORK_IN_UMBRELLA(WebKit, WebKit)
 #endif
 
-// FIXME: Get rid of this and change NSAttributedString conversion so it doesn't use WebKitLegacy (cf. rdar://problem/30597352).
-SOFT_LINK(WebKitLegacy, _WebCreateFragment, void, (WebCore::Document& document, NSAttributedString *string, WebCore::FragmentAndResources& result), (document, string, result))
+// FIXME: Get rid of this and change NSAttributedString conversion so it doesn't use WebKit (cf. rdar://problem/30597352).
+SOFT_LINK(WebKit, _WebCreateFragment, void, (WebCore::Document& document, NSAttributedString *string, WebCore::FragmentAndResources& result), (document, string, result))
 
 namespace WebCore {
 
@@ -73,16 +73,16 @@ void Editor::getTextDecorationAttributesRespectingTypingStyle(const RenderStyle&
         if (value && value->isValueList()) {
             CSSValueList& valueList = downcast<CSSValueList>(*value);
             if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueLineThrough).ptr()))
-                [result setObject:@(NSUnderlineStyleSingle) forKey:NSStrikethroughStyleAttributeName];
+                [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
             if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueUnderline).ptr()))
-                [result setObject:@(NSUnderlineStyleSingle) forKey:NSUnderlineStyleAttributeName];
+                [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
         }
     } else {
         int decoration = style.textDecorationsInEffect();
         if (decoration & TextDecorationLineThrough)
-            [result setObject:@(NSUnderlineStyleSingle) forKey:NSStrikethroughStyleAttributeName];
+            [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
         if (decoration & TextDecorationUnderline)
-            [result setObject:@(NSUnderlineStyleSingle) forKey:NSUnderlineStyleAttributeName];
+            [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
     }
 }
 
@@ -96,23 +96,23 @@ RetainPtr<NSDictionary> Editor::fontAttributesForSelectionStart() const
     RetainPtr<NSMutableDictionary> attributes = adoptNS([[NSMutableDictionary alloc] init]);
 
     if (auto ctFont = style->fontCascade().primaryFont().getCTFont())
-        [attributes setObject:(id)ctFont forKey:NSFontAttributeName];
+        [attributes.get() setObject:(const objc_object*)ctFont forKey:NSFontAttributeName];
 
     // FIXME: Why would we not want to retrieve these attributes on iOS?
 #if PLATFORM(MAC)
     if (style->visitedDependentColor(CSSPropertyBackgroundColor).isVisible())
-        [attributes setObject:nsColor(style->visitedDependentColor(CSSPropertyBackgroundColor)) forKey:NSBackgroundColorAttributeName];
+        [attributes.get() setObject:nsColor(style->visitedDependentColor(CSSPropertyBackgroundColor)) forKey:NSBackgroundColorAttributeName];
 
     if (style->visitedDependentColor(CSSPropertyColor).isValid() && !Color::isBlackColor(style->visitedDependentColor(CSSPropertyColor)))
-        [attributes setObject:nsColor(style->visitedDependentColor(CSSPropertyColor)) forKey:NSForegroundColorAttributeName];
+        [attributes.get() setObject:nsColor(style->visitedDependentColor(CSSPropertyColor)) forKey:NSForegroundColorAttributeName];
 
     const ShadowData* shadowData = style->textShadow();
     if (shadowData) {
         RetainPtr<NSShadow> platformShadow = adoptNS([[NSShadow alloc] init]);
-        [platformShadow setShadowOffset:NSMakeSize(shadowData->x(), shadowData->y())];
-        [platformShadow setShadowBlurRadius:shadowData->radius()];
-        [platformShadow setShadowColor:nsColor(shadowData->color())];
-        [attributes setObject:platformShadow.get() forKey:NSShadowAttributeName];
+        [platformShadow.get() setShadowOffset:NSMakeSize(shadowData->x(), shadowData->y())];
+        [platformShadow.get() setShadowBlurRadius:shadowData->radius()];
+        [platformShadow.get() setShadowColor:nsColor(shadowData->color())];
+        [attributes.get() setObject:platformShadow.get() forKey:NSShadowAttributeName];
     }
 
     int superscriptInt = 0;
@@ -134,7 +134,7 @@ RetainPtr<NSDictionary> Editor::fontAttributesForSelectionStart() const
         break;
     }
     if (superscriptInt)
-        [attributes setObject:@(superscriptInt) forKey:NSSuperscriptAttributeName];
+        [attributes.get() setObject:[NSNumber numberWithInt:superscriptInt] forKey:NSSuperscriptAttributeName];
 #endif
 
     getTextDecorationAttributesRespectingTypingStyle(*style, attributes.get());
@@ -278,7 +278,7 @@ RefPtr<SharedBuffer> Editor::dataInRTFDFormat(NSAttributedString *string)
         return nullptr;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    return SharedBuffer::create([string RTFDFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
+    return SharedBuffer::create([string RTFDFromRange:NSMakeRange(0, length) documentAttributes:[NSDictionary dictionary]]);
     END_BLOCK_OBJC_EXCEPTIONS;
 
     return nullptr;
@@ -291,7 +291,7 @@ RefPtr<SharedBuffer> Editor::dataInRTFFormat(NSAttributedString *string)
         return nullptr;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    return SharedBuffer::create([string RTFFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
+    return SharedBuffer::create([string RTFFromRange:NSMakeRange(0, length) documentAttributes:[NSDictionary dictionary]]);
     END_BLOCK_OBJC_EXCEPTIONS;
 
     return nullptr;

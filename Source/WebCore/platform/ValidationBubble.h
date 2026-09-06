@@ -33,7 +33,7 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 OBJC_CLASS NSPopover;
 #elif PLATFORM(IOS)
 OBJC_CLASS UIViewController;
@@ -82,7 +82,7 @@ private:
     PlatformView* m_view;
     String m_message;
     double m_fontSize { 0 };
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<NSPopover> m_popover;
 #elif PLATFORM(IOS)
     RetainPtr<UIViewController> m_popoverController;

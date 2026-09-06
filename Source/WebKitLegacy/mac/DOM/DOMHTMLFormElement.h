@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLCollection;
 @class NSString;
@@ -37,7 +37,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (copy) NSString *method;
 @property (copy) NSString *name;
 @property (copy) NSString *target;
-@property (readonly, strong) DOMHTMLCollection *elements;
+@property (readonly, retain) DOMHTMLCollection *elements;
 @property (readonly) int length;
 
 - (void)submit;

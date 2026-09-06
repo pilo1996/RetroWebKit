@@ -53,7 +53,11 @@ using namespace HTMLNames;
 AccessibilityTable::AccessibilityTable(RenderObject* renderer)
     : AccessibilityRenderObject(renderer)
     , m_headerContainer(nullptr)
+#if ACCESSIBILITY_TABLES
     , m_isExposableThroughAccessibility(true)
+#else
+    , m_isExposableThroughAccessibility(false)
+#endif
 {
 }
 
@@ -64,7 +68,11 @@ AccessibilityTable::~AccessibilityTable()
 void AccessibilityTable::init()
 {
     AccessibilityRenderObject::init();
+#if ACCESSIBILITY_TABLES
     m_isExposableThroughAccessibility = computeIsTableExposableThroughAccessibility();
+#else
+    m_isExposableThroughAccessibility = false;
+#endif
 }
 
 Ref<AccessibilityTable> AccessibilityTable::create(RenderObject* renderer)

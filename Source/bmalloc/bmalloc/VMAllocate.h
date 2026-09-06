@@ -36,7 +36,11 @@
 #include <unistd.h>
 
 #if BOS(DARWIN)
+#include <mach/mach_init.h>
+#include <mach/vm_map.h>
+#if (BPLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
 #include <mach/vm_page_size.h>
+#endif
 #include <mach/vm_statistics.h>
 #endif
 
@@ -116,8 +120,15 @@ inline void vmValidatePhysical(void* p, size_t vmSize)
 inline void* tryVMAllocate(size_t vmSize)
 {
     vmValidate(vmSize);
+#if BOS(DARWIN)
+    void* result = static_cast<char*>(nullptr) + vmPageSize();
+    kern_return_t error = vm_map(current_task(), reinterpret_cast<vm_address_t*>(&result), vmSize, 0, VM_FLAGS_ANYWHERE | BMALLOC_VM_TAG, MEMORY_OBJECT_NULL, 0, FALSE, VM_PROT_DEFAULT, VM_PROT_ALL, VM_INHERIT_DEFAULT);
+    if (error) {
+        reportAssertionFailureWithMessage(__FILE__, __LINE__, __PRETTY_FUNCTION__, "vm_allocate failed allocating %lu bytes with return code %d", vmSize, error);
+#else
     void* result = mmap(0, vmSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, BMALLOC_VM_TAG, 0);
     if (result == MAP_FAILED) {
+#endif
         logVMFailure();
         return nullptr;
     }
@@ -134,13 +145,21 @@ inline void* vmAllocate(size_t vmSize)
 inline void vmDeallocate(void* p, size_t vmSize)
 {
     vmValidate(p, vmSize);
+#if BOS(DARWIN) 
+    vm_deallocate(current_task(), reinterpret_cast<vm_address_t>(p), vmSize);
+#else
     munmap(p, vmSize);
+#endif
 }
 
 inline void vmRevokePermissions(void* p, size_t vmSize)
 {
     vmValidate(p, vmSize);
+#if BOS(DARWIN)
+    vm_protect(current_task(), reinterpret_cast<vm_address_t>(p), vmSize, FALSE, VM_PROT_NONE);
+#else
     mprotect(p, vmSize, PROT_NONE);
+#endif
 }
 
 // Allocates vmSize bytes at a specified power-of-two alignment.
@@ -151,6 +170,17 @@ inline void* tryVMAllocate(size_t vmAlignment, size_t vmSize)
     vmValidate(vmSize);
     vmValidate(vmAlignment);
 
+#if BOS(DARWIN)
+    void* p = static_cast<char*>(nullptr) + vmPageSize();
+    kern_return_t error = vm_map(current_task(), reinterpret_cast<vm_address_t*>(&p), vmSize, vmAlignment - 1, VM_FLAGS_ANYWHERE | BMALLOC_VM_TAG, MEMORY_OBJECT_NULL, 0, FALSE, VM_PROT_DEFAULT, VM_PROT_ALL, VM_INHERIT_DEFAULT);
+    if (error) {
+        reportAssertionFailureWithMessage(__FILE__, __LINE__, __PRETTY_FUNCTION__, "vm_map failed allocating %lu bytes, alignment %lu, with return code %d", vmSize, vmAlignment, error);
+        logVMFailure();
+        return nullptr;
+    }
+    
+    return p;
+#else
     size_t mappedSize = vmAlignment + vmSize;
     if (mappedSize < vmAlignment || mappedSize < vmSize) // Check for overflow
         return nullptr;
@@ -172,6 +202,7 @@ inline void* tryVMAllocate(size_t vmAlignment, size_t vmSize)
         vmDeallocate(alignedEnd, rightExtra);
 
     return aligned;
+#endif
 }
 
 inline void* vmAllocate(size_t vmAlignment, size_t vmSize)
@@ -181,11 +212,18 @@ inline void* vmAllocate(size_t vmAlignment, size_t vmSize)
     return result;
 }
 
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
 inline void vmDeallocatePhysicalPages(void* p, size_t vmSize)
 {
     vmValidatePhysical(p, vmSize);
-#if BOS(DARWIN)
+#if BOS(DARWIN) && defined(MADV_FREE_REUSABLE)
     SYSCALL(madvise(p, vmSize, MADV_FREE_REUSABLE));
+// this does work but is too slow to be usable
+#elif BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // mmap()'ing the same range again will throw away the old mapping, deallocating its pages
+    // internally mmap() calls vm_map() passing VM_FLAGS_OVERWRITE, but that flag isn't available for user access
+    RELEASE_BASSERT(mmap(p, vmSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, BMALLOC_VM_TAG, 0) == p);
+// on 10.5 calling madvise is just a waste of time; additionally despite of being defined in the system headers the kernel doesn't know MADV_FREE and returns an error when being called with this value
 #else
     SYSCALL(madvise(p, vmSize, MADV_DONTNEED));
 #endif
@@ -194,10 +232,14 @@ inline void vmDeallocatePhysicalPages(void* p, size_t vmSize)
 inline void vmAllocatePhysicalPages(void* p, size_t vmSize)
 {
     vmValidatePhysical(p, vmSize);
-#if BOS(DARWIN)
+#if BOS(DARWIN) && defined(MADV_FREE_REUSE)
     SYSCALL(madvise(p, vmSize, MADV_FREE_REUSE));
-#else
+// on 10.5 calling madvise is just a waste of time
+#elif !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     SYSCALL(madvise(p, vmSize, MADV_NORMAL));
+#else
+    UNUSED(p);
+    UNUSED(vmSize);
 #endif
 }
 
@@ -224,6 +266,7 @@ inline void vmAllocatePhysicalPagesSloppy(void* p, size_t size)
 
     vmAllocatePhysicalPages(begin, end - begin);
 }
+#endif
 
 } // namespace bmalloc
 

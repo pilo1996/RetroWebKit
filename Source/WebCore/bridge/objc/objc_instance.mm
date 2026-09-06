@@ -32,6 +32,7 @@
 #import "WebScriptObjectProtocol.h"
 #import "runtime/FunctionPrototype.h"
 #import "runtime_method.h"
+#import <objc/objc-auto.h>
 #import <runtime/Error.h>
 #import <runtime/JSLock.h>
 #import <runtime/ObjectPrototype.h>
@@ -133,10 +134,21 @@ ObjcInstance::~ObjcInstance()
     [pool drain];
 }
 
+static NSAutoreleasePool* allocateAutoReleasePool()
+{
+    // If GC is enabled an autorelease pool is unnecessary, and the
+    // pool cannot be protected from GC so may be collected leading
+    // to a crash when we try to drain the release pool.
+    if (objc_collectingEnabled())
+        return nil;
+
+    return [[NSAutoreleasePool alloc] init];
+}
+
 void ObjcInstance::virtualBegin()
 {
     if (!_pool)
-        _pool = [[NSAutoreleasePool alloc] init];
+        _pool = allocateAutoReleasePool();
     _beginCount++;
 }
 
@@ -236,13 +248,16 @@ JSC::JSValue ObjcInstance::invokeObjcMethod(ExecState* exec, ObjcMethod* method)
 
     if (method->isFallbackMethod()) {
         if (objcValueTypeForType([signature methodReturnType]) != ObjcObjectType) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
             NSLog(@"Incorrect signature for invokeUndefinedMethodFromWebScript:withArguments: -- return type must be object.");
+#pragma GCC diagnostic pop
             return result;
         }
 
         // Invoke invokeUndefinedMethodFromWebScript:withArguments:, pass JavaScript function
         // name as first (actually at 2) argument and array of args as second.
-        NSString* jsName = (NSString* )method->javaScriptName();
+        NSString* jsName = (const NSString* )method->javaScriptName();
         [invocation setArgument:&jsName atIndex:2];
 
         NSMutableArray* objcArgs = [NSMutableArray array];
@@ -355,7 +370,10 @@ JSC::JSValue ObjcInstance::invokeDefaultMethod(ExecState* exec)
     [invocation setTarget:_instance.get()];
 
     if (objcValueTypeForType([signature methodReturnType]) != ObjcObjectType) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
         NSLog(@"Incorrect signature for invokeDefaultMethodWithArguments: -- return type must be object.");
+#pragma GCC diagnostic pop
         return result;
     }
 

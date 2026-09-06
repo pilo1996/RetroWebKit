@@ -1692,7 +1692,7 @@ RefPtr<Range> Internals::rangeOfStringNearLocation(const Range& searchRange, con
 
 ExceptionOr<RefPtr<Range>> Internals::rangeForDictionaryLookupAtLocation(int x, int y)
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     auto* document = contextDocument();
     if (!document || !document->frame())
         return Exception { INVALID_ACCESS_ERR };

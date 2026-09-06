@@ -28,9 +28,9 @@
 
 #import "QuartzCoreSPI.h"
 
-WEBCORE_EXPORT @interface WebActionDisablingCALayerDelegate : NSObject <CALayerDelegate>
+@interface WebActionDisablingCALayerDelegate : NSObject <CALayerDelegate>
 
-+ (instancetype)shared;
++ (id)shared;
 
 @end
 

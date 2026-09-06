@@ -58,6 +58,7 @@
 #import <WebCore/Frame.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/HistoryItem.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/Page.h>
 #import <WebCore/RenderView.h>
 #import <WebCore/RenderWidget.h>
@@ -74,7 +75,6 @@
 #import <Foundation/NSURLRequest.h>
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/KeyEventCodesIOS.h>
-#import <WebCore/MainFrame.h>
 #import <WebCore/WAKClipView.h>
 #import <WebCore/WAKScrollView.h>
 #import <WebCore/WAKWindow.h>
@@ -98,7 +98,7 @@ using namespace WebCore;
 - (BOOL)_scrollTo:(const NSPoint *)newOrigin animate:(BOOL)animate; // need the boolean result from this method
 @end
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 @interface NSView ()
 - (void)setBackgroundColor:(NSColor *)color;
 @end
@@ -194,6 +194,8 @@ enum {
 #endif
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 -(NSView <WebDocumentView> *)_makeDocumentViewForDataSource:(WebDataSource *)dataSource
 {
     NSString* MIMEType = [dataSource _responseMIMEType];
@@ -218,6 +220,7 @@ enum {
     
     return documentView;
 }
+#pragma GCC diagnostic pop
 
 - (void)_setWebFrame:(WebFrame *)webFrame
 {
@@ -251,6 +254,8 @@ enum {
     return std::max<float>(height * Scrollbar::minFractionToStepWhenPaging(), height - Scrollbar::maxOverlapBetweenPages());
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCClass, NSArray *supportTypes)
 {
     NSEnumerator *enumerator = [supportTypes objectEnumerator];
@@ -262,6 +267,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
             [allTypes setObject:objCClass forKey:mime];
     }
 }
+#pragma GCC diagnostic pop
 
 + (NSMutableDictionary *)_viewTypesAllowImageTypeOmission:(BOOL)allowImageTypeOmission
 {
@@ -298,6 +304,8 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     return [[[self _viewTypesAllowImageTypeOmission:YES] _webkit_objectForMIMEType:MIMEType] isSubclassOfClass:[WebHTMLView class]];
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 + (Class)_viewClassForMIMEType:(NSString *)MIMEType allowingPlugins:(BOOL)allowPlugins
 {
     Class viewClass;
@@ -315,6 +323,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         
     return retVal;
 }
+#pragma GCC diagnostic pop
 
 - (void)_install
 {
@@ -374,10 +383,23 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
         WebCore::notifyHistoryItemChanged = WKNotifyHistoryItemChanged;
 
 #if !PLATFORM(IOS)
+// FIXME: Remove the NSAppKitVersionNumberWithDeferredWindowDisplaySupport check once
+// once AppKit's Deferred Window Display support is available.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050 || !defined(NSAppKitVersionNumberWithDeferredWindowDisplaySupport)
+        // CoreGraphics deferred updates are disabled if WebKitEnableCoalescedUpdatesPreferenceKey is NO
+        // or has no value. For compatibility with Mac OS X 10.5 and lower, deferred updates are off by default.
+        if (![[NSUserDefaults standardUserDefaults] boolForKey:WebKitEnableDeferredUpdatesPreferenceKey])
+            WKDisableCGDeferredUpdates();
+#endif
         if (!WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_MAIN_THREAD_EXCEPTIONS))
             setDefaultThreadViolationBehavior(LogOnFirstThreadViolation, ThreadViolationRoundOne);
 
         bool throwExceptionsForRoundTwo = WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_ROUND_TWO_MAIN_THREAD_EXCEPTIONS);
+#ifdef MAIL_THREAD_WORKAROUND
+        // Even if old Mail is linked with new WebKit, don't throw exceptions.
+        if ([WebResource _needMailThreadWorkaroundIfCalledOffMainThread])
+            throwExceptionsForRoundTwo = false;
+#endif
         if (!throwExceptionsForRoundTwo)
             setDefaultThreadViolationBehavior(LogOnFirstThreadViolation, ThreadViolationRoundTwo);
 
@@ -420,6 +442,14 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     _private = nil;
     
     [super dealloc];
+}
+
+- (void)finalize 
+{
+    if (_private && _private->includedInWebKitStatistics)
+        --WebFrameViewCount;
+
+    [super finalize];
 }
 
 #if PLATFORM(IOS)
@@ -541,7 +571,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     }
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 - (BOOL)wantsUpdateLayer
 {
     return YES;

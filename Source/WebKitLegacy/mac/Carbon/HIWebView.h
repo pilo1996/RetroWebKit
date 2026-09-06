@@ -33,7 +33,7 @@
 
 #include <Carbon/Carbon.h>
 
-#include <WebKitLegacy/WebKitAvailability.h>
+#include <WebKit/WebKitAvailability.h>
 
 #if PRAGMA_ONCE
 #pragma once

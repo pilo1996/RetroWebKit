@@ -105,9 +105,9 @@ void AsyncTask<Object, Function>::runSoon()
 }
 
 template<typename Object, typename Function>
-void AsyncTask<Object, Function>::threadEntryPoint(AsyncTask* asyncTask)
+__attribute((__noreturn__)) void AsyncTask<Object, Function>::threadEntryPoint(AsyncTask* asyncTask)
 {
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
     pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
 #endif
 
@@ -115,7 +115,7 @@ void AsyncTask<Object, Function>::threadEntryPoint(AsyncTask* asyncTask)
 }
 
 template<typename Object, typename Function>
-void AsyncTask<Object, Function>::threadRunLoop()
+__attribute((__noreturn__)) void AsyncTask<Object, Function>::threadRunLoop()
 {
     // This loop ratchets downward from most active to least active state. While
     // we ratchet downward, any other thread may reset our state.

@@ -255,7 +255,7 @@ void Extensions3DOpenGL::drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Ds
     m_context->makeContextCurrent();
 #if PLATFORM(GTK)
     ::glDrawArraysInstanced(mode, first, count, primcount);
-#elif PLATFORM(COCOA)
+#elif PLATFORM(IOS) || PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     ::glDrawArraysInstancedARB(mode, first, count, primcount);
 #else
     UNUSED_PARAM(mode);
@@ -270,7 +270,7 @@ void Extensions3DOpenGL::drawElementsInstanced(GC3Denum mode, GC3Dsizei count, G
     m_context->makeContextCurrent();
 #if PLATFORM(GTK)
     ::glDrawElementsInstanced(mode, count, type, reinterpret_cast<GLvoid*>(static_cast<intptr_t>(offset)), primcount);
-#elif PLATFORM(COCOA)
+#elif PLATFORM(IOS) || PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     ::glDrawElementsInstancedARB(mode, count, type, reinterpret_cast<GLvoid*>(static_cast<intptr_t>(offset)), primcount);
 #else
     UNUSED_PARAM(mode);
@@ -286,7 +286,7 @@ void Extensions3DOpenGL::vertexAttribDivisor(GC3Duint index, GC3Duint divisor)
     m_context->makeContextCurrent();
 #if PLATFORM(GTK)
     ::glVertexAttribDivisor(index, divisor);
-#elif PLATFORM(COCOA)
+#elif PLATFORM(IOS) || PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     ::glVertexAttribDivisorARB(index, divisor);
 #else
     UNUSED_PARAM(index);

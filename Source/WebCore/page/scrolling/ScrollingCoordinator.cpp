@@ -50,7 +50,7 @@
 
 namespace WebCore {
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) || !ENABLE(ASYNC_SCROLLING)
 Ref<ScrollingCoordinator> ScrollingCoordinator::create(Page* page)
 {
 #if USE(COORDINATED_GRAPHICS)

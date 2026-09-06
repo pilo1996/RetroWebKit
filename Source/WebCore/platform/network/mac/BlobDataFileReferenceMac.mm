@@ -30,10 +30,15 @@
 
 #include "FileMetadata.h"
 #include <wtf/SoftLinking.h>
+#include <wtf/AutodrainedPool.h>
 #include <wtf/text/CString.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <Bom/BOMCopier.h>
+#endif
+
+#ifndef __bridge
+#define __bridge
 #endif
 
 typedef struct _BOMCopier* BOMCopier;
@@ -57,25 +62,35 @@ void BlobDataFileReference::generateReplacementFile()
 
     prepareForFileAccess();
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<NSFileCoordinator> coordinator = adoptNS([[NSFileCoordinator alloc] initWithFilePresenter:nil]);
-    [coordinator coordinateReadingItemAtURL:[NSURL fileURLWithPath:m_path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:^(NSURL *newURL) {
+    [coordinator.get() coordinateReadingItemAtURL:[NSURL fileURLWithPath:m_path] options:NSFileCoordinatorReadingWithoutChanges error:nullptr byAccessor:^(NSURL *newURL) {
+#else
+    {
+        AutodrainedPool pool;
+
+        NSURL *newURL = [NSURL fileURLWithPath:m_path];
+#endif
         // The archive is put into a subdirectory of temporary directory for historic reasons. Changing this will require WebCore to change at the same time.
         CString archivePath([NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitGeneratedFileXXXXXX"].fileSystemRepresentation);
         if (mkstemp(archivePath.mutableData()) == -1)
             return;
 
-        NSDictionary *options = @{
-            (__bridge id)kBOMCopierOptionCreatePKZipKey : @YES,
-            (__bridge id)kBOMCopierOptionSequesterResourcesKey : @YES,
-            (__bridge id)kBOMCopierOptionKeepParentKey : @YES,
-            (__bridge id)kBOMCopierOptionCopyResourcesKey : @YES,
-        };
+        NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+            (__bridge id)kBOMCopierOptionCreatePKZipKey, [NSNumber numberWithBool:YES],
+            (__bridge id)kBOMCopierOptionSequesterResourcesKey, [NSNumber numberWithBool:YES],
+            (__bridge id)kBOMCopierOptionKeepParentKey, [NSNumber numberWithBool:YES],
+            (__bridge id)kBOMCopierOptionCopyResourcesKey, [NSNumber numberWithBool:YES],
+            nil];
 
         BOMCopier copier = BOMCopierNew();
         if (!BOMCopierCopyWithOptions(copier, newURL.path.fileSystemRepresentation, archivePath.data(), (__bridge CFDictionaryRef)options))
             m_replacementPath = String::fromUTF8(archivePath);
         BOMCopierFree(copier);
-    }];
+    }
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+    ];
+#endif
 
     m_replacementShouldBeGenerated = false;
     if (!m_replacementPath.isNull()) {

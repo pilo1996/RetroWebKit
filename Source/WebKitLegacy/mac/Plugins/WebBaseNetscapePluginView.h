@@ -112,6 +112,7 @@ namespace WebCore {
 - (void)addWindowObservers;
 - (void)removeWindowObservers;
 - (BOOL)shouldClipOutPlugin;
+- (BOOL)inFlatteningPaint;
 
 - (BOOL)supportsSnapshotting;
 - (void)cacheSnapshot;

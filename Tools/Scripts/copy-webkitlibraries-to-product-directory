@@ -142,9 +142,11 @@ if ($wksi) {
         ));
     } else {
         push(@librariesToCopy, (
-            "libWebKitSystemInterfaceElCapitan.a",
-            "libWebKitSystemInterfaceOSX10.12.a",
-            "libWebKitSystemInterfaceOSX10.13.a"
+            "libWebKitSystemInterfaceLeopard.a",
+            "libWebKitSystemInterfaceSnowLeopard.a",
+#            "libWebKitSystemInterfaceElCapitan.a",
+#            "libWebKitSystemInterfaceOSX10.12.a"
+#            "libWebKitSystemInterfaceOSX10.13.a"
         ));
     }
 

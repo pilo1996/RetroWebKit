@@ -31,7 +31,7 @@
 #include "config.h"
 #include "Crypto.h"
 
-#if OS(DARWIN)
+#if OS(DARWIN) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 #include "CommonCryptoUtilities.h"
 #endif
 #include "Document.h"
@@ -61,7 +61,7 @@ ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
         return Exception { TYPE_MISMATCH_ERR };
     if (array.byteLength() > 65536)
         return Exception { QUOTA_EXCEEDED_ERR };
-#if OS(DARWIN)
+#if OS(DARWIN) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     int rc = CCRandomCopyBytes(kCCRandomDefault, array.baseAddress(), array.byteLength());
     RELEASE_ASSERT(rc == kCCSuccess);
 #else

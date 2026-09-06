@@ -26,6 +26,8 @@
 #include "config.h"
 #include "WebAudioBufferList.h"
 
+#if ENABLE(MEDIA_STREAM)
+
 #include "CAAudioStreamDescription.h"
 #include "CoreMediaSoftLink.h"
 
@@ -112,3 +114,5 @@ AudioBuffer* WebAudioBufferList::buffer(uint32_t index) const
 }
 
 }
+
+#endif

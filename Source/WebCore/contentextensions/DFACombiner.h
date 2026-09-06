@@ -44,7 +44,7 @@ private:
     Vector<DFA> m_dfas;
 };
 
-inline void DFACombiner::addDFA(DFA&& dfa)
+ALWAYS_INLINE void DFACombiner::addDFA(DFA&& dfa)
 {
     dfa.minimize();
     m_dfas.append(WTFMove(dfa));

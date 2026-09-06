@@ -321,6 +321,10 @@ def determineArchitectureFromMachOBinary
         "arm"
     when 12 | is64BitFlag
         "arm64"
+    when 18
+        "ppc"
+    when 18 | is64BitFlag
+        "ppc64"
     else
         $stderr.puts "Warning: unable to determine architecture from code: #{code}"
         nil

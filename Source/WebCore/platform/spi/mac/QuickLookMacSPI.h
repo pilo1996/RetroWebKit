@@ -23,7 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #import <QuickLookUI/QLPreviewItem.h>
+#endif
 
 @protocol QLPreviewMenuItemDelegate <NSObject>
 @optional

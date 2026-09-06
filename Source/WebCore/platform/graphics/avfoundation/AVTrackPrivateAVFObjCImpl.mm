@@ -26,7 +26,7 @@
 #include "config.h"
 #include "AVTrackPrivateAVFObjCImpl.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && USE(AVFOUNDATION)
 
 #import "MediaSelectionGroupAVFObjC.h"
 #import <AVFoundation/AVAssetTrack.h>

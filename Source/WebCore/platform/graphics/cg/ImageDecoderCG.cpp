@@ -51,7 +51,9 @@ const CFStringRef WebCoreCGImagePropertyAPNGUnclampedDelayTime = CFSTR("Unclampe
 const CFStringRef WebCoreCGImagePropertyAPNGDelayTime = CFSTR("DelayTime");
 const CFStringRef WebCoreCGImagePropertyAPNGLoopCount = CFSTR("LoopCount");
 
-#if PLATFORM(WIN)
+const CFStringRef WebCoreCGImagePropertyGIFUnclampedDelayTime = CFSTR("UnclampedDelayTime");
+
+#if PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
 const CFStringRef kCGImageSourceShouldPreferRGB32 = CFSTR("kCGImageSourceShouldPreferRGB32");
 const CFStringRef kCGImageSourceSkipMetadata = CFSTR("kCGImageSourceSkipMetadata");
 const CFStringRef kCGImageSourceSubsampleFactor = CFSTR("kCGImageSourceSubsampleFactor");
@@ -61,7 +63,7 @@ const CFStringRef kCGImageSourceShouldCacheImmediately = CFSTR("kCGImageSourceSh
 static RetainPtr<CFMutableDictionaryRef> createImageSourceOptions()
 {
     RetainPtr<CFMutableDictionaryRef> options = adoptCF(CFDictionaryCreateMutable(nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-    CFDictionarySetValue(options.get(), kCGImageSourceShouldCache, kCFBooleanTrue);
+    CFDictionarySetValue(options.get(), kCGImageSourceShouldCache, kCFBooleanFalse);
     CFDictionarySetValue(options.get(), kCGImageSourceShouldPreferRGB32, kCFBooleanTrue);
     CFDictionarySetValue(options.get(), kCGImageSourceSkipMetadata, kCFBooleanTrue);
     return options;
@@ -70,7 +72,9 @@ static RetainPtr<CFMutableDictionaryRef> createImageSourceOptions()
 static RetainPtr<CFMutableDictionaryRef> createImageSourceAsyncOptions()
 {
     RetainPtr<CFMutableDictionaryRef> options = createImageSourceOptions();
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
     CFDictionarySetValue(options.get(), kCGImageSourceShouldCacheImmediately, kCFBooleanTrue);
+#endif
     CFDictionarySetValue(options.get(), kCGImageSourceCreateThumbnailFromImageAlways, kCFBooleanTrue);
     return options;
 }
@@ -339,7 +343,7 @@ float ImageDecoder::frameDurationAtIndex(size_t index) const
     if (properties) {
         CFDictionaryRef gifProperties = (CFDictionaryRef)CFDictionaryGetValue(properties.get(), kCGImagePropertyGIFDictionary);
         if (gifProperties) {
-            if (CFNumberRef num = (CFNumberRef)CFDictionaryGetValue(gifProperties, kCGImagePropertyGIFUnclampedDelayTime)) {
+            if (CFNumberRef num = (CFNumberRef)CFDictionaryGetValue(gifProperties, WebCoreCGImagePropertyGIFUnclampedDelayTime)) {
                 // Use the unclamped frame delay if it exists.
                 CFNumberGetValue(num, kCFNumberFloatType, &duration);
             } else if (CFNumberRef num = (CFNumberRef)CFDictionaryGetValue(gifProperties, kCGImagePropertyGIFDelayTime)) {
@@ -467,6 +471,13 @@ void ImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
     m_isAllDataReceived = allDataReceived;
 
 #if PLATFORM(COCOA)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+    if (allDataReceived) {
+        // 10.6 bug workaround: image sources with final=false fail to draw into PDF contexts, so re-create image source
+        // when data is complete. <rdar://problem/7874035> (<http://openradar.appspot.com/7874035>)
+        m_nativeDecoder = adoptCF(CGImageSourceCreateIncremental(nullptr));
+    }
+#endif
     // On Mac the NSData inside the SharedBuffer can be secretly appended to without the SharedBuffer's knowledge.
     // We use SharedBuffer's ability to wrap itself inside CFData to get around this, ensuring that ImageIO is
     // really looking at the SharedBuffer.

@@ -53,8 +53,8 @@
 #import <WebCore/ShadowRoot.h>
 #import <WebCore/WheelEvent.h>
 #import <WebCore/markup.h>
-#import <WebKitLegacy/DOMExtensions.h>
-#import <WebKitLegacy/DOMHTML.h>
+#import <WebKit/DOMExtensions.h>
+#import <WebKit/DOMHTML.h>
 #import <runtime/JSCJSValue.h>
 #import <runtime/JSLock.h>
 #import <wtf/Assertions.h>
@@ -233,7 +233,7 @@ using namespace JSC;
 
 @end
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static NSEventPhase toNSEventPhase(PlatformWheelEventPhase platformPhase)
 {
     uint32_t phase = PlatformWheelEventPhaseNone; 

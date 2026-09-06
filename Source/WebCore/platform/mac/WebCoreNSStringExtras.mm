@@ -98,5 +98,5 @@ NSString *canonicalLocaleName(NSString *language)
         return @"en_US";
 
     RetainPtr<CFStringRef> code = adoptCF(CFLocaleCreateCanonicalLocaleIdentifierFromScriptManagerCodes(0, languageCode, regionCode));
-    return (NSString *)code.autorelease();
+    return (const NSString *)code.autorelease();
 }

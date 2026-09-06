@@ -27,6 +27,7 @@
 #import "BundlePath.h"
 
 #import <Foundation/Foundation.h>
+#import <wtf/AutodrainedPool.h>
 #import <string>
 
 @interface JSJavaScriptCoreFinder : NSObject
@@ -43,11 +44,10 @@ const CString* constantBundlePath = nullptr;
 const CString& bundlePath()
 {
     if (!constantBundlePath) {
-        @autoreleasepool {
-            NSBundle* myBundle = [NSBundle bundleForClass:[JSJavaScriptCoreFinder class]];
+        AutodrainedPool pool;
+        NSBundle* myBundle = [NSBundle bundleForClass:[JSJavaScriptCoreFinder class]];
 
-            constantBundlePath = new CString([[myBundle bundlePath] UTF8String]);
-        }
+        constantBundlePath = new CString([[myBundle bundlePath] UTF8String]);
     }
 
     return *constantBundlePath;

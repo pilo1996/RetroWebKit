@@ -26,6 +26,8 @@
 #import "config.h"
 #import "WebCoreNSURLSession.h"
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+
 #import "CachedResourceRequest.h"
 #import "PlatformMediaResourceLoader.h"
 #import "SubresourceLoader.h"
@@ -657,3 +659,5 @@ void WebCoreNSURLSessionDataTaskClient::loadFinished(PlatformMediaResource& reso
     [self _resource:resource loadFinishedWithError:nil];
 }
 @end
+
+#endif

@@ -29,7 +29,7 @@
 #if !PLATFORM(IOS)
 
 #import <PDFKit/PDFKit.h>
-#import <WebKitLegacy/WebDocumentInternal.h>
+#import <WebKit/WebDocumentInternal.h>
 
 @class WebDataSource;
 

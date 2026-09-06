@@ -39,6 +39,10 @@
 #include <wtf/StdLibExtras.h>
 #endif // !PLATFORM(IOS)
 
+#ifndef CF_RETURNS_RETAINED
+#define CF_RETURNS_RETAINED
+#endif
+
 namespace WebCore {
 static CGColorRef leakCGColor(const Color&) CF_RETURNS_RETAINED;
 }

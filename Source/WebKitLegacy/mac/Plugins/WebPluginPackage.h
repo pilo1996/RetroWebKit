@@ -28,7 +28,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <WebKitLegacy/WebBasePluginPackage.h>
+#import <WebKit/WebBasePluginPackage.h>
 
 @protocol WebPluginViewFactory;
 

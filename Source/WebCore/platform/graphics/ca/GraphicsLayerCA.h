@@ -277,7 +277,8 @@ private:
     void changeLayerTypeTo(PlatformCALayer::LayerType);
 
     CompositingCoordinatesOrientation defaultContentsOrientation() const;
-
+    void updateContentsTransform();
+    
     void setupContentsLayer(PlatformCALayer*);
     PlatformCALayer* contentsLayer() const { return m_contentsLayer.get(); }
 

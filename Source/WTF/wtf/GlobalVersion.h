@@ -29,7 +29,11 @@
 
 namespace WTF {
 
+#if CPU(PPC)
+typedef uint32_t GlobalVersion;
+#else
 typedef uint64_t GlobalVersion;
+#endif
 
 GlobalVersion newGlobalVersion();
 

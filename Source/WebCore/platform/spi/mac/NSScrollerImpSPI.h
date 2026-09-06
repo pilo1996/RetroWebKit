@@ -26,7 +26,7 @@
 #ifndef NSScrollerImpSPI_h
 #define NSScrollerImpSPI_h
 
-#if USE(APPKIT)
+#if USE(APPKIT) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #if USE(APPLE_INTERNAL_SDK)
 

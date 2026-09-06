@@ -44,6 +44,8 @@ RetainPtr<CFReadStreamRef> createHTTPBodyCFReadStream(FormData&);
 
 FormData* httpBodyFromStream(CFReadStreamRef);
 
+#if USE(CFNETWORK)
 CFStringRef formDataStreamLengthPropertyName();
+#endif
 
 } // namespace WebCore

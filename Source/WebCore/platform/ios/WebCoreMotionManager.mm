@@ -27,7 +27,6 @@
 #import "WebCoreMotionManager.h"
 
 #import "WebCoreObjCExtras.h"
-#import <CoreLocation/CoreLocation.h>
 #import <objc/objc-runtime.h>
 #import <wtf/MathExtras.h>
 #import <wtf/NeverDestroyed.h>
@@ -36,6 +35,7 @@
 #if PLATFORM(IOS)
 
 #import "WebCoreThreadRun.h"
+#import <CoreLocation/CoreLocation.h>
 #import <CoreMotion/CoreMotion.h>
 
 // Get CoreLocation classes
@@ -262,7 +262,7 @@ static const double kGravity = 9.80665;
         // matrix (R) where [z=attitude.yaw, x=attitude.pitch, y=attitude.roll]
         // in the form:
         //
-        //   /  R[0]   R[1]   R[2]  \
+        //   /  R[0]   R[1]   R[2]  \.
         //   |  R[3]   R[4]   R[5]  |
         //   \  R[6]   R[7]   R[8]  /
 

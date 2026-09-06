@@ -29,6 +29,8 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
 
+#if PLATFORM(IOS)
+
 OBJC_CLASS WebPreviewLoader;
 
 namespace WebCore {
@@ -61,3 +63,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

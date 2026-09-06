@@ -30,7 +30,7 @@
 #include "Logging.h"
 #include "TextStream.h"
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
 #include "WheelEventDeltaFilterMac.h"
 #endif
 
@@ -46,7 +46,7 @@ WheelEventDeltaFilter::~WheelEventDeltaFilter()
 
 std::unique_ptr<WheelEventDeltaFilter> WheelEventDeltaFilter::create()
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     return std::make_unique<WheelEventDeltaFilterMac>();
 #else
     return std::make_unique<BasicWheelEventDeltaFilter>();

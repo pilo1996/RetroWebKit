@@ -135,7 +135,7 @@ long PlatformPasteboard::addTypes(const Vector<String>& pasteboardTypes)
 long PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
 {
     if (pasteboardTypes.isEmpty())
-        return [m_pasteboard declareTypes:@[] owner:nil];
+        return [m_pasteboard.get() declareTypes:[NSArray array] owner:nil];
 
     RetainPtr<NSMutableArray> types = adoptNS([[NSMutableArray alloc] init]);
     for (size_t i = 0; i < pasteboardTypes.size(); ++i)
@@ -146,7 +146,7 @@ long PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
 
 long PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String& pasteboardType)
 {
-    BOOL didWriteData = [m_pasteboard setData:buffer ? buffer->createNSData().get() : nil forType:pasteboardType];
+    BOOL didWriteData = [m_pasteboard.get() setData:buffer ? buffer->createNSData().get() : nil forType:pasteboardType];
     if (!didWriteData)
         return 0;
     return changeCount();
@@ -173,24 +173,24 @@ long PlatformPasteboard::setStringForType(const String& string, const String& pa
         if ([[m_pasteboard.get() types] containsObject:NSURLPboardType]) {
             NSURL *base = [url baseURL];
             if (base)
-                didWriteData = [m_pasteboard.get() setPropertyList:@[[url relativeString], [base absoluteString]] forType:NSURLPboardType];
+                didWriteData = [m_pasteboard.get() setPropertyList:[NSArray arrayWithObjects:[url relativeString], [base absoluteString], nil] forType:NSURLPboardType];
             else if (url)
-                didWriteData = [m_pasteboard.get() setPropertyList:@[[url absoluteString], @""] forType:NSURLPboardType];
+                didWriteData = [m_pasteboard.get() setPropertyList:[NSArray arrayWithObjects:[url absoluteString], @"", nil] forType:NSURLPboardType];
             else
-                didWriteData = [m_pasteboard.get() setPropertyList:@[@"", @""] forType:NSURLPboardType];
+                didWriteData = [m_pasteboard.get() setPropertyList:[NSArray arrayWithObjects:@"", @"", nil] forType:NSURLPboardType];
 
             if (!didWriteData)
                 return 0;
         }
 
-        if ([[m_pasteboard.get() types] containsObject:(NSString *)kUTTypeURL]) {
-            didWriteData = [m_pasteboard.get() setString:[url absoluteString] forType:(NSString *)kUTTypeURL];
+        if ([[m_pasteboard.get() types] containsObject:(const NSString *)kUTTypeURL]) {
+            didWriteData = [m_pasteboard.get() setString:[url absoluteString] forType:(const NSString *)kUTTypeURL];
             if (!didWriteData)
                 return 0;
         }
 
-        if ([[m_pasteboard.get() types] containsObject:(NSString *)kUTTypeFileURL] && [url isFileURL]) {
-            didWriteData = [m_pasteboard.get() setString:[url absoluteString] forType:(NSString *)kUTTypeFileURL];
+        if ([[m_pasteboard.get() types] containsObject:(const NSString *)kUTTypeFileURL] && [url isFileURL]) {
+            didWriteData = [m_pasteboard.get() setString:[url absoluteString] forType:(const NSString *)kUTTypeFileURL];
             if (!didWriteData)
                 return 0;
         }

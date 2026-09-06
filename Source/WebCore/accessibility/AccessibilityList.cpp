@@ -56,7 +56,11 @@ Ref<AccessibilityList> AccessibilityList::create(RenderObject* renderer)
 
 bool AccessibilityList::computeAccessibilityIsIgnored() const
 {
+#if ACCESSIBILITY_LISTS
     return accessibilityIsIgnoredByDefault();
+#else
+    return true;
+#endif
 }
     
 bool AccessibilityList::isUnorderedList() const

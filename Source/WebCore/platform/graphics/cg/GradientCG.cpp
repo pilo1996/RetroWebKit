@@ -33,12 +33,22 @@
 #include <CoreGraphics/CoreGraphics.h>
 #include <wtf/RetainPtr.h>
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+CG_EXTERN CGFunctionRef CGGradientGetFunction(CGGradientRef);
+#endif
+
 namespace WebCore {
 
 void Gradient::platformDestroy()
 {
     CGGradientRelease(m_gradient);
     m_gradient = 0;
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (m_gradientFunction) {
+      CGFunctionRelease(m_gradientFunction);
+      m_gradientFunction = 0;
+    }
+#endif
 }
 
 CGGradientRef Gradient::platformGradient()
@@ -88,6 +98,11 @@ CGGradientRef Gradient::platformGradient()
         m_gradient = CGGradientCreateWithColors(extendedSRGBColorSpaceRef(), colorsArray.get(), locations.data());
     else
         m_gradient = CGGradientCreateWithColorComponents(sRGBColorSpaceRef(), colorComponents.data(), locations.data(), numStops);
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (m_gradient) {
+        m_gradientFunction = CGGradientGetFunction(m_gradient);
+    }
+#endif
 
     return m_gradient;
 }

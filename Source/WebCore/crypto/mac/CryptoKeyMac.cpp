@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CryptoKey.h"
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(SUBTLE_CRYPTO) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #include "CommonCryptoUtilities.h"
 

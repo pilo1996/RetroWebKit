@@ -24,7 +24,7 @@
  */
 
 
-#import <WebKitLegacy/DOMEvent.h>
+#import <WebKit/DOMEvent.h>
 
 namespace WebCore {
 class Event;

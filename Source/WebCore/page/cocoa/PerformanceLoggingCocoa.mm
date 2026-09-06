@@ -33,16 +33,21 @@ namespace WebCore {
 
 std::optional<uint64_t> PerformanceLogging::physicalFootprint()
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
     if (result != KERN_SUCCESS)
         return std::nullopt;
     return vmInfo.phys_footprint;
+#else
+    return std::nullopt;
+#endif
 }
 
 void PerformanceLogging::getPlatformMemoryUsageStatistics(HashMap<const char*, size_t>& stats)
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
@@ -53,6 +58,15 @@ void PerformanceLogging::getPlatformMemoryUsageStatistics(HashMap<const char*, s
     stats.add("phys_footprint", static_cast<size_t>(vmInfo.phys_footprint));
     stats.add("resident_size", static_cast<size_t>(vmInfo.resident_size));
     stats.add("virtual_size", static_cast<size_t>(vmInfo.virtual_size));
+#else
+    task_basic_info_data_t basicInfo;
+    mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
+    kern_return_t err = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &basicInfo, &count);
+    if (err != KERN_SUCCESS)
+        return;
+    stats.add("resident_size", static_cast<size_t>(basicInfo.resident_size));
+    stats.add("virtual_size", static_cast<size_t>(basicInfo.virtual_size));
+#endif
 }
 
 }

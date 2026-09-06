@@ -35,6 +35,16 @@
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+#import "CFNetworkSPI.h"
+#import "ResourceHandle.h"
+#import "ResourceRequest.h"
+
+@interface NSURLResponse (WebNSURLResponseDetails)
++ (id)_responseWithCFURLResponse:(CFURLResponseRef)response;
+@end 
+#endif
+        
 namespace WebCore {
 
 #if PLATFORM(MAC)
@@ -44,7 +54,7 @@ namespace WebCore {
 // If CoreTypes is ever brought up to speed we can remove this table and associated code.
 static CFDictionaryRef createExtensionToMIMETypeMap()
 {
-    CFStringRef keys[] = {
+    static CFStringRef keys[] = {
         CFSTR("ai"),
         CFSTR("asc"),
         CFSTR("bcpio"),
@@ -163,7 +173,7 @@ static CFDictionaryRef createExtensionToMIMETypeMap()
         CFSTR("z")
     };
 
-    CFStringRef values[] = {
+    static CFStringRef values[] = {
         CFSTR("application/postscript"),
         CFSTR("text/plain"),
         CFSTR("application/x-bcpio"),
@@ -289,12 +299,12 @@ static CFDictionaryRef createExtensionToMIMETypeMap()
 void adjustMIMETypeIfNecessary(CFURLResponseRef cfResponse, bool isMainResourceLoad)
 {
     UNUSED_PARAM(isMainResourceLoad);
-    RetainPtr<CFStringRef> result = CFURLResponseGetMIMEType(cfResponse);
+    RetainPtr<CFStringRef> result = wkGetCFURLResponseMIMEType(cfResponse);
     RetainPtr<CFStringRef> originalResult = result;
 
     if (!result) {
-        auto url = CFURLResponseGetURL(cfResponse);
-        if ([(NSURL *)url isFileURL]) {
+        auto url = wkGetCFURLResponseURL(cfResponse);
+        if ([(const NSURL *)url isFileURL]) {
             RetainPtr<CFStringRef> extension = adoptCF(CFURLCopyPathExtension(url));
             if (extension) {
                 // <rdar://problem/7007389> CoreTypes UTI map is missing 100+ file extensions that GateKeeper knew about
@@ -320,13 +330,23 @@ void adjustMIMETypeIfNecessary(CFURLResponseRef cfResponse, bool isMainResourceL
         result = defaultMIMETypeString;
     }
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // Workaround for <rdar://problem/5539824>
+    if (CFStringCompare(result.get(), CFSTR("text/xml"), 0) == kCFCompareEqualTo)
+        result = CFSTR("application/xml");
+#endif
+
     if (result != originalResult)
-        CFURLResponseSetMIMEType(cfResponse, result.get());
+        wkSetCFURLResponseMIMEType(cfResponse, result.get());
 }
 #endif
 
 #if !USE(CFURLCONNECTION)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+NSURLResponse *synthesizeRedirectResponseIfNecessary(ResourceHandle *handle, NSURLRequest *newRequest, NSURLResponse *redirectResponse)
+#else
 NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLRequest *currentRequest, NSURLRequest *newRequest, NSURLResponse *redirectResponse)
+#endif
 {
     if (redirectResponse)
         return redirectResponse;
@@ -335,15 +355,30 @@ NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLRequest *currentReques
     if ([[[newRequest URL] scheme] isEqualToString:[[currentRequest URL] scheme]]
         && !([newRequest respondsToSelector:@selector(_schemeWasUpgradedDueToDynamicHSTS)] && [newRequest _schemeWasUpgradedDueToDynamicHSTS]))
         return nil;
-#else
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     if ([[[newRequest URL] scheme] isEqualToString:[[currentRequest URL] scheme]])
+        return nil;
+#else
+    const ResourceRequest& currentRequest = handle->currentRequest();
+    if ([[[newRequest URL] scheme] isEqualToString:currentRequest.url().protocol().createNSStringWithoutCopying().get()])
         return nil;
 #endif
 
     // If the new request is a different protocol than the current request, synthesize a redirect response.
     // This is critical for HSTS (<rdar://problem/14241270>).
-    NSDictionary *synthesizedResponseHeaderFields = @{ @"Location": [[newRequest URL] absoluteString], @"Cache-Control": @"no-store" };
-    return [[[NSHTTPURLResponse alloc] initWithURL:[currentRequest URL] statusCode:302 HTTPVersion:(NSString *)kCFHTTPVersion1_1 headerFields:synthesizedResponseHeaderFields] autorelease];
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    RetainPtr<CFURLRef> currentURL = currentRequest.url().createCFURL();
+    RetainPtr<CFHTTPMessageRef> responseMessage = adoptCF(CFHTTPMessageCreateResponse(kCFAllocatorDefault, 302, 0, kCFHTTPVersion1_1));
+    RetainPtr<CFURLRef> newAbsoluteURL = URL([[newRequest URL] absoluteURL]).createCFURL();
+    CFHTTPMessageSetHeaderFieldValue(responseMessage.get(), CFSTR("Location"), CFURLGetString(newAbsoluteURL.get()));
+    CFHTTPMessageSetHeaderFieldValue(responseMessage.get(), CFSTR("Cache-Control"), CFSTR("no-store"));
+ 
+    RetainPtr<CFURLResponseRef> newResponse = adoptCF(CFURLResponseCreateWithHTTPResponse(kCFAllocatorDefault, currentURL.get(), responseMessage.get(), kCFURLCacheStorageNotAllowed));
+    return [NSHTTPURLResponse _responseWithCFURLResponse:newResponse.get()];
+#else
+    NSDictionary *synthesizedResponseHeaderFields = [NSDictionary dictionaryWithObjectsAndKeys:[[newRequest URL] absoluteString], @"Location", @"no-store", @"Cache-Control", nil];
+    return [[[NSHTTPURLResponse alloc] initWithURL:[currentRequest URL] statusCode:302 HTTPVersion:(const NSString *)kCFHTTPVersion1_1 headerFields:synthesizedResponseHeaderFields] autorelease];
+#endif
 }
 #endif
 

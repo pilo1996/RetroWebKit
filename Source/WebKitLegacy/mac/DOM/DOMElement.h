@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMNode.h>
+#import <WebKit/DOMNode.h>
 
 #if TARGET_OS_IPHONE
 #import <CoreGraphics/CoreGraphics.h>
@@ -42,7 +42,7 @@ enum {
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMElement : DOMNode
 @property (readonly, copy) NSString *tagName;
-@property (readonly, strong) DOMCSSStyleDeclaration *style;
+@property (readonly, retain) DOMCSSStyleDeclaration *style;
 @property (readonly) int offsetLeft;
 @property (readonly) int offsetTop;
 @property (readonly) int offsetWidth;
@@ -55,16 +55,16 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property int scrollTop;
 @property (readonly) int scrollWidth;
 @property (readonly) int scrollHeight;
-@property (readonly, strong) DOMElement *offsetParent;
+@property (readonly, retain) DOMElement *offsetParent;
 @property (copy) NSString *innerHTML;
 @property (copy) NSString *outerHTML;
 @property (copy) NSString *className;
 @property (readonly, copy) NSString *innerText WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMElement *previousElementSibling WEBKIT_AVAILABLE_MAC(10_6);
-@property (readonly, strong) DOMElement *nextElementSibling WEBKIT_AVAILABLE_MAC(10_6);
-@property (readonly, strong) DOMElement *firstElementChild WEBKIT_AVAILABLE_MAC(10_6);
-@property (readonly, strong) DOMElement *lastElementChild WEBKIT_AVAILABLE_MAC(10_6);
-@property (readonly) unsigned childElementCount WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, retain) DOMElement *previousElementSibling WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMElement *nextElementSibling WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMElement *firstElementChild WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMElement *lastElementChild WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly) unsigned childElementCount WEBKIT_AVAILABLE_MAC(10_5);
 
 #if TARGET_OS_IPHONE
 @property (readonly) CGRect boundsInRootViewSpace;
@@ -85,18 +85,18 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (DOMAttr *)setAttributeNodeNS:(DOMAttr *)newAttr;
 - (BOOL)hasAttribute:(NSString *)name;
 - (BOOL)hasAttributeNS:(NSString *)namespaceURI localName:(NSString *)localName WEBKIT_AVAILABLE_MAC(10_5);
-- (void)focus WEBKIT_AVAILABLE_MAC(10_6);
-- (void)blur WEBKIT_AVAILABLE_MAC(10_6);
+- (void)focus WEBKIT_AVAILABLE_MAC(10_5);
+- (void)blur WEBKIT_AVAILABLE_MAC(10_5);
 - (void)scrollIntoView:(BOOL)alignWithTop WEBKIT_AVAILABLE_MAC(10_5);
 - (void)scrollIntoViewIfNeeded:(BOOL)centerIfNeeded WEBKIT_AVAILABLE_MAC(10_5);
 - (void)scrollByLines:(int)lines WEBKIT_AVAILABLE_MAC(10_5);
 - (void)scrollByPages:(int)pages WEBKIT_AVAILABLE_MAC(10_5);
-- (DOMNodeList *)getElementsByClassName:(NSString *)name WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMNodeList *)getElementsByClassName:(NSString *)name WEBKIT_AVAILABLE_MAC(10_5);
 #if !TARGET_OS_IPHONE
-- (void)webkitRequestFullScreen:(unsigned short)flags WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webkitRequestFullScreen:(unsigned short)flags WEBKIT_AVAILABLE_MAC(10_5);
 #endif
-- (DOMElement *)querySelector:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
-- (DOMNodeList *)querySelectorAll:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMElement *)querySelector:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_5);
+- (DOMNodeList *)querySelectorAll:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_5);
 @end
 
 @interface DOMElement (DOMElementDeprecated)

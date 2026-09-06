@@ -34,6 +34,7 @@
 #import "FontCache.h"
 #import "FontCascade.h"
 #import "FontDescription.h"
+#import "NSFontSPI.h"
 #import "OpenTypeCG.h"
 #import "SharedBuffer.h"
 #import "WebCoreSystemInterface.h"
@@ -54,6 +55,23 @@
 @interface NSFont (WebAppKitSecretAPI)
 - (BOOL)_isFakeFixedPitch;
 @end
+#endif
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+enum {
+  kLowerCaseType                = 37,
+  kUpperCaseType                = 38
+};
+enum {
+  kDefaultLowerCaseSelector     = 0,
+  kLowerCaseSmallCapsSelector   = 1,
+  kLowerCasePetiteCapsSelector  = 2
+};
+enum {
+  kDefaultUpperCaseSelector     = 0,
+  kUpperCaseSmallCapsSelector   = 1,
+  kUpperCasePetiteCapsSelector  = 2
+};
 #endif
 
 namespace WebCore {
@@ -123,6 +141,13 @@ void Font::platformInit()
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
 #endif
 
+#if PLATFORM(MAC) && (__MAC_OS_X_VERSION_MIN_REQUIRED < 101100 && __MAC_OS_X_VERSION_MIN_REQUIRED > 1060)
+    // Work around <rdar://problem/19433490>
+    CGGlyph dummyGlyphs[] = {0, 0};
+    CGSize dummySize[] = { CGSizeMake(0, 0), CGSizeMake(0, 0) };
+    CTFontTransformGlyphs(m_platformData.ctFont(), dummyGlyphs, dummySize, 2, kCTFontTransformApplyPositioning | kCTFontTransformApplyShaping);
+#endif
+
     unsigned unitsPerEm = CTFontGetUnitsPerEm(m_platformData.font());
     float pointSize = m_platformData.size();
     CGFloat capHeight = pointSize ? CTFontGetCapHeight(m_platformData.font()) : 0;
@@ -151,6 +176,15 @@ void Font::platformInit()
     // and add it to the ascent.
     if (origin() == Origin::Local && needsAscentAdjustment(familyName.get()))
         ascent += std::round((ascent + descent) * 0.15f);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    else if (caseInsensitiveCompare(familyName.get(), CFSTR("Geeza Pro"))) {
+        // Geeza Pro has glyphs that draw slightly above the ascent or far below the descent. Adjust
+        // those vertical metrics to better match reality, so that diacritics at the bottom of one line
+        // do not overlap diacritics at the top of the next line.
+        ascent *= 1.08f;
+        descent *= 2.f;
+    }
+#endif
 #endif
 
     // Compute line spacing before the line metrics hacks are applied.
@@ -387,16 +421,19 @@ static RefPtr<Font> createDerivativeFont(CTFontRef font, float size, FontOrienta
     return Font::create(scaledFontData);
 }
 
+#if (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
 static inline bool isOpenTypeFeature(CFDictionaryRef feature)
 {
     return CFDictionaryContainsKey(feature, kCTFontOpenTypeFeatureTag) && CFDictionaryContainsKey(feature, kCTFontOpenTypeFeatureValue);
 }
+#endif
 
 static inline bool isTrueTypeFeature(CFDictionaryRef feature)
 {
     return CFDictionaryContainsKey(feature, kCTFontFeatureTypeIdentifierKey) && CFDictionaryContainsKey(feature, kCTFontFeatureSelectorIdentifierKey);
 }
 
+#if (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
 static inline std::optional<CFStringRef> openTypeFeature(CFDictionaryRef feature)
 {
     ASSERT(isOpenTypeFeature(feature));
@@ -407,6 +444,7 @@ static inline std::optional<CFStringRef> openTypeFeature(CFDictionaryRef feature
     ASSERT_UNUSED(success, success);
     return rawValue ? std::optional<CFStringRef>(tag) : std::nullopt;
 }
+#endif
 
 static inline std::pair<int, int> trueTypeFeature(CFDictionaryRef feature)
 {
@@ -457,11 +495,18 @@ static inline CFNumberRef defaultSelectorForTrueTypeFeature(int key, CTFontRef f
 
 static inline RetainPtr<CFDictionaryRef> removedFeature(CFDictionaryRef feature, CTFontRef font)
 {
+#if (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
     bool isOpenType = isOpenTypeFeature(feature);
+#endif
     bool isTrueType = isTrueTypeFeature(feature);
+#if (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
     if (!isOpenType && !isTrueType)
+#else
+    if (!isTrueType)
+#endif
         return feature; // We don't understand this font format.
     RetainPtr<CFMutableDictionaryRef> result = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+#if (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
     if (isOpenType) {
         auto featureTag = openTypeFeature(feature);
         if (featureTag && (CFEqual(featureTag.value(), CFSTR("smcp"))
@@ -477,6 +522,7 @@ static inline RetainPtr<CFDictionaryRef> removedFeature(CFDictionaryRef feature,
             CFDictionaryAddValue(result.get(), kCTFontOpenTypeFeatureValue, CFDictionaryGetValue(feature, kCTFontOpenTypeFeatureValue));
         }
     }
+#endif
     if (isTrueType) {
         auto trueTypeFeaturePair = trueTypeFeature(feature);
         if (trueTypeFeaturePair.first == kLowerCaseType && (trueTypeFeaturePair.second == kLowerCaseSmallCapsSelector || trueTypeFeaturePair.second == kLowerCasePetiteCapsSelector)) {
@@ -513,8 +559,22 @@ static RetainPtr<CTFontRef> createCTFontWithoutSynthesizableFeatures(CTFontRef f
     CFTypeRef keys[] = { kCTFontFeatureSettingsAttribute };
     CFTypeRef values[] = { newFeatures.get() };
     RetainPtr<CFDictionaryRef> attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    RetainPtr<CTFontDescriptorRef> newDescriptor;
+    CTFontDescriptorRef descriptor = NULL;
+    auto platformFont = CTFontGetPlatformFont(font, &descriptor);
+    if (descriptor) {
+        newDescriptor = adoptCF(CTFontDescriptorCreateCopyWithAttributes(descriptor, attributes.get()));
+        CFRelease(descriptor);
+    } else
+        newDescriptor = adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get()));
+    auto result = adoptCF(CTFontCreateWithPlatformFont(platformFont, CTFontGetSize(font), nullptr, newDescriptor.get()));
+    RELEASE_ASSERT(CTFontGetPlatformFont(font, nullptr) == CTFontGetPlatformFont(result.get(), nullptr));
+    return result;
+#else
     RetainPtr<CTFontDescriptorRef> newDescriptor = adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get()));
     return adoptCF(CTFontCreateCopyWithAttributes(font, CTFontGetSize(font), nullptr, newDescriptor.get()));
+#endif
 }
 
 RefPtr<Font> Font::createFontWithoutSynthesizableFeatures() const
@@ -529,8 +589,17 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
 {
     float size = m_platformData.size() * scaleFactor;
     CTFontSymbolicTraits fontTraits = CTFontGetSymbolicTraits(m_platformData.font());
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    CTFontDescriptorRef descriptor = NULL;
+    auto platformFont = CTFontGetPlatformFont(m_platformData.font(), &descriptor);
+    auto scaledFont = adoptCF(CTFontCreateWithPlatformFont(platformFont, size, nullptr, descriptor));
+    if (descriptor)
+        CFRelease(descriptor);
+    RELEASE_ASSERT(platformFont == CTFontGetPlatformFont(scaledFont.get(), nullptr));
+#else
     RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontCopyFontDescriptor(m_platformData.font()));
     RetainPtr<CTFontRef> scaledFont = adoptCF(CTFontCreateWithFontDescriptor(fontDescriptor.get(), size, nullptr));
+#endif
 
     return createDerivativeFont(scaledFont.get(), size, m_platformData.orientation(), fontTraits, m_platformData.syntheticBold(), m_platformData.syntheticOblique());
 }

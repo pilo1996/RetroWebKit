@@ -54,6 +54,7 @@ namespace WebCore {
 
 #if PLATFORM(MAC)
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 static CGFloat toNSFontWeight(FontSelectionValue fontWeight)
 {
     if (fontWeight < FontSelectionValue(150))
@@ -74,12 +75,17 @@ static CGFloat toNSFontWeight(FontSelectionValue fontWeight)
         return NSFontWeightHeavy;
     return NSFontWeightBlack;
 }
+#endif
 
 RetainPtr<CTFontRef> platformFontWithFamilySpecialCase(const AtomicString& family, FontSelectionRequest request, float size)
 {
     // FIXME: See comment in FontCascadeDescription::effectiveFamilyAt() in FontDescriptionCocoa.cpp
     if (equalLettersIgnoringASCIICase(family, "-webkit-system-font") || equalLettersIgnoringASCIICase(family, "-apple-system") || equalLettersIgnoringASCIICase(family, "-apple-system-font") || equalLettersIgnoringASCIICase(family, "system-ui")) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
         RetainPtr<CTFontRef> result = toCTFont([NSFont systemFontOfSize:size weight:toNSFontWeight(request.weight)]);
+#else
+        RetainPtr<CTFontRef> result = toCTFont(isFontWeightBold(request.weight) ? [NSFont boldSystemFontOfSize:size] : [NSFont systemFontOfSize:size]);
+#endif
         if (isItalic(request.slope)) {
             CTFontSymbolicTraits desiredTraits = kCTFontItalicTrait;
             if (isFontWeightBold(request.weight))
@@ -95,17 +101,11 @@ RetainPtr<CTFontRef> platformFontWithFamilySpecialCase(const AtomicString& famil
         int monospacedNumbersSelector = kMonospacedNumbersSelector;
         RetainPtr<CFNumberRef> numberSpacingNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &numberSpacingType));
         RetainPtr<CFNumberRef> monospacedNumbersNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &monospacedNumbersSelector));
-        CFTypeRef featureKeys[] = { kCTFontFeatureTypeIdentifierKey, kCTFontFeatureSelectorIdentifierKey };
-        CFTypeRef featureValues[] = { numberSpacingNumber.get(), monospacedNumbersNumber.get() };
-        RetainPtr<CFDictionaryRef> featureIdentifier = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, featureKeys, featureValues, WTF_ARRAY_LENGTH(featureKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-        CFTypeRef featureIdentifiers[] = { featureIdentifier.get() };
-        RetainPtr<CFArrayRef> featureArray = adoptCF(CFArrayCreate(kCFAllocatorDefault, featureIdentifiers, 1, &kCFTypeArrayCallBacks));
-        CFTypeRef attributesKeys[] = { kCTFontFeatureSettingsAttribute };
-        CFTypeRef attributesValues[] = { featureArray.get() };
-        RetainPtr<CFDictionaryRef> attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, attributesKeys, attributesValues, WTF_ARRAY_LENGTH(attributesKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
 
         RetainPtr<CTFontRef> result = toCTFont([NSFont systemFontOfSize:size]);
-        return adoptCF(CTFontCreateCopyWithAttributes(result.get(), size, nullptr, adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get())).get()));
+        RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontCopyFontDescriptor(result.get()));
+        RetainPtr<CTFontDescriptorRef> newDescriptor = adoptCF(CTFontDescriptorCreateCopyWithFeature(fontDescriptor.get(), numberSpacingNumber.get(), monospacedNumbersNumber.get()));
+        return adoptCF(CTFontCreateWithFontDescriptor(newDescriptor.get(), size, nullptr));
     }
 
     if (equalLettersIgnoringASCIICase(family, "-apple-menu"))
@@ -127,6 +127,27 @@ RetainPtr<CTFontRef> platformFontWithFamilySpecialCase(const AtomicString& famil
 
     return nullptr;
 }
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090
+
+RetainPtr<CTFontRef> platformLookupFallbackFont(CTFontRef font, const AtomicString& locale, const UChar* characters, unsigned length)
+{
+    RetainPtr<CFStringRef> localeString;
+    if (!locale.isNull())
+        localeString = locale.string().createCFString();
+
+//    RetainPtr<CTFontRef> ctFont = font;
+//    if (!ctFont)
+//        ctFont = adoptCF(CTFontCreateUIFontForLanguage(kCTFontUIFontUser, 0, localeString.get()));
+
+    RetainPtr<NSString> string = adoptNS([[NSString alloc] initWithCharactersNoCopy:const_cast<UChar*>(characters) length:length freeWhenDone:NO]);
+    NSFont *nsFont = [NSFont findFontLike:toNSFont(font) forString:string.get() withRange:NSMakeRange(0, [string.get() length]) inLanguage:(const NSString*)localeString.get()];
+    if (!nsFont && length == 1)
+        nsFont = [NSFont findFontLike:toNSFont(font) forCharacter:characters[0] inLanguage:(const NSString*)localeString.get()];
+    return toCTFont(nsFont);
+}
+
+#endif
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {

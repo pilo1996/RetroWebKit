@@ -580,7 +580,7 @@ id <DOMEventTarget> kit(EventTarget* eventTarget)
             boundingBox.inflate(margin);
 
             CGRect cgRect = node.document().frame()->view()->contentsToWindow(enclosingIntRect(boundingBox));
-            [rectArray addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
+            [rectArray.get() addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
 
             *rects = rectArray.autorelease();
         }
@@ -593,7 +593,7 @@ id <DOMEventTarget> kit(EventTarget* eventTarget)
         cgRect.origin.x += origin.x();
         cgRect.origin.y += origin.y();
         cgRect = node.document().frame()->view()->contentsToWindow(enclosingIntRect(cgRect));
-        [rectArray addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
+        [rectArray.get() addObject:[NSValue value:&cgRect withObjCType:@encode(CGRect)]];
     }
 
     *rects = rectArray.autorelease();
@@ -630,9 +630,9 @@ id <DOMEventTarget> kit(EventTarget* eventTarget)
 #if PLATFORM(MAC)
     RetainPtr<NSImage> renderedImage = createDragImageForRange(*frame, range, forceBlackText);
 
-    IntSize size([renderedImage size]);
+    IntSize size([renderedImage.get() size]);
     size.scale(1 / frame->page()->deviceScaleFactor());
-    [renderedImage setSize:size];
+    [renderedImage.get() setSize:size];
 
     return renderedImage.autorelease();
 #else
@@ -863,7 +863,7 @@ WebCore::NodeFilter* core(DOMNodeFilter *wrapper)
         raiseTypeErrorException();
     
     auto result = core(self)->acceptNode(*core(node));
-    return result.type() == CallbackResultType::Success ? result.releaseReturnValue() : NodeFilter::FILTER_REJECT;
+    return result.type() == CallbackResultType::Success ? result.releaseReturnValue() : (short)NodeFilter::FILTER_REJECT;
 }
 
 @end

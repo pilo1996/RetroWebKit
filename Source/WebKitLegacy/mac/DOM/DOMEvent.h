@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class NSString;
 @protocol DOMEventTarget;
@@ -38,15 +38,15 @@ enum {
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMEvent : DOMObject
 @property (readonly, copy) NSString *type;
-@property (readonly, strong) id <DOMEventTarget> target;
-@property (readonly, strong) id <DOMEventTarget> currentTarget;
+@property (readonly, retain) id <DOMEventTarget> target;
+@property (readonly, retain) id <DOMEventTarget> currentTarget;
 @property (readonly) unsigned short eventPhase;
 @property (readonly) BOOL bubbles;
 @property (readonly) BOOL cancelable;
 @property (readonly) DOMTimeStamp timeStamp;
-@property (readonly, strong) id <DOMEventTarget> srcElement WEBKIT_AVAILABLE_MAC(10_6);
-@property BOOL returnValue WEBKIT_AVAILABLE_MAC(10_6);
-@property BOOL cancelBubble WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, retain) id <DOMEventTarget> srcElement WEBKIT_AVAILABLE_MAC(10_5);
+@property BOOL returnValue WEBKIT_AVAILABLE_MAC(10_5);
+@property BOOL cancelBubble WEBKIT_AVAILABLE_MAC(10_5);
 
 - (void)stopPropagation;
 - (void)preventDefault;

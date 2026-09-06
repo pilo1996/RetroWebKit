@@ -45,6 +45,7 @@
 #import "WebEditingDelegatePrivate.h"
 #import "WebFormDelegate.h"
 #import "WebFrameInternal.h"
+#import "WebFrameView.h"
 #import "WebHTMLView.h"
 #import "WebHTMLViewInternal.h"
 #import "WebKitLogging.h"
@@ -85,7 +86,6 @@
 #if PLATFORM(IOS)
 #import <WebCore/WebCoreThreadMessage.h>
 #import "DOMElementInternal.h"
-#import "WebFrameView.h"
 #import "WebUIKitDelegate.h"
 #endif
 
@@ -93,7 +93,7 @@ using namespace WebCore;
 
 using namespace HTMLNames;
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) &&  (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 @interface NSSpellChecker (WebNSSpellCheckerDetails)
 - (NSString *)languageForWordRange:(NSRange)range inString:(NSString *)string orthography:(NSOrthography *)orthography;
 @end
@@ -102,6 +102,14 @@ using namespace HTMLNames;
 @interface NSAttributedString (WebNSAttributedStringDetails)
 - (DOMDocumentFragment *)_documentFromRange:(NSRange)range document:(DOMDocument *)document documentAttributes:(NSDictionary *)attributes subresources:(NSArray **)subresources;
 @end
+
+#if !PLATFORM(IOS) &&  (__MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+#define NSTextInputContext NSInputContext
+@interface NSTextInputContext : NSObject
++ (NSTextInputContext *)currentInputContext;
+- (void)discardMarkedText;
+@end
+#endif
 
 static WebViewInsertAction kit(EditorInsertAction action)
 {
@@ -112,6 +120,8 @@ static WebViewInsertAction kit(EditorInsertAction action)
         return WebViewInsertActionPasted;
     case EditorInsertAction::Dropped:
         return WebViewInsertActionDropped;
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
 }
 
@@ -134,6 +144,7 @@ static WebViewInsertAction kit(EditorInsertAction action)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)initWithUndoStep:(UndoStep&)step
@@ -151,6 +162,11 @@ static WebViewInsertAction kit(EditorInsertAction action)
         return;
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    [super finalize];
 }
 
 + (WebUndoStep *)stepWithUndoStep:(UndoStep&)step
@@ -458,14 +474,16 @@ static NSDictionary *attributesForAttributedStringConversion()
     return dictionary;
 }
 
-void _WebCreateFragment(Document& document, NSAttributedString *string, FragmentAndResources& result)
+extern "C" void _WebCreateFragment(Document& document, NSAttributedString *string, FragmentAndResources& result)
 {
     static NSDictionary *documentAttributes = [attributesForAttributedStringConversion() retain];
     NSArray *subresources;
     DOMDocumentFragment* fragment = [string _documentFromRange:NSMakeRange(0, [string length])
         document:kit(&document) documentAttributes:documentAttributes subresources:&subresources];
     result.fragment = core(fragment);
-    for (WebResource* resource in subresources)
+    NSEnumerator *enumerator = [subresources objectEnumerator];
+    WebResource *resource;
+    while ((resource = [enumerator nextObject]) != nil)
         result.resources.append([resource _coreResource]);
 }
 
@@ -748,7 +766,7 @@ void WebEditorClient::handleKeyboardEvent(KeyboardEvent* event)
 {
     Frame* frame = event->target()->toNode()->document().frame();
 #if !PLATFORM(IOS)
-    WebHTMLView *webHTMLView = [[kit(frame) frameView] documentView];
+    WebHTMLView *webHTMLView = (WebHTMLView *)[[kit(frame) frameView] documentView];
     if ([webHTMLView _interpretKeyEvent:event savingCommands:NO])
         event->setDefaultHandled();
 #else
@@ -763,7 +781,7 @@ void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
 #if !PLATFORM(IOS)
     // FIXME: Switch to WebKit2 model, interpreting the event before it's sent down to WebCore.
     Frame* frame = event->target()->toNode()->document().frame();
-    WebHTMLView *webHTMLView = [[kit(frame) frameView] documentView];
+    WebHTMLView *webHTMLView = (WebHTMLView *)[[kit(frame) frameView] documentView];
     if ([webHTMLView _interpretKeyEvent:event savingCommands:YES])
         event->setDefaultHandled();
 #else
@@ -971,7 +989,11 @@ bool WebEditorClient::performTwoStepDrop(DocumentFragment&, Range&, bool)
 bool WebEditorClient::shouldEraseMarkersAfterChangeSelection(TextCheckingType type) const
 {
     // This prevents erasing spelling markers on OS X Lion or later to match AppKit on these Mac OS X versions.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     return type != TextCheckingTypeSpelling;
+#else
+    return true;
+#endif
 }
 
 void WebEditorClient::ignoreWordInSpellDocument(const String& text)
@@ -1016,7 +1038,9 @@ void WebEditorClient::checkGrammarOfString(StringView text, Vector<GrammarDetail
         *badGrammarLocation = (range.location == NSNotFound) ? -1 : static_cast<int>(range.location);
     if (badGrammarLength)
         *badGrammarLength = range.length;
-    for (NSDictionary *detail in grammarDetails) {
+    NSEnumerator *enumerator = [grammarDetails objectEnumerator];
+    NSDictionary *detail;
+    while ((detail = [enumerator nextObject]) != nil) {
         ASSERT(detail);
         GrammarDetail grammarDetail;
         NSValue *detailRangeAsNSValue = [detail objectForKey:NSGrammarRange];
@@ -1028,12 +1052,15 @@ void WebEditorClient::checkGrammarOfString(StringView text, Vector<GrammarDetail
         grammarDetail.length = detailNSRange.length;
         grammarDetail.userDescription = [detail objectForKey:NSGrammarUserDescription];
         NSArray *guesses = [detail objectForKey:NSGrammarCorrections];
-        for (NSString *guess in guesses)
+        NSEnumerator *enumerator = [guesses objectEnumerator];
+        NSString *guess;
+        while ((guess = [enumerator nextObject]) != nil)
             grammarDetail.guesses.append(String(guess));
         details.append(grammarDetail);
     }
 }
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 static Vector<TextCheckingResult> core(NSArray *incomingResults, TextCheckingTypeMask checkingTypes)
 {
     Vector<TextCheckingResult> results;
@@ -1112,6 +1139,7 @@ static Vector<TextCheckingResult> core(NSArray *incomingResults, TextCheckingTyp
 
     return results;
 }
+#endif
 
 #if HAVE(ADVANCED_SPELL_CHECKING)
 static int insertionPointFromCurrentSelection(const VisibleSelection& currentSelection)
@@ -1122,6 +1150,7 @@ static int insertionPointFromCurrentSelection(const VisibleSelection& currentSel
 }
 #endif
 
+#if USE(UNIFIED_TEXT_CHECKING)
 Vector<TextCheckingResult> WebEditorClient::checkTextOfParagraph(StringView string, TextCheckingTypeMask checkingTypes, const VisibleSelection& currentSelection)
 {
     NSDictionary *options = nil;
@@ -1130,6 +1159,7 @@ Vector<TextCheckingResult> WebEditorClient::checkTextOfParagraph(StringView stri
 #endif
     return core([[NSSpellChecker sharedSpellChecker] checkString:string.createNSStringWithoutCopying().get() range:NSMakeRange(0, string.length()) types:(checkingTypes | NSTextCheckingTypeOrthography) options:options inSpellDocumentWithTag:spellCheckerDocumentTag() orthography:NULL wordCount:NULL], checkingTypes);
 }
+#endif
 
 void WebEditorClient::updateSpellingUIWithGrammarString(const String& badGrammarPhrase, const GrammarDetail& grammarDetail)
 {
@@ -1167,6 +1197,7 @@ bool WebEditorClient::spellingUIIsShowing()
 void WebEditorClient::getGuessesForWord(const String& word, const String& context, const WebCore::VisibleSelection& currentSelection, Vector<String>& guesses)
 {
     guesses.clear();
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     NSString* language = nil;
     NSOrthography* orthography = nil;
     NSSpellChecker *checker = [NSSpellChecker sharedSpellChecker];
@@ -1179,6 +1210,9 @@ void WebEditorClient::getGuessesForWord(const String& word, const String& contex
         language = [checker languageForWordRange:NSMakeRange(0, context.length()) inString:context orthography:orthography];
     }
     NSArray* stringsArray = [checker guessesForWordRange:NSMakeRange(0, word.length()) inString:word language:language inSpellDocumentWithTag:spellCheckerDocumentTag()];
+#else
+    NSArray* stringsArray = [[NSSpellChecker sharedSpellChecker] guessesForWord:word];
+#endif
     unsigned count = [stringsArray count];
 
     if (count > 0) {
@@ -1299,7 +1333,7 @@ void WebEditorClient::handleAcceptedCandidateWithSoftSpaces(TextCheckingResult a
 
 #endif // PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
 
 @interface WebEditorSpellCheckResponder : NSObject
 {
@@ -1341,7 +1375,7 @@ void WebEditorClient::didCheckSucceed(int sequence, NSArray* results)
 
 void WebEditorClient::requestCheckingOfString(WebCore::TextCheckingRequest& request, const VisibleSelection& currentSelection)
 {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     ASSERT(!m_textCheckingRequest);
     m_textCheckingRequest = &request;
 

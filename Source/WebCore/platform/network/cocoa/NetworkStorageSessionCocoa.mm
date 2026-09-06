@@ -45,7 +45,7 @@ void NetworkStorageSession::setCookies(const Vector<Cookie>& cookies, const URL&
 {
     RetainPtr<NSMutableArray> nsCookies = adoptNS([[NSMutableArray alloc] initWithCapacity:cookies.size()]);
     for (const auto& cookie : cookies)
-        [nsCookies addObject:(NSHTTPCookie *)cookie];
+        [nsCookies.get() addObject:(NSHTTPCookie *)cookie];
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     [nsCookieStorage() setCookies:nsCookies.get() forURL:(NSURL *)url mainDocumentURL:(NSURL *)mainDocumentURL];
@@ -57,11 +57,13 @@ void NetworkStorageSession::deleteCookie(const Cookie& cookie)
     [nsCookieStorage() deleteCookie:(NSHTTPCookie *)cookie];
 }
 
-static Vector<Cookie> nsCookiesToCookieVector(NSArray<NSHTTPCookie *> *nsCookies)
+static Vector<Cookie> nsCookiesToCookieVector(NSArray *nsCookies)
 {
     Vector<Cookie> cookies;
     cookies.reserveInitialCapacity(nsCookies.count);
-    for (NSHTTPCookie *nsCookie in nsCookies)
+    NSEnumerator *enumerator = [nsCookies objectEnumerator];
+    NSHTTPCookie *nsCookie;
+    while ((nsCookie = [enumerator nextObject]))
         cookies.uncheckedAppend(nsCookie);
 
     return cookies;
@@ -69,7 +71,7 @@ static Vector<Cookie> nsCookiesToCookieVector(NSArray<NSHTTPCookie *> *nsCookies
 
 Vector<Cookie> NetworkStorageSession::getAllCookies()
 {
-    return nsCookiesToCookieVector(nsCookieStorage().cookies);
+    return nsCookiesToCookieVector([nsCookieStorage() cookies]);
 }
 
 Vector<Cookie> NetworkStorageSession::getCookies(const URL& url)

@@ -259,17 +259,16 @@ RefPtr<LegacyWebArchive> LegacyWebArchive::create(const URL&, SharedBuffer& data
     if (!cfData)
         return nullptr;
         
-    CFErrorRef error = nullptr;
+    CFStringRef errorString = nullptr;
     
-    RetainPtr<CFDictionaryRef> plist = adoptCF(static_cast<CFDictionaryRef>(CFPropertyListCreateWithData(0, cfData.get(), kCFPropertyListImmutable, 0, &error)));
+    RetainPtr<CFDictionaryRef> plist = adoptCF(static_cast<CFDictionaryRef>(CFPropertyListCreateFromXMLData(0, cfData.get(), kCFPropertyListImmutable, &errorString)));
     if (!plist) {
 #ifndef NDEBUG
-        RetainPtr<CFStringRef> errorString = error ? adoptCF(CFErrorCopyDescription(error)) : 0;
-        const char* cError = errorString ? CFStringGetCStringPtr(errorString.get(), kCFStringEncodingUTF8) : "unknown error";
+        const char* cError = errorString ? CFStringGetCStringPtr(errorString, kCFStringEncodingUTF8) : "unknown error";
         LOG(Archives, "LegacyWebArchive - Error parsing PropertyList from archive data - %s", cError);
 #endif
-        if (error)
-            CFRelease(error);
+        if (errorString)
+            CFRelease(errorString);
         return nullptr;
     }
     
@@ -373,7 +372,7 @@ RetainPtr<CFDataRef> LegacyWebArchive::rawDataRepresentation()
     auto stream = adoptCF(CFWriteStreamCreateWithAllocatedBuffers(0, 0));
 
     CFWriteStreamOpen(stream.get());
-    CFPropertyListWrite(propertyList.get(), stream.get(), kCFPropertyListBinaryFormat_v1_0, 0, 0);
+    CFPropertyListWriteToStream(propertyList.get(), stream.get(), kCFPropertyListBinaryFormat_v1_0, 0);
 
     auto plistData = adoptCF(static_cast<CFDataRef>(CFWriteStreamCopyProperty(stream.get(), kCFStreamPropertyDataWritten)));
     ASSERT(plistData);

@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebNSFileManagerExtras.h>
+#import <WebKit/WebNSFileManagerExtras.h>
 
 #import "WebKitNSStringExtras.h"
 #import "WebNSURLExtras.h"
@@ -37,6 +37,10 @@
 
 #if PLATFORM(IOS)
 #import <WebCore/FileSystemIOS.h>
+#endif
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+extern "C" DADiskRef DADiskCreateFromVolumePath(CFAllocatorRef allocator, DASessionRef session, CFURLRef path);
 #endif
 
 @implementation NSFileManager (WebNSFileManagerExtras)

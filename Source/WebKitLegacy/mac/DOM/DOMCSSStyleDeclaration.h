@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMCSSRule;
 @class DOMCSSValue;
@@ -33,7 +33,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSStyleDeclaration : DOMObject
 @property (copy) NSString *cssText;
 @property (readonly) unsigned length;
-@property (readonly, strong) DOMCSSRule *parentRule;
+@property (readonly, retain) DOMCSSRule *parentRule;
 
 - (NSString *)getPropertyValue:(NSString *)propertyName;
 - (DOMCSSValue *)getPropertyCSSValue:(NSString *)propertyName;
@@ -41,7 +41,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (NSString *)getPropertyPriority:(NSString *)propertyName;
 - (void)setProperty:(NSString *)propertyName value:(NSString *)value priority:(NSString *)priority WEBKIT_AVAILABLE_MAC(10_5);
 - (NSString *)item:(unsigned)index;
-- (NSString *)getPropertyShorthand:(NSString *)propertyName WEBKIT_DEPRECATED_MAC(10_5, 10_5);
+- (NSString *)getPropertyShorthand:(NSString *)propertyName WEBKIT_DEPRECATED_MAC(10_5, 10_6);
 - (BOOL)isPropertyImplicit:(NSString *)propertyName WEBKIT_AVAILABLE_MAC(10_5);
 @end
 

@@ -1,4 +1,4 @@
-MODULES = ANGLE libwebrtc
+MODULES = ANGLE brotli woff2 lz4 ots libwebrtc
 
 all:
 	@for dir in $(MODULES); do ${MAKE} $@ -C $$dir; exit_status=$$?; \

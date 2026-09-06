@@ -50,7 +50,7 @@ Heap::Heap(std::lock_guard<StaticMutex>&)
     if (m_environment.isDebugHeapEnabled())
         m_debugHeap = PerProcess<DebugHeap>::get();
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     auto queue = dispatch_queue_create("WebKit Malloc Memory Pressure Handler", DISPATCH_QUEUE_SERIAL);
     m_pressureHandlerDispatchSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0, DISPATCH_MEMORYPRESSURE_CRITICAL, queue);
     dispatch_source_set_event_handler(m_pressureHandlerDispatchSource, ^{
@@ -122,7 +122,7 @@ void Heap::concurrentScavenge()
 {
     std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
     pthread_set_qos_class_self_np(m_requestedScavengerThreadQOSClass, 0);
 #endif
 
@@ -137,6 +137,7 @@ void Heap::concurrentScavenge()
 
 void Heap::scavenge(std::lock_guard<StaticMutex>&)
 {
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     for (auto& list : m_freePages) {
         for (auto* chunk : list) {
             for (auto* page : chunk->freePages()) {
@@ -149,16 +150,49 @@ void Heap::scavenge(std::lock_guard<StaticMutex>&)
             }
         }
     }
+#endif
     
     for (auto& list : m_chunkCache) {
         while (!list.isEmpty())
             deallocateSmallChunk(list.pop(), &list - &m_chunkCache[0]);
     }
 
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     for (auto& range : m_largeFree) {
         vmDeallocatePhysicalPagesSloppy(range.begin(), range.size());
 
         range.setPhysicalSize(0);
+#else
+    LargeRange range;
+    while ((range = m_largeFree.remove(chunkSize, chunkSize))) {
+        LargeRange prev;
+        LargeRange next;
+
+        if (test(range.begin(), chunkMask)) {
+            size_t prefixSize = roundUpToMultipleOf(chunkSize, range.begin()) - range.begin();
+            std::pair<LargeRange, LargeRange> pair = range.split(prefixSize);
+            prev = pair.first;
+            range = pair.second;
+        }
+
+        if (range.size() > chunkSize) {
+            size_t deallocatableSize = roundDownToMultipleOf(chunkSize, range.size());
+            std::pair<LargeRange, LargeRange> pair = range.split(deallocatableSize);
+            range = pair.first;
+            next = pair.second;
+        }
+
+        BASSERT(range.size() == range.physicalSize());
+
+        // RELEASE_BASSERT(m_objectTypes.removeIfExisting(Chunk::get(range.begin()))); FIXME: can't remove from objectTypes since the Chunk we're releasing here can span multiple entries, and even parts of multiple Chunks; probably doesn't matter 
+        vmDeallocate(range.begin(), range.size()); // TODO: remove this range from the zone
+
+        if (prev)
+            m_largeFree.add(prev);
+
+        if (next)
+            m_largeFree.add(next);
+#endif
     }
 }
 
@@ -236,10 +270,14 @@ void Heap::deallocateSmallChunk(Chunk* chunk, size_t pageClass)
     size_t size = m_largeAllocated.remove(chunk);
 
     bool hasPhysicalPages = true;
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     forEachPage(chunk, pageSize(pageClass), [&](SmallPage* page) {
         if (!page->hasPhysicalPages())
             hasPhysicalPages = false;
     });
+#else
+    UNUSED(pageClass);
+#endif
     size_t physicalSize = hasPhysicalPages ? size : 0;
 
     m_largeFree.add(LargeRange(chunk, size, physicalSize));
@@ -269,12 +307,14 @@ SmallPage* Heap::allocateSmallPage(std::lock_guard<StaticMutex>& lock, size_t si
         if (chunk->freePages().isEmpty())
             m_freePages[pageClass].remove(chunk);
 
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         if (!page->hasPhysicalPages()) {
             scheduleScavengerIfUnderMemoryPressure(pageSize(pageClass));
 
             vmAllocatePhysicalPagesSloppy(page->begin()->begin(), pageSize(pageClass));
             page->setHasPhysicalPages(true);
         }
+#endif
 
         return page;
     }();
@@ -457,12 +497,14 @@ LargeRange Heap::splitAndAllocate(LargeRange& range, size_t alignment, size_t si
         next = pair.second;
     }
     
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     if (range.physicalSize() < range.size()) {
         scheduleScavengerIfUnderMemoryPressure(range.size());
         
         vmAllocatePhysicalPagesSloppy(range.begin() + range.physicalSize(), range.size() - range.physicalSize());
         range.setPhysicalSize(range.size());
     }
+#endif
     
     if (prev)
         m_largeFree.add(prev);
@@ -509,7 +551,10 @@ void* Heap::tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, si
 void* Heap::allocateLarge(std::lock_guard<StaticMutex>& lock, size_t alignment, size_t size)
 {
     void* result = tryAllocateLarge(lock, alignment, size);
-    RELEASE_BASSERT(result);
+    if (!result) {
+        reportAssertionFailureWithMessage(__FILE__, __LINE__, __PRETTY_FUNCTION__, "alignment: %lu, size: %lu\n", alignment, size);
+        BCRASH();
+    }
     return result;
 }
 

@@ -78,6 +78,38 @@
 #define BCPU_X86_64 1
 #endif
 
+/* BCPU(PPC64) - PowerPC 64-bit Big Endian */
+#if (  defined(__ppc64__)      \
+    || defined(__PPC64__))     \
+    && defined(__BYTE_ORDER__) \
+    && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BCPU_PPC64 1
+#endif
+
+/* BCPU(PPC64) - PowerPC 64-bit Little Endian */
+#if (   defined(__ppc64__)     \
+    || defined(__PPC64__)      \
+    || defined(__ppc64le__)    \
+    || defined(__PPC64LE__))   \
+    && defined(__BYTE_ORDER__) \
+    && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#define BCPU_PPC64LE 1
+#endif
+
+/* BCPU(PPC) - PowerPC 32-bit */
+#if (  defined(__ppc__)        \
+    || defined(__PPC__)        \
+    || defined(__powerpc__)    \
+    || defined(__powerpc)      \
+    || defined(__POWERPC__)    \
+    || defined(_M_PPC)         \
+    || defined(__PPC))         \
+    && !BCPU(PPC64)             \
+    && defined(__BYTE_ORDER__) \
+    && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#define BCPU_PPC 1
+#endif
+
 /* BCPU(ARM64) - Apple */
 #if (defined(__arm64__) && defined(__APPLE__)) || defined(__aarch64__)
 #define BCPU_ARM64 1

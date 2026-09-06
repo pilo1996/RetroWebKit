@@ -58,7 +58,7 @@ extern NSString *WebArchivePboardType;
     @param subframeArchives The archives representing the subframes of the archive (can be nil).
     @result An initialized WebArchive.
 */
-- (instancetype)initWithMainResource:(WebResource *)mainResource subresources:(NSArray *)subresources subframeArchives:(NSArray *)subframeArchives;
+- (id)initWithMainResource:(WebResource *)mainResource subresources:(NSArray *)subresources subframeArchives:(NSArray *)subframeArchives;
 
 /*!
     @method initWithData:
@@ -66,13 +66,13 @@ extern NSString *WebArchivePboardType;
     @param data The data representing the archive. This can be obtained using WebArchive's data method.
     @result An initialized WebArchive.
 */
-- (instancetype)initWithData:(NSData *)data;
+- (id)initWithData:(NSData *)data;
 
 /*!
     @property mainResource
     @abstract The main resource of the archive.
 */
-@property (nonatomic, readonly, strong) WebResource *mainResource;
+@property (nonatomic, readonly, retain) WebResource *mainResource;
 
 /*!
     @property subresources

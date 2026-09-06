@@ -292,8 +292,10 @@ void RenderLayerCompositor::enableCompositingMode(bool enable /* = true */)
         m_compositing = enable;
         
         if (m_compositing) {
-            ensureRootLayer();
+            updateRootLayerAttachment();
             notifyIFramesOfCompositingChange();
+            if (!page().isInWindow())
+                detachRootLayer();
         } else
             destroyRootLayer();
     }
@@ -3401,10 +3403,6 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
 
 void RenderLayerCompositor::ensureRootLayer()
 {
-    RootLayerAttachment expectedAttachment = isMainFrameCompositor() ? RootLayerAttachedViaChromeClient : RootLayerAttachedViaEnclosingFrame;
-    if (expectedAttachment == m_rootLayerAttachment)
-         return;
-
     if (!m_rootContentLayer) {
         m_rootContentLayer = GraphicsLayer::create(graphicsLayerFactory(), *this);
         m_rootContentLayer->setName("content root");
@@ -3423,7 +3421,7 @@ void RenderLayerCompositor::ensureRootLayer()
         updateRootContentLayerClipping();
     }
 
-    if (requiresScrollLayer(expectedAttachment)) {
+    if (requiresScrollLayer(isMainFrameCompositor() ? RootLayerAttachedViaChromeClient : RootLayerAttachedViaEnclosingFrame)) {
         if (!m_overflowControlsHostLayer) {
             ASSERT(!m_scrollLayer);
             ASSERT(!m_clipLayer);
@@ -3463,12 +3461,6 @@ void RenderLayerCompositor::ensureRootLayer()
             m_scrollLayer = nullptr;
         }
     }
-
-    // Check to see if we have to change the attachment
-    if (m_rootLayerAttachment != RootLayerUnattached)
-        detachRootLayer();
-
-    attachRootLayer(expectedAttachment);
 }
 
 void RenderLayerCompositor::destroyRootLayer()
@@ -3592,7 +3584,17 @@ void RenderLayerCompositor::detachRootLayer()
 
 void RenderLayerCompositor::updateRootLayerAttachment()
 {
+    RootLayerAttachment expectedAttachment = isMainFrameCompositor() ? RootLayerAttachedViaChromeClient : RootLayerAttachedViaEnclosingFrame;
+    if (expectedAttachment == m_rootLayerAttachment)
+         return;
+
     ensureRootLayer();
+
+    // Check to see if we have to change the attachment
+    if (m_rootLayerAttachment != RootLayerUnattached)
+        detachRootLayer();
+
+    attachRootLayer(expectedAttachment);
 }
 
 void RenderLayerCompositor::rootLayerAttachmentChanged()
@@ -3611,7 +3613,7 @@ void RenderLayerCompositor::rootLayerAttachmentChanged()
     if (RenderLayerBacking* backing = layer ? layer->backing() : nullptr)
         backing->updateDrawsContent();
 
-    if (!frame.isMainFrame())
+    if (!frame.isMainFrame() || !m_rootContentLayer)
         return;
 
     m_rootContentLayer->addChild(&frame.mainFrame().pageOverlayController().layerWithDocumentOverlays());

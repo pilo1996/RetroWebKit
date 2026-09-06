@@ -61,7 +61,7 @@
     @param webView The WebView that manages the frame.
     @result Returns an initialized WebFrame.
 */
-- (instancetype)initWithName:(NSString *)name webFrameView:(WebFrameView *)view webView:(WebView *)webView;
+- (id)initWithName:(NSString *)name webFrameView:(WebFrameView *)view webView:(WebView *)webView;
 
 /*!
     @property name
@@ -73,20 +73,20 @@
     @property webView
     @abstract The WebView for the document that includes this frame.
 */
-@property (nonatomic, readonly, strong) WebView *webView;
+@property (nonatomic, readonly, retain) WebView *webView;
 
 /*!
     @property frameView
     @abstract The WebFrameView for this frame.
 */
-@property (nonatomic, readonly, strong) WebFrameView *frameView;
+@property (nonatomic, readonly, retain) WebFrameView *frameView;
 
 /*!
     @property DOMDocument
     @abstract The DOM document of the frame.
     @description Returns nil if the frame does not contain a DOM document such as a standalone image.
 */
-@property (nonatomic, readonly, strong) DOMDocument *DOMDocument;
+@property (nonatomic, readonly, retain) DOMDocument *DOMDocument;
 
 /*!
     @property frameElement
@@ -94,7 +94,7 @@
     @description The class of the result is either DOMHTMLFrameElement, DOMHTMLIFrameElement or DOMHTMLObjectElement.
     Returns nil if the frame is the main frame since there is no frame element for the frame in this case.
 */
-@property (nonatomic, readonly, strong) DOMHTMLElement *frameElement;
+@property (nonatomic, readonly, retain) DOMHTMLElement *frameElement;
 
 /*!
     @method loadRequest:
@@ -146,7 +146,7 @@
     @discussion Returns the committed data source.  Will return nil if the
     provisional data source hasn't yet been loaded.
 */
-@property (nonatomic, readonly, strong) WebDataSource *dataSource;
+@property (nonatomic, readonly, retain) WebDataSource *dataSource;
 
 /*!
     @property provisionalDataSource
@@ -155,7 +155,7 @@
     be nil if no data source has been set on the frame, or the data source
     has successfully transitioned to the committed data source.
 */
-@property (nonatomic, readonly, strong) WebDataSource *provisionalDataSource;
+@property (nonatomic, readonly, retain) WebDataSource *provisionalDataSource;
 
 /*!
     @method stopLoading
@@ -193,7 +193,7 @@
     @property parentFrame
     @abstract The frame containing this frame, or nil if this is a top level frame.
 */
-@property (nonatomic, readonly, strong) WebFrame *parentFrame;
+@property (nonatomic, readonly, retain) WebFrame *parentFrame;
 
 /*!
     @property childFrames
@@ -206,7 +206,7 @@
     @property windowObject
     @abstract The WebScriptObject representing the frame's JavaScript window object.
 */
-@property (nonatomic, readonly, strong) WebScriptObject *windowObject;
+@property (nonatomic, readonly, retain) WebScriptObject *windowObject;
 
 /*!
     @property globalContext
@@ -221,7 +221,7 @@
     @abstract The frame's global JavaScript execution context.
     @discussion Use this method to bridge between the WebKit and Objective-C JavaScriptCore API.
 */
-@property (nonatomic, readonly, strong) JSContext *javaScriptContext;
+@property (nonatomic, readonly, retain) JSContext *javaScriptContext;
 #endif // JSC_OBJC_API_ENABLED
 
 @end

@@ -29,6 +29,10 @@
 
 #include "SleepDisabler.h"
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include "Timer.h"
+#endif
+
 namespace WebCore {
 
 class SleepDisablerCocoa : public SleepDisabler {
@@ -38,6 +42,9 @@ public:
 
 private:
     uint32_t m_sleepAssertion;
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    Timer m_systemActivityTimer;
+#endif
 };
 
 }

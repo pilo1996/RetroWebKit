@@ -113,7 +113,7 @@ bool RenderThemeCocoa::paintApplePayButton(const RenderObject& renderer, const P
 
 String RenderThemeCocoa::mediaControlsFormattedStringForDuration(const double durationInSeconds)
 {
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+#if ENABLE(MEDIA_CONTROLS_SCRIPT) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     if (!std::isfinite(durationInSeconds))
         return WEB_UI_STRING("indefinite time", "accessibility help text for an indefinite media controller time value");
 
@@ -126,6 +126,7 @@ String RenderThemeCocoa::mediaControlsFormattedStringForDuration(const double du
     }
     return [m_durationFormatter.get() stringFromTimeInterval:durationInSeconds];
 #else
+    UNUSED_PARAM(durationInSeconds);
     return emptyString();
 #endif
 }

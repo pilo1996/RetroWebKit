@@ -24,21 +24,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMAttr.h>
-#import <WebKitLegacy/DOMCDATASection.h>
-#import <WebKitLegacy/DOMCharacterData.h>
-#import <WebKitLegacy/DOMComment.h>
-#import <WebKitLegacy/DOMDocument.h>
-#import <WebKitLegacy/DOMDocumentFragment.h>
-#import <WebKitLegacy/DOMDocumentType.h>
-#import <WebKitLegacy/DOMElement.h>
-#import <WebKitLegacy/DOMEntity.h>
-#import <WebKitLegacy/DOMEntityReference.h>
-#import <WebKitLegacy/DOMException.h>
-#import <WebKitLegacy/DOMImplementation.h>
-#import <WebKitLegacy/DOMNamedNodeMap.h>
-#import <WebKitLegacy/DOMNode.h>
-#import <WebKitLegacy/DOMNodeList.h>
-#import <WebKitLegacy/DOMObject.h>
-#import <WebKitLegacy/DOMProcessingInstruction.h>
-#import <WebKitLegacy/DOMText.h>
+#import <WebKit/DOMAttr.h>
+#import <WebKit/DOMCDATASection.h>
+#import <WebKit/DOMCharacterData.h>
+#import <WebKit/DOMComment.h>
+#import <WebKit/DOMDocument.h>
+#import <WebKit/DOMDocumentFragment.h>
+#import <WebKit/DOMDocumentType.h>
+#import <WebKit/DOMElement.h>
+#import <WebKit/DOMEntity.h>
+#import <WebKit/DOMEntityReference.h>
+#import <WebKit/DOMException.h>
+#import <WebKit/DOMImplementation.h>
+#import <WebKit/DOMNamedNodeMap.h>
+#import <WebKit/DOMNode.h>
+#import <WebKit/DOMNodeList.h>
+#import <WebKit/DOMObject.h>
+#import <WebKit/DOMProcessingInstruction.h>
+#import <WebKit/DOMText.h>

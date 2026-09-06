@@ -25,6 +25,8 @@
 
 #include "config.h"
 
+#if USE(VIDEOTOOLBOX)
+
 #include <VideoToolbox/VideoToolbox.h>
 #include <wtf/SoftLinking.h>
 
@@ -49,3 +51,5 @@ SOFT_LINK_CONSTANT_FOR_SOURCE(WebCore, VideoToolbox, kVTDecompressionPropertyKey
 SOFT_LINK_CONSTANT_FOR_SOURCE(WebCore, VideoToolbox, kVTImageRotationPropertyKey_EnableHighSpeedTransfer, CFStringRef)
 SOFT_LINK_CONSTANT_FOR_SOURCE(WebCore, VideoToolbox, kVTImageRotationPropertyKey_FlipHorizontalOrientation, CFStringRef)
 SOFT_LINK_CONSTANT_FOR_SOURCE(WebCore, VideoToolbox, kVTImageRotationPropertyKey_FlipVerticalOrientation, CFStringRef)
+
+#endif

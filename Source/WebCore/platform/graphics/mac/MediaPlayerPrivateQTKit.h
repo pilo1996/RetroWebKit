@@ -33,6 +33,12 @@
 #include "FloatSize.h"
 #include <wtf/RetainPtr.h>
 
+#if ENABLE(VIDEO_TRACK)
+#include "VideoTrackPrivateQTKit.h"
+#include "AudioTrackPrivateQTKit.h"
+#include "InbandTextTrackPrivateQTKit.h"
+#endif
+
 #ifdef __OBJC__
 #import "QTKitSPI.h"
 #else
@@ -186,6 +192,10 @@ private:
     bool wirelessVideoPlaybackDisabled() const override { return false; }
 #endif
 
+#if ENABLE(VIDEO_TRACK)
+    void clearTracks();
+#endif
+
     MediaPlayer* m_player;
     RetainPtr<QTMovie> m_qtMovie;
     RetainPtr<QTVideoRendererWebKitOnly> m_qtVideoRenderer;
@@ -216,6 +226,11 @@ private:
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_shouldPlayToTarget { false };
+#endif
+#if ENABLE(VIDEO_TRACK)
+    Vector<RefPtr<AudioTrackPrivateQTKit>> m_audioTracks;
+    Vector<RefPtr<VideoTrackPrivateQTKit>> m_videoTracks;
+    Vector<RefPtr<InbandTextTrackPrivateQTKit>> m_textTracks;
 #endif
 };
 

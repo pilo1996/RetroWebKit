@@ -142,7 +142,7 @@ void KeyedEncoderCF::endArray()
 
 RefPtr<SharedBuffer> KeyedEncoderCF::finishEncoding()
 {
-    auto data = adoptCF(CFPropertyListCreateData(kCFAllocatorDefault, m_rootDictionary.get(), kCFPropertyListBinaryFormat_v1_0, 0, nullptr));
+    auto data = adoptCF(CFPropertyListCreateXMLData(kCFAllocatorDefault, m_rootDictionary.get()));
     if (!data)
         return nullptr;
     return SharedBuffer::create(data.get());

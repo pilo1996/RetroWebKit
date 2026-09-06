@@ -24,8 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMException.h>
-#import <WebKitLegacy/WebScriptObject.h>
+#import <WebKit/DOMException.h>
+#import <WebKit/WebScriptObject.h>
 
 @class DOMStyleSheet;
 
@@ -39,10 +39,10 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
     DOMObjectInternal *_internal;
 }
 
-- (instancetype)init NS_UNAVAILABLE;
+- (id)init NS_UNAVAILABLE;
 
 @end
 
 @interface DOMObject (DOMLinkStyle)
-@property (readonly, strong) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
+@property (readonly, retain) DOMStyleSheet *sheet WEBKIT_AVAILABLE_MAC(10_4);
 @end

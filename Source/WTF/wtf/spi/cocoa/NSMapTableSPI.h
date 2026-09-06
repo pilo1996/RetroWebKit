@@ -29,6 +29,8 @@
 #import <Foundation/NSMapTablePriv.h>
 #endif
 
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
+
 WTF_EXTERN_C_BEGIN
 
 void *NSMapGet(NSMapTable *, const void *key);
@@ -36,3 +38,5 @@ void NSMapInsert(NSMapTable *, const void *key, const void *value);
 void NSMapRemove(NSMapTable *, const void *key);
 
 WTF_EXTERN_C_END
+
+#endif

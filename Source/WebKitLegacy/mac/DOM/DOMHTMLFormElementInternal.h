@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLFormElement.h>
+#import <WebKit/DOMHTMLFormElement.h>
 
 namespace WebCore {
 class HTMLFormElement;

@@ -84,6 +84,7 @@ public:
 #if ENABLE(CSS_SCROLL_SNAP)
     virtual FloatPoint scrollOffset() const = 0;
     virtual void immediateScrollOnAxis(ScrollEventAxis, float delta) = 0;
+    virtual void scrollToOffsetWithoutAnimation(const FloatPoint& offset) = 0;
     virtual void startScrollSnapTimer()
     {
         // Override to perform client-specific scroll snap point start logic

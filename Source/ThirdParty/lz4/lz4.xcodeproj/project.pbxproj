@@ -1,0 +1,267 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 45;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		8B52D6931FAA57DB00D71275 /* lz4.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B52D6861FAA57DB00D71275 /* lz4.c */; };
+		8B52D6941FAA57DB00D71275 /* lz4.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B52D6871FAA57DB00D71275 /* lz4.h */; settings = {ATTRIBUTES = (Public, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		312BDB0B15FECAB00097EBC7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = "$(INSTALL_PATH_PREFIX)/usr/local/OpenSourceVersions";
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		312BDB0D15FECACE0097EBC7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = "$(INSTALL_PATH_PREFIX)/usr/local/OpenSourceLicenses";
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5D7C59C51208C68B001C873E /* lz4.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = lz4.xcconfig; sourceTree = "<group>"; };
+		5D7C59C61208C68B001C873E /* Base.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		5D7C59C71208C68B001C873E /* DebugRelease.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = DebugRelease.xcconfig; sourceTree = "<group>"; };
+		8B52D6861FAA57DB00D71275 /* lz4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lz4.c; sourceTree = "<group>"; };
+		8B52D6871FAA57DB00D71275 /* lz4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lz4.h; sourceTree = "<group>"; };
+		8B52D6881FAA57DB00D71275 /* lz4frame.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lz4frame.c; sourceTree = "<group>"; };
+		8B52D6891FAA57DB00D71275 /* lz4frame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lz4frame.h; sourceTree = "<group>"; };
+		8B52D68A1FAA57DB00D71275 /* lz4frame_static.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lz4frame_static.h; sourceTree = "<group>"; };
+		8B52D68B1FAA57DB00D71275 /* lz4hc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lz4hc.c; sourceTree = "<group>"; };
+		8B52D68C1FAA57DB00D71275 /* lz4hc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lz4hc.h; sourceTree = "<group>"; };
+		8B52D68D1FAA57DB00D71275 /* lz4opt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lz4opt.h; sourceTree = "<group>"; };
+		8B52D6901FAA57DB00D71275 /* xxhash.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xxhash.c; sourceTree = "<group>"; };
+		8B52D6911FAA57DB00D71275 /* xxhash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = xxhash.h; sourceTree = "<group>"; };
+		FB39D0D11200F0E300088E69 /* liblz4.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblz4.a; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FB39D0CF1200F0E300088E69 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5D7C59C41208C68B001C873E /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				5D7C59C51208C68B001C873E /* lz4.xcconfig */,
+				5D7C59C61208C68B001C873E /* Base.xcconfig */,
+				5D7C59C71208C68B001C873E /* DebugRelease.xcconfig */,
+			);
+			path = Configurations;
+			sourceTree = "<group>";
+		};
+		8B52D67B1FAA57DB00D71275 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				8B52D6861FAA57DB00D71275 /* lz4.c */,
+				8B52D6871FAA57DB00D71275 /* lz4.h */,
+				8B52D6881FAA57DB00D71275 /* lz4frame.c */,
+				8B52D6891FAA57DB00D71275 /* lz4frame.h */,
+				8B52D68A1FAA57DB00D71275 /* lz4frame_static.h */,
+				8B52D68B1FAA57DB00D71275 /* lz4hc.c */,
+				8B52D68C1FAA57DB00D71275 /* lz4hc.h */,
+				8B52D68D1FAA57DB00D71275 /* lz4opt.h */,
+				8B52D6901FAA57DB00D71275 /* xxhash.c */,
+				8B52D6911FAA57DB00D71275 /* xxhash.h */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		FB39D06E1200ED9200088E69 = {
+			isa = PBXGroup;
+			children = (
+				8B52D67B1FAA57DB00D71275 /* lib */,
+				5D7C59C41208C68B001C873E /* Configurations */,
+				FB39D0CC1200EF9B00088E69 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FB39D0CC1200EF9B00088E69 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FB39D0D11200F0E300088E69 /* liblz4.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		FB39D77B1201110C00088E69 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B52D6941FAA57DB00D71275 /* lz4.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		FB39D0D01200F0E300088E69 /* lz4 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FB39D0D61200F11E00088E69 /* Build configuration list for PBXNativeTarget "lz4" */;
+			buildPhases = (
+				FB39D77B1201110C00088E69 /* Headers */,
+				FB39D0CE1200F0E300088E69 /* Sources */,
+				FB39D0CF1200F0E300088E69 /* Frameworks */,
+				312BDB0B15FECAB00097EBC7 /* CopyFiles */,
+				312BDB0D15FECACE0097EBC7 /* CopyFiles */,
+				8BCF491F15CAA3D30056E4ED /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = lz4;
+			productName = lz4;
+			productReference = FB39D0D11200F0E300088E69 /* liblz4.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FB39D0701200ED9200088E69 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 0700;
+				LastUpgradeCheck = 0700;
+			};
+			buildConfigurationList = FB39D0731200ED9200088E69 /* Build configuration list for PBXProject "lz4" */;
+			compatibilityVersion = "Xcode 3.1";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				Japanese,
+				French,
+				German,
+			);
+			mainGroup = FB39D06E1200ED9200088E69;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FB39D0D01200F0E300088E69 /* lz4 */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		8BCF491F15CAA3D30056E4ED /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(CONFIGURATION_BUILD_DIR)/$(FULL_PRODUCT_NAME)",
+			);
+			outputPaths = (
+				"$(OBJECT_FILE_DIR)-$(CURRENT_VARIANT)/timestamp-last-time-linked-with-lipo",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "echo $ARCHS | awk 'BEGIN{FS=\" \"}\n                   {\n                       for (i=1; i<=NF && NF>1; i++)\n                           cmdline=cmdline\" $OBJECT_FILE_DIR-$CURRENT_VARIANT/\"$i\"/$FULL_PRODUCT_NAME\";\n                       if (NF>1)\n                           system(\"lipo -create \"cmdline\" -output $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME\");\n                   }'\ntouch -r $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME $OBJECT_FILE_DIR-$CURRENT_VARIANT/timestamp-last-time-linked-with-lipo";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FB39D0CE1200F0E300088E69 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B52D6931FAA57DB00D71275 /* lz4.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5D7C59DB1208C6C3001C873E /* Production */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C61208C68B001C873E /* Base.xcconfig */;
+			buildSettings = {
+			};
+			name = Production;
+		};
+		5D7C59DC1208C6C3001C873E /* Production */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C51208C68B001C873E /* lz4.xcconfig */;
+			buildSettings = {
+			};
+			name = Production;
+		};
+		FB39D0711200ED9200088E69 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C71208C68B001C873E /* DebugRelease.xcconfig */;
+			buildSettings = {
+				GCC_OPTIMIZATION_LEVEL = g;
+			};
+			name = Debug;
+		};
+		FB39D0721200ED9200088E69 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C71208C68B001C873E /* DebugRelease.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		FB39D0D21200F0E400088E69 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C51208C68B001C873E /* lz4.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		FB39D0D31200F0E400088E69 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5D7C59C51208C68B001C873E /* lz4.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FB39D0731200ED9200088E69 /* Build configuration list for PBXProject "lz4" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB39D0711200ED9200088E69 /* Debug */,
+				FB39D0721200ED9200088E69 /* Release */,
+				5D7C59DB1208C6C3001C873E /* Production */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Production;
+		};
+		FB39D0D61200F11E00088E69 /* Build configuration list for PBXNativeTarget "lz4" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FB39D0D21200F0E400088E69 /* Debug */,
+				FB39D0D31200F0E400088E69 /* Release */,
+				5D7C59DC1208C6C3001C873E /* Production */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Production;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FB39D0701200ED9200088E69 /* Project object */;
+}

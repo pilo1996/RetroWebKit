@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSRule.h>
+#import <WebKit/DOMCSSRule.h>
 
 @class DOMCSSRuleList;
 @class DOMMediaList;
@@ -31,8 +31,8 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSMediaRule : DOMCSSRule
-@property (readonly, strong) DOMMediaList *media;
-@property (readonly, strong) DOMCSSRuleList *cssRules;
+@property (readonly, retain) DOMMediaList *media;
+@property (readonly, retain) DOMCSSRuleList *cssRules;
 
 - (unsigned)insertRule:(NSString *)rule index:(unsigned)index WEBKIT_AVAILABLE_MAC(10_5);
 - (void)deleteRule:(unsigned)index;

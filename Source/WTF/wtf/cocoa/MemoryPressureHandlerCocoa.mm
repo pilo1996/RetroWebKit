@@ -32,24 +32,83 @@
 #import <notify.h>
 #import <wtf/CurrentTime.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+#include <mach/vm_statistics.h>
+#include <mach/mach_types.h>
+#include <mach/mach_init.h>
+#include <mach/mach_host.h>
+#endif
+
 #define ENABLE_FMW_FOOTPRINT_COMPARISON 0
 
 extern "C" void cache_simulate_memory_warning_event(uint64_t);
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+
+@interface MemoryPressureHandlerObjCAdapter : NSObject {
+    std::function<void (void)> m_memoryPressureCallback;
+    BOOL m_enabled;
+}
+-(id)initWithCallback:(std::function<void (void)>)callback;
+-(void)timerOnMainThread;
+-(void)startTimer:(unsigned)seconds;
+-(void)disableTimerCallback;
+@end
+
+@implementation MemoryPressureHandlerObjCAdapter
+
+-(id)initWithCallback:(std::function<void (void)>)callback;
+{
+    self = [super init];
+    if (self) {
+        m_memoryPressureCallback = callback;
+        m_enabled = FALSE;
+    }
+    return self;
+}
+
+-(void)timerOnMainThread
+{
+    if (m_enabled && m_memoryPressureCallback)
+        m_memoryPressureCallback();
+}
+
+-(void)startTimer:(unsigned)seconds
+{
+    ASSERT(m_memoryPressureCallback);
+    m_enabled = TRUE;
+    [self performSelector:@selector(timerOnMainThread) withObject:nil afterDelay:seconds];
+}
+
+-(void)disableTimerCallback
+{
+    m_enabled = FALSE;
+}
+
+@end
+
+#endif
 
 namespace WTF {
 
 void MemoryPressureHandler::platformReleaseMemory(Critical critical)
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (critical == Critical::Yes && (!isUnderMemoryPressure() || m_isSimulatingMemoryPressure)) {
         // libcache listens to OS memory notifications, but for process suspension
         // or memory pressure simulation, we need to prod it manually:
         cache_simulate_memory_warning_event(DISPATCH_MEMORYPRESSURE_CRITICAL);
     }
+#else
+    UNUSED_PARAM(critical);
+#endif
 }
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static dispatch_source_t _cache_event_source = 0;
 static dispatch_source_t _timer_event_source = 0;
-static int _notifyTokens[3];
+#endif
+static int _notifyTokens[3] = {-1};
 
 // Disable memory event reception for a minimum of s_minimumHoldOffTime
 // seconds after receiving an event. Don't let events fire any sooner than
@@ -64,6 +123,7 @@ static const unsigned s_holdOffMultiplier = 20;
 
 void MemoryPressureHandler::install()
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (m_installed || _timer_event_source)
         return;
 
@@ -123,6 +183,65 @@ void MemoryPressureHandler::install()
     notify_register_dispatch("org.WebKit.lowMemory.end", &_notifyTokens[2], dispatch_get_main_queue(), ^(int) {
         endSimulatedMemoryPressure();
     });
+#else
+    if (m_installed)
+        return;
+
+    std::function<void (void)> callback = [] {
+        bool critical = false;
+        int wasNotified = 0;
+        static unsigned counter = 0;
+        static natural_t pageoutsPrevious = static_cast<natural_t>(0xffffffffffffffffULL);
+        mach_msg_type_number_t count;
+
+        int status = notify_check(_notifyTokens[0], &wasNotified);
+        if (status == NOTIFY_STATUS_OK && wasNotified) // been forced ?
+            counter++;
+
+#if !defined(__LP64__)
+        task_basic_info_data_t taskInfo;
+        count = TASK_BASIC_INFO_COUNT;
+        kern_return_t errTaskInfo = task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t)&taskInfo, &count);
+        if (errTaskInfo == KERN_SUCCESS && taskInfo.virtual_size > 1024*1024*3584ULL) // > 3.5 GB ?
+            counter++;
+#endif
+
+        vm_statistics_data_t vmInfo;
+        count = HOST_VM_INFO_COUNT;
+        kern_return_t errVMInfo = host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)&vmInfo, &count);
+        if (errVMInfo == KERN_SUCCESS && vmInfo.pageouts != pageoutsPrevious && pageoutsPrevious != static_cast<natural_t>(0xffffffffffffffffULL)) // paging out ?
+            counter++;
+
+        if ((errVMInfo != KERN_SUCCESS || vmInfo.pageouts == pageoutsPrevious)
+#if !defined(__LP64__)
+            && (errTaskInfo != KERN_SUCCESS || taskInfo.virtual_size <= 1024*1024*3584ULL)
+#endif
+            && (status != NOTIFY_STATUS_OK || !wasNotified))
+        {
+            counter = 0;
+        }
+        if (errVMInfo == KERN_SUCCESS)
+            pageoutsPrevious = vmInfo.pageouts;
+        if (counter >= 3)
+            critical = true;
+        if (counter == 0) {
+            MemoryPressureHandler::singleton().uninstall();
+            MemoryPressureHandler::singleton().holdOff(s_minimumHoldOffTime);
+            return;
+        }
+        MemoryPressureHandler::singleton().respondToMemoryPressure(critical ? Critical::Yes : Critical::No);
+    };
+
+    if (!m_memoryPressureHandlerAdapter)
+        m_memoryPressureHandlerAdapter = adoptNS([[MemoryPressureHandlerObjCAdapter alloc] initWithCallback:callback]);
+    [m_memoryPressureHandlerAdapter.get() startTimer:s_minimumHoldOffTime];
+
+    if (_notifyTokens[0] == -1) {
+        notify_register_check("org.WebKit.lowMemory", &_notifyTokens[0]);
+        int wasNotified;
+        notify_check(_notifyTokens[0], &wasNotified);
+    }
+#endif
 
     m_installed = true;
 }
@@ -132,6 +251,7 @@ void MemoryPressureHandler::uninstall()
     if (!m_installed)
         return;
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (_cache_event_source) {
             dispatch_source_cancel(_cache_event_source);
@@ -145,15 +265,21 @@ void MemoryPressureHandler::uninstall()
             _timer_event_source = 0;
         }
     });
+#else
+    [m_memoryPressureHandlerAdapter.get() disableTimerCallback];
+#endif
 
     m_installed = false;
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     for (auto& token : _notifyTokens)
         notify_cancel(token);
+#endif
 }
 
 void MemoryPressureHandler::holdOff(unsigned seconds)
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         _timer_event_source = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
         if (_timer_event_source) {
@@ -170,6 +296,9 @@ void MemoryPressureHandler::holdOff(unsigned seconds)
             dispatch_resume(_timer_event_source);
         }
     });
+#else
+    [m_memoryPressureHandlerAdapter.get() startTimer:seconds];
+#endif
 }
 
 void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchronous synchronous)
@@ -189,6 +318,7 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 
 std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
@@ -196,6 +326,9 @@ std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHa
         return std::nullopt;
 
     return MemoryUsage {static_cast<size_t>(vmInfo.internal), static_cast<size_t>(vmInfo.phys_footprint)};
+#else
+    return std::nullopt;
+#endif
 }
 
 } // namespace WTF

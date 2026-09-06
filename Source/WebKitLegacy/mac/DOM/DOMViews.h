@@ -24,8 +24,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMCore.h>
-#import <WebKitLegacy/DOMDocument.h>
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMCore.h>
+#import <WebKit/DOMDocument.h>
+#import <WebKit/DOMObject.h>
 
-#import <WebKitLegacy/DOMAbstractView.h>
+#import <WebKit/DOMAbstractView.h>

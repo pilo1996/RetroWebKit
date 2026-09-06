@@ -154,6 +154,9 @@ public:
     virtual TransformationMatrix sublayerTransform() const = 0;
     virtual void setSublayerTransform(const TransformationMatrix&) = 0;
 
+    virtual TransformationMatrix contentsTransform() const = 0;
+    virtual void setContentsTransform(const TransformationMatrix&) = 0;
+
     virtual bool isHidden() const = 0;
     virtual void setHidden(bool) = 0;
 
@@ -262,7 +265,7 @@ public:
     Ref<PlatformCALayer> createCompatibleLayerOrTakeFromPool(LayerType, PlatformCALayerClient*, IntSize);
 
 #if PLATFORM(COCOA)
-    virtual void enumerateRectsBeingDrawn(CGContextRef, void (^block)(CGRect)) = 0;
+    virtual void enumerateRectsBeingDrawn(CGContextRef, std::function<void(CGRect)> block) = 0;
 #endif
 
     static const unsigned webLayerMaxRectsToPaint = 5;

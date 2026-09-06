@@ -1218,7 +1218,8 @@ namespace WTF {
 
         m_deletedCount = 0;
 
-        fastFree(oldTable);
+        if (oldTable != nullptr)
+            fastFree(oldTable);
 
         internalCheckTableConsistency();
         return newEntry;

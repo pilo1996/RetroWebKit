@@ -65,6 +65,7 @@
 #import "WebEditorClient.h"
 #import "WebFormDelegatePrivate.h"
 #import "WebFrameInternal.h"
+#import "WebFrameLoadDelegate.h"
 #import "WebFrameLoaderClient.h"
 #import "WebFrameNetworkingContext.h"
 #import "WebFrameViewInternal.h"
@@ -91,6 +92,7 @@
 #import "WebNSViewExtras.h"
 #import "WebNodeHighlight.h"
 #import "WebNotificationClient.h"
+#import "WebNotificationProviderGrowl.h"
 #import "WebPDFView.h"
 #import "WebPaymentCoordinatorClient.h"
 #import "WebPlatformStrategies.h"
@@ -128,6 +130,7 @@
 #import <WebCore/Chrome.h>
 #import <WebCore/ColorMac.h>
 #import <WebCore/DatabaseManager.h>
+#import <WebCore/DiagnosticLoggingClient.h>
 #import <WebCore/DictionaryLookup.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
@@ -205,12 +208,13 @@
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebCoreView.h>
 #import <WebCore/Widget.h>
-#import <WebKitLegacy/DOM.h>
-#import <WebKitLegacy/DOMExtensions.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOM.h>
+#import <WebKit/DOMExtensions.h>
+#import <WebKit/DOMPrivate.h>
 #import <WebKitSystemInterface.h>
 #import <bindings/ScriptValue.h>
 #import <mach-o/dyld.h>
+#import <objc/objc-auto.h>
 #import <objc/runtime.h>
 #import <runtime/ArrayPrototype.h>
 #import <runtime/CatchScope.h>
@@ -218,6 +222,7 @@
 #import <runtime/InitializeThreading.h>
 #import <runtime/JSCJSValue.h>
 #import <runtime/JSLock.h>
+#import <wtf/AutodrainedPool.h>
 #import <wtf/Assertions.h>
 #import <wtf/HashTraits.h>
 #import <wtf/MainThread.h>
@@ -241,7 +246,9 @@
 #import "WebNSPasteboardExtras.h"
 #import "WebNSPrintOperationExtras.h"
 #import "WebPDFView.h"
+#if HAVE(AVKIT)
 #import <WebCore/AVKitSPI.h>
+#endif
 #import <WebCore/LookupSPI.h>
 #import <WebCore/NSImmediateActionGestureRecognizerSPI.h>
 #import <WebCore/TextIndicator.h>
@@ -285,12 +292,11 @@
 #import <WebCore/WebEvent.h>
 #import <WebCore/WebSQLiteDatabaseTrackerClient.h>
 #import <WebCore/WebVideoFullscreenControllerAVKit.h>
-#import <libkern/OSAtomic.h>
 #import <wtf/FastMalloc.h>
 #endif
 
 #if ENABLE(DASHBOARD_SUPPORT)
-#import <WebKitLegacy/WebDashboardRegion.h>
+#import <WebKit/WebDashboardRegion.h>
 #endif
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -348,7 +354,7 @@ SOFT_LINK_CLASS(AVKit, AVFunctionBarScrubber)
 #endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
 #endif // HAVE(TOUCH_BAR) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 SOFT_LINK_CONSTANT_MAY_FAIL(Lookup, LUNotificationPopoverWillClose, NSString *)
 #endif
 
@@ -531,6 +537,10 @@ static const char webViewIsOpen[] = "At least one WebView is still open.";
 @end
 #endif
 
+@interface WebView(WebViewPrivate)
+- (void)_setIsVisible:(BOOL)isVisible;
+@end
+
 #if !PLATFORM(IOS)
 @interface NSObject (WebValidateWithoutDelegate)
 - (BOOL)validateUserInterfaceItemWithoutDelegate:(id <NSValidatedUserInterfaceItem>)item;
@@ -556,7 +566,7 @@ static const char webViewIsOpen[] = "At least one WebView is still open.";
     dispatch_once_t asyncForwarderPred;
 #endif
 }
-- (instancetype)initWithTarget:(id)target defaultTarget:(id)defaultTarget;
+- (id)initWithTarget:(id)target defaultTarget:(id)defaultTarget;
 #if PLATFORM(IOS)
 - (void)clearTarget;
 - (id)asyncForwarder;
@@ -725,6 +735,9 @@ private:
 - (NSResponder *)_responderForResponderOperations;
 @end
 
+static void patchMailRemoveAttributesMethod();
+static void patch_NSCTFont_isHiraginoFont();
+
 NSString *WebElementDOMNodeKey =            @"WebElementDOMNode";
 NSString *WebElementFrameKey =              @"WebElementFrame";
 NSString *WebElementImageKey =              @"WebElementImage";
@@ -803,11 +816,13 @@ static BOOL continuousSpellCheckingEnabled;
 static BOOL iconLoadingEnabled = YES;
 #if !PLATFORM(IOS)
 static BOOL grammarCheckingEnabled;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 static BOOL automaticQuoteSubstitutionEnabled;
 static BOOL automaticLinkDetectionEnabled;
 static BOOL automaticDashSubstitutionEnabled;
 static BOOL automaticTextReplacementEnabled;
 static BOOL automaticSpellingCorrectionEnabled;
+#endif
 #endif
 
 #if HAVE(TOUCH_BAR)
@@ -1161,6 +1176,24 @@ static String webKitBundleVersionString()
     reportException(execState, toJS(execState, exception));
 }
 
+static bool runningLeopardMail()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    return MacApplication::isAppleMail();
+#endif
+    return NO;
+}
+
+static bool coreVideoHas7228836Fix()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    NSBundle* coreVideoFrameworkBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/CoreVideo.framework"];
+    double version = [[coreVideoFrameworkBundle objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey] doubleValue];
+    return (version >= 48);
+#endif
+    return true;
+}
+
 static bool shouldEnableLoadDeferring()
 {
 #if PLATFORM(IOS)
@@ -1197,6 +1230,27 @@ static bool shouldRestrictWindowFocus()
     [types release];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+// This method should be removed once we no longer want to keep Safari 5.0.x working with nightly builds.
+- (BOOL)_usesDocumentViews
+{
+    return true;
+}
+#endif
+
+static NSString *leakMailQuirksUserScriptContents()
+{
+    NSString *scriptPath = [[NSBundle bundleForClass:[WebView class]] pathForResource:@"MailQuirksUserScript" ofType:@"js"];
+    NSStringEncoding encoding;
+    return [[NSString alloc] initWithContentsOfFile:scriptPath usedEncoding:&encoding error:0];
+}
+
+- (void)_injectMailQuirksScript
+{
+    static NSString *mailQuirksScriptContents = leakMailQuirksUserScriptContents();
+    _private->group->userContentController().addUserScript(*core([WebScriptWorld world]), std::make_unique<UserScript>(mailQuirksScriptContents, [NSURL URLWithString:@"webkit-resource:///MailQuirksUserScript.js"], Vector<String>(), Vector<String>(), InjectAtDocumentEnd, InjectInAllFrames));
+}
+
 static bool needsOutlookQuirksScript()
 {
     static bool isOutlookNeedingQuirksScript = !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_HTML5_PARSER)
@@ -1214,8 +1268,7 @@ static NSString *leakOutlookQuirksUserScriptContents()
 -(void)_injectOutlookQuirksScript
 {
     static NSString *outlookQuirksScriptContents = leakOutlookQuirksUserScriptContents();
-    _private->group->userContentController().addUserScript(*core([WebScriptWorld world]), std::make_unique<UserScript>(outlookQuirksScriptContents, URL(), Vector<String>(), Vector<String>(), InjectAtDocumentEnd, InjectInAllFrames));
-
+    _private->group->userContentController().addUserScript(*core([WebScriptWorld world]), std::make_unique<UserScript>(outlookQuirksScriptContents, [NSURL URLWithString:@"webkit-resource:///OutlookQuirksUserScript.js"], Vector<String>(), Vector<String>(), InjectAtDocumentEnd, InjectInAllFrames));
 }
 #endif
 
@@ -1291,7 +1344,7 @@ static bool shouldConvertInvalidURLsToBlank()
 {
 #if PLATFORM(IOS)
     static bool shouldConvertInvalidURLsToBlank = dyld_get_program_sdk_version() >= DYLD_IOS_VERSION_10_0;
-#elif PLATFORM(MAC)
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     static bool shouldConvertInvalidURLsToBlank = dyld_get_program_sdk_version() >= DYLD_MACOSX_VERSION_10_12;
 #else
     static bool shouldConvertInvalidURLsToBlank = true;
@@ -1346,6 +1399,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #else
     _private->backgroundColor = CGColorRetain(cachedCGColor(Color::white));
 #endif
+    _private->includesFlattenedCompositingLayersWhenDrawingToBitmap = YES;
 
 #if PLATFORM(MAC)
     _private->windowVisibilityObserver = adoptNS([[WebWindowVisibilityObserver alloc] initWithView:self]);
@@ -1357,7 +1411,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
     [self addSubview:frameView];
     [frameView release];
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     if (Class gestureClass = NSClassFromString(@"NSImmediateActionGestureRecognizer")) {
         RetainPtr<NSImmediateActionGestureRecognizer> recognizer = adoptNS([(NSImmediateActionGestureRecognizer *)[gestureClass alloc] init]);
         _private->immediateActionController = [[WebImmediateActionController alloc] initWithWebView:self recognizer:recognizer.get()];
@@ -1399,6 +1453,9 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #if ENABLE(GAMEPAD)
         WebKitInitializeGamepadProviderIfNecessary();
 #endif
+        patchMailRemoveAttributesMethod();
+
+        patch_NSCTFont_isHiraginoFont();
         
         Settings::setShouldRespectPriorityInCSSAttributeSetters(shouldRespectPriorityInCSSAttributeSetters());
 
@@ -1457,6 +1514,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #endif
 #if ENABLE(NOTIFICATIONS)
     WebCore::provideNotification(_private->page, new WebNotificationClient(self));
+    [self _setNotificationProvider:[WebNotificationProviderGrowl shared]];
 #endif
 #if ENABLE(DEVICE_ORIENTATION)
 #if !PLATFORM(IOS)
@@ -1472,6 +1530,7 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #endif
 
     _private->page->setCanStartMedia([self window]);
+    _private->page->setIsInWindow([self window]);
     _private->page->settings().setLocalStorageDatabasePath([[self preferences] _localStorageDatabasePath]);
     _private->page->settings().setUseLegacyBackgroundSizeShorthandBehavior(shouldUseLegacyBackgroundSizeShorthandBehavior());
 
@@ -1567,10 +1626,17 @@ static void WebKitInitializeGamepadProviderIfNecessary()
 #endif
 
     _private->page->settings().setContentDispositionAttachmentSandboxEnabled(true);
+
+    if (runningLeopardMail())
+        [self _injectMailQuirksScript];
 }
 
-- (id)_initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName
+- (id)_initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName usesDocumentViews:(BOOL)usesDocumentViews
 {
+    // FIXME: Remove the usesDocumentViews parameter; it's only here for compatibility with WebKit nightly builds
+    // running against Safari 5 on Leopard.
+    ASSERT(usesDocumentViews);
+
     self = [super initWithFrame:f];
     if (!self)
         return nil;
@@ -2271,7 +2337,7 @@ static bool fastDocumentTeardownEnabled()
 
     [_private->inspector inspectedWebViewClosed];
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     [_private->immediateActionController webViewClosed];
 #endif
 
@@ -2647,6 +2713,12 @@ static bool fastDocumentTeardownEnabled()
     return needsQuirk;
 }
 
+static bool needsDidFinishLoadOrderQuirk()
+{
+    static bool needsQuirk = !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_CORRECT_DID_FINISH_LOAD_ORDER) && MacApplication::isAppleMail();
+    return needsQuirk;
+}
+
 static bool needsSelfRetainWhileLoadingQuirk()
 {
     static bool needsQuirk = MacApplication::isAperture();
@@ -2679,6 +2751,17 @@ static bool needsSelfRetainWhileLoadingQuirk()
         || [[self preferences] usePreHTML5ParserQuirks];
 #else
     return [[self preferences] usePreHTML5ParserQuirks];
+#endif
+}
+
+- (BOOL)_needsUnrestrictedGetMatchedCSSRules
+{
+#if !PLATFORM(IOS)
+    static bool needsUnrestrictedGetMatchedCSSRules = !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_GET_MATCHED_CSS_RULES_RESTRICTIONS) && MacApplication::isSafari();
+    return needsUnrestrictedGetMatchedCSSRules;
+#else
+    // FIXME: <rdar://problem/8963684> Implement linked-on-or-after check for needsUnrestrictedGetMatchedCSSRules
+    return NO;
 #endif
 }
 
@@ -2797,7 +2880,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setXSSAuditorEnabled([preferences isXSSAuditorEnabled]);
     settings.setDNSPrefetchingEnabled([preferences isDNSPrefetchingEnabled]);
 
-    settings.setAcceleratedCompositingEnabled([preferences acceleratedCompositingEnabled]);
+    settings.setAcceleratedCompositingEnabled(coreVideoHas7228836Fix() && [preferences acceleratedCompositingEnabled]);
     settings.setAcceleratedDrawingEnabled([preferences acceleratedDrawingEnabled]);
     settings.setDisplayListDrawingEnabled([preferences displayListDrawingEnabled]);
     settings.setCanvasUsesAcceleratedDrawing([preferences canvasUsesAcceleratedDrawing]);
@@ -2819,9 +2902,12 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setSpatialNavigationEnabled([preferences isSpatialNavigationEnabled]);
     settings.setPaginateDuringLayoutEnabled([preferences paginateDuringLayoutEnabled]);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     settings.setAsynchronousSpellCheckingEnabled([preferences asynchronousSpellCheckingEnabled]);
+#endif
     settings.setHyperlinkAuditingEnabled([preferences hyperlinkAuditingEnabled]);
     settings.setUsePreHTML5ParserQuirks([self _needsPreHTML5ParserQuirks]);
+    settings.setCrossOriginCheckInGetMatchedCSSRulesDisabled([self _needsUnrestrictedGetMatchedCSSRules]);
     settings.setInteractiveFormValidationEnabled([self interactiveFormValidationEnabled]);
     settings.setValidationMessageTimerMagnification([self validationMessageTimerMagnification]);
 
@@ -2844,6 +2930,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setShouldRespectImageOrientation([preferences shouldRespectImageOrientation]);
 
     settings.setRequestAnimationFrameEnabled([preferences requestAnimationFrameEnabled]);
+    settings.setNeedsDidFinishLoadOrderQuirk(needsDidFinishLoadOrderQuirk());
     settings.setDiagnosticLoggingEnabled([preferences diagnosticLoggingEnabled]);
     settings.setLowPowerVideoAudioBufferSizeEnabled([preferences lowPowerVideoAudioBufferSizeEnabled]);
 
@@ -2887,6 +2974,9 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     settings.setAllowsAirPlayForMediaPlayback([preferences allowsAirPlayForMediaPlayback]);
 #endif
+#if ENABLE(RESOURCE_USAGE)
+    settings.setResourceUsageOverlayVisible([preferences resourceUsageOverlayVisible]);
+#endif
 #if PLATFORM(IOS)
     settings.setStandalone([preferences _standalone]);
     settings.setTelephoneNumberParsingEnabled([preferences _telephoneNumberParsingEnabled]);
@@ -2925,6 +3015,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setNeedsAdobeFrameReloadingQuirk([self _needsAdobeFrameReloadingQuirk]);
     settings.setTreatsAnyTextCSSLinkAsStylesheet([self _needsLinkElementTextCSSQuirk]);
     settings.setNeedsKeyboardEventDisambiguationQuirks([self _needsKeyboardEventDisambiguationQuirks]);
+    settings.setNeedsLeopardMailQuirks(runningLeopardMail());
     settings.setEnforceCSSMIMETypeInNoQuirksMode(!WKAppVersionCheckLessThan(@"com.apple.iWeb", -1, 2.1));
     settings.setNeedsIsLoadingInAPISenseQuirk([self _needsIsLoadingInAPISenseQuirk]);
     settings.setTextAreasAreResizable([preferences textAreasAreResizable]);
@@ -3076,6 +3167,8 @@ static bool needsSelfRetainWhileLoadingQuirk()
 
     settings.setLargeImageAsyncDecodingEnabled([preferences largeImageAsyncDecodingEnabled]);
     settings.setAnimatedImageAsyncDecodingEnabled([preferences animatedImageAsyncDecodingEnabled]);
+
+    settings.setLargeAnimatedImageFrameCachingEnabled([preferences largeAnimatedImageFrameCachingEnabled]);
 }
 
 static inline IMP getMethod(id o, SEL s)
@@ -3547,7 +3640,7 @@ static inline IMP getMethod(id o, SEL s)
 - (NSCachedURLResponse *)_cachedResponseForURL:(NSURL *)URL
 {
     RetainPtr<NSMutableURLRequest *> request = adoptNS([[NSMutableURLRequest alloc] initWithURL:URL]);
-    [request _web_setHTTPUserAgent:[self userAgentForURL:URL]];
+    [request.get() _web_setHTTPUserAgent:[self userAgentForURL:URL]];
     NSCachedURLResponse *cachedResponse;
 
     if (!_private->page)
@@ -4434,6 +4527,18 @@ static inline IMP getMethod(id o, SEL s)
     return _private->page->areMemoryCacheClientCallsEnabled();
 }
 
+- (void)_setJavaScriptURLsAreAllowed:(BOOL)areAllowed
+{
+    _private->page->setJavaScriptURLsAreAllowed(areAllowed);
+}
+
+#if !PLATFORM(IOS)
++ (NSCursor *)_pointingHandCursor
+{
+    return handCursor().platformCursor();
+}
+#endif
+
 - (BOOL)_postsAcceleratedCompositingNotifications
 {
     return _private->postsAcceleratedCompositingNotifications;
@@ -4482,12 +4587,14 @@ static inline IMP getMethod(id o, SEL s)
 
 - (NSDictionary *)_contentsOfUserInterfaceItem:(NSString *)userInterfaceItem
 {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if ([userInterfaceItem isEqualToString:@"validationBubble"]) {
         auto* validationBubble = _private->formValidationBubble.get();
         String message = validationBubble ? validationBubble->message() : emptyString();
         double fontSize = validationBubble ? validationBubble->fontSize() : 0;
-        return @{ userInterfaceItem: @{ @"message": (NSString *)message, @"fontSize": [NSNumber numberWithDouble:fontSize] } };
+        return [NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObjectsAndKeys:(NSString *)message, @"message", [NSNumber numberWithDouble:fontSize], @"fontSize", nil] forKey:userInterfaceItem];
     }
+#endif
 
     return nil;
 }
@@ -4503,6 +4610,16 @@ static inline IMP getMethod(id o, SEL s)
     }
 
     return YES;
+}
+
+- (void)_setIncludesFlattenedCompositingLayersWhenDrawingToBitmap:(BOOL)flag
+{
+    _private->includesFlattenedCompositingLayersWhenDrawingToBitmap = flag;
+}
+
+- (BOOL)_includesFlattenedCompositingLayersWhenDrawingToBitmap
+{
+    return _private->includesFlattenedCompositingLayersWhenDrawingToBitmap;
 }
 
 - (void)setTracksRepaints:(BOOL)flag
@@ -5222,7 +5339,11 @@ static Vector<String> toStringVector(NSArray* patterns)
 
 #else
 
+#if COMPILER(SUPPORTS_BLOCKS)
 - (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString forSelectedRange:(NSRange)range view:(NSView *)view completionHandler:(void (^)(NSTextCheckingResult *acceptedCandidate))completionBlock
+#else
+- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString forSelectedRange:(NSRange)range view:(NSView *)view completionHandler:(std::function<void (NSTextCheckingResult *)>)completionBlock;
+#endif
 {
 }
 
@@ -5243,7 +5364,7 @@ static Vector<String> toStringVector(NSArray* patterns)
 
 // Used to send messages to delegates that implement informal protocols.
 
-- (instancetype)initWithTarget:(id)t defaultTarget:(id)dt
+- (id)initWithTarget:(id)t defaultTarget:(id)dt
 {
     self = [super init];
     if (!self)
@@ -5385,6 +5506,7 @@ static Vector<String> toStringVector(NSArray* patterns)
     continuousSpellCheckingEnabled = [defaults boolForKey:WebContinuousSpellCheckingEnabled];
     grammarCheckingEnabled = [defaults boolForKey:WebGrammarCheckingEnabled];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     automaticQuoteSubstitutionEnabled = [self _shouldAutomaticQuoteSubstitutionBeEnabled];
     automaticLinkDetectionEnabled = [defaults boolForKey:WebAutomaticLinkDetectionEnabled];
     automaticDashSubstitutionEnabled = [self _shouldAutomaticDashSubstitutionBeEnabled];
@@ -5395,14 +5517,19 @@ static Vector<String> toStringVector(NSArray* patterns)
         name:NSSpellCheckerDidChangeAutomaticTextReplacementNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticSpellingCorrectionEnabled:)
         name:NSSpellCheckerDidChangeAutomaticSpellingCorrectionNotification object:nil];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticQuoteSubstitutionEnabled:)
         name:NSSpellCheckerDidChangeAutomaticQuoteSubstitutionNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticDashSubstitutionEnabled:)
         name:NSSpellCheckerDidChangeAutomaticDashSubstitutionNotification object:nil];
 #endif
+#endif
+#endif
 }
 
 #if !PLATFORM(IOS)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 + (BOOL)_shouldAutomaticTextReplacementBeEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -5434,8 +5561,10 @@ static Vector<String> toStringVector(NSArray* patterns)
 + (BOOL)_shouldAutomaticQuoteSubstitutionBeEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     if (![defaults objectForKey:WebAutomaticQuoteSubstitutionEnabled])
         return [NSSpellChecker isAutomaticQuoteSubstitutionEnabled];
+#endif
 
     return [defaults boolForKey:WebAutomaticQuoteSubstitutionEnabled];
 }
@@ -5443,12 +5572,15 @@ static Vector<String> toStringVector(NSArray* patterns)
 + (BOOL)_shouldAutomaticDashSubstitutionBeEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     if (![defaults objectForKey:WebAutomaticDashSubstitutionEnabled])
         return [NSSpellChecker isAutomaticDashSubstitutionEnabled];
+#endif
 
     return [defaults boolForKey:WebAutomaticDashSubstitutionEnabled];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 + (void)_didChangeAutomaticQuoteSubstitutionEnabled:(NSNotification *)notification
 {
     automaticQuoteSubstitutionEnabled = [self _shouldAutomaticQuoteSubstitutionBeEnabled];
@@ -5460,6 +5592,8 @@ static Vector<String> toStringVector(NSArray* patterns)
     automaticDashSubstitutionEnabled = [self _shouldAutomaticDashSubstitutionBeEnabled];
     [[NSSpellChecker sharedSpellChecker] updatePanels];
 }
+#endif
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 + (void)_applicationWillTerminate
 {   
@@ -5471,7 +5605,8 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pluginDatabaseClientCount)
         [WebPluginDatabase closeSharedDatabase];
 
-    WebKit::WebStorageNamespaceProvider::closeLocalStorage();
+    if (fastDocumentTeardownEnabled())
+        WebKit::WebStorageNamespaceProvider::closeLocalStorage();
 }
 #endif // !PLATFORM(IOS)
 
@@ -5668,6 +5803,12 @@ static bool clientNeedsWebViewInitThreadWorkaround()
     if ([bundleIdentifier _webkit_hasCaseInsensitivePrefix:@"com.apple.Automator."])
         return true;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // Mail.
+    if ([bundleIdentifier _webkit_isCaseInsensitiveEqualToString:@"com.apple.Mail"])
+        return true;
+#endif
+
     return false;
 }
 
@@ -5678,12 +5819,12 @@ static bool needsWebViewInitThreadWorkaround()
 }
 #endif // !PLATFORM(IOS)
 
-- (instancetype)initWithFrame:(NSRect)f
+- (id)initWithFrame:(NSRect)f
 {
     return [self initWithFrame:f frameName:nil groupName:nil];
 }
 
-- (instancetype)initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName
+- (id)initWithFrame:(NSRect)f frameName:(NSString *)frameName groupName:(NSString *)groupName
 {
 #if !PLATFORM(IOS)
     if (needsWebViewInitThreadWorkaround())
@@ -5691,11 +5832,11 @@ static bool needsWebViewInitThreadWorkaround()
 #endif
 
     WebCoreThreadViolationCheckRoundTwo();
-    return [self _initWithFrame:f frameName:frameName groupName:groupName];
+    return [self _initWithFrame:f frameName:frameName groupName:groupName usesDocumentViews:YES];
 }
 
 #if !PLATFORM(IOS)
-- (instancetype)initWithCoder:(NSCoder *)decoder
+- (id)initWithCoder:(NSCoder *)decoder
 {
     if (needsWebViewInitThreadWorkaround())
         return [[self _webkit_invokeOnMainThread] initWithCoder:decoder];
@@ -5800,7 +5941,8 @@ static bool needsWebViewInitThreadWorkaround()
     // Because the machinations of the view's shutdown may cause self to be added to
     // active autorelease pool, we capture any such releases here to ensure they are
     // carried out before we are dealloc'd.
-    @autoreleasepool {
+    {
+        AutodrainedPool pool;
 
 #if PLATFORM(IOS)
         if (_private)
@@ -5827,6 +5969,15 @@ static bool needsWebViewInitThreadWorkaround()
     }
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    ASSERT(_private->closed);
+
+    --WebViewCount;
+
+    [super finalize];
 }
 
 - (void)close
@@ -5876,7 +6027,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
             name:NSWindowDidMiniaturizeNotification object:window];
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_windowVisibilityChanged:)
             name:NSWindowDidDeminiaturizeNotification object:window];
-        [_private->windowVisibilityObserver startObserving:window];
+        [_private->windowVisibilityObserver.get() startObserving:window];
     }
 }
 
@@ -5900,7 +6051,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
             name:NSWindowDidMiniaturizeNotification object:window];
         [[NSNotificationCenter defaultCenter] removeObserver:self
             name:NSWindowDidDeminiaturizeNotification object:window];
-        [_private->windowVisibilityObserver stopObserving:window];
+        [_private->windowVisibilityObserver.get() stopObserving:window];
     }
 }
 
@@ -5965,7 +6116,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     _private->page->setDeviceScaleFactor([self _deviceScaleFactor]);
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     if (_private->immediateActionController) {
         NSImmediateActionGestureRecognizer *recognizer = [_private->immediateActionController immediateActionRecognizer];
         if ([self window]) {
@@ -6125,7 +6276,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     return [[self preferences] identifier];
 }
 
-- (void)setUIDelegate:delegate
+- (void)setUIDelegate:(id <WebUIDelegate>)delegate
 {
     _private->UIDelegate = delegate;
 #if PLATFORM(IOS)
@@ -6135,7 +6286,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     _private->UIDelegateForwarder = nil;
 }
 
-- (id)UIDelegate
+- (id <WebUIDelegate>)UIDelegate
 {
     return _private->UIDelegate;
 }
@@ -6152,7 +6303,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 }
 #endif
 
-- (void)setResourceLoadDelegate: delegate
+- (void)setResourceLoadDelegate:(id <WebResourceLoadDelegate>)delegate
 {
 #if PLATFORM(IOS)
     [_private->resourceProgressDelegateForwarder clearTarget];
@@ -6163,23 +6314,23 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     [self _cacheResourceLoadDelegateImplementations];
 }
 
-- (id)resourceLoadDelegate
+- (id <WebResourceLoadDelegate>)resourceLoadDelegate
 {
     return _private->resourceProgressDelegate;
 }
 
-- (void)setDownloadDelegate: delegate
+- (void)setDownloadDelegate:(id <WebDownloadDelegate>)delegate
 {
     _private->downloadDelegate = delegate;
 }
 
 
-- (id)downloadDelegate
+- (id <WebDownloadDelegate>)downloadDelegate
 {
     return _private->downloadDelegate;
 }
 
-- (void)setPolicyDelegate:delegate
+- (void)setPolicyDelegate:(id <WebPolicyDelegate>)delegate
 {
     _private->policyDelegate = delegate;
 #if PLATFORM(IOS)
@@ -6189,7 +6340,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     _private->policyDelegateForwarder = nil;
 }
 
-- (id)policyDelegate
+- (id <WebPolicyDelegate>)policyDelegate
 {
     return _private->policyDelegate;
 }
@@ -6206,7 +6357,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 }
 #endif
 
-- (void)setFrameLoadDelegate:delegate
+- (void)setFrameLoadDelegate:(id <WebFrameLoadDelegate>)delegate
 {
     // <rdar://problem/6950660> - Due to some subtle WebKit changes - presumably to delegate callback behavior - we've
     // unconvered a latent bug in at least one WebKit app where the delegate wasn't properly retained by the app and
@@ -6233,7 +6384,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 #endif
 }
 
-- (id)frameLoadDelegate
+- (id <WebFrameLoadDelegate>)frameLoadDelegate
 {
     return _private->frameLoadDelegate;
 }
@@ -6652,12 +6803,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     return static_cast<DragApplicationFlags>(flags);
 }
 
-- (DragDestinationAction)actionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo
+- (DragDestinationAction)actionMaskForDraggingInfo:(id <NSDraggingInfo, NSCopying, NSMutableCopying, NSCoding, NSObject>)draggingInfo
 {
     return (DragDestinationAction)[[self _UIDelegateForwarder] webView:self dragDestinationActionMaskForDraggingInfo:draggingInfo];
 }
 
-- (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)draggingInfo
+- (NSDragOperation)draggingEntered:(id <NSDraggingInfo, NSCopying, NSMutableCopying, NSCoding, NSObject>)draggingInfo
 {
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
@@ -6666,7 +6817,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     return core(self)->dragController().dragEntered(dragData);
 }
 
-- (NSDragOperation)draggingUpdated:(id <NSDraggingInfo>)draggingInfo
+- (NSDragOperation)draggingUpdated:(id <NSDraggingInfo, NSCopying, NSMutableCopying, NSCoding, NSObject>)draggingInfo
 {
     Page* page = core(self);
     if (!page)
@@ -6679,7 +6830,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     return page->dragController().dragUpdated(dragData);
 }
 
-- (void)draggingExited:(id <NSDraggingInfo>)draggingInfo
+- (void)draggingExited:(id <NSDraggingInfo, NSCopying, NSMutableCopying, NSCoding, NSObject>)draggingInfo
 {
     Page* page = core(self);
     if (!page)
@@ -6696,7 +6847,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     return YES;
 }
 
-- (BOOL)performDragOperation:(id <NSDraggingInfo>)draggingInfo
+- (BOOL)performDragOperation:(id <NSDraggingInfo, NSCopying, NSMutableCopying, NSCoding, NSObject>)draggingInfo
 {
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
@@ -7391,6 +7542,7 @@ static TextCheckingResult textCheckingResultFromNSTextCheckingResult(NSTextCheck
             [menuItem setState:checkMark ? NSOnState : NSOffState];
         }
         return YES;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     } else if (action == @selector(toggleAutomaticQuoteSubstitution:)) {
         BOOL checkMark = [self isAutomaticQuoteSubstitutionEnabled];
         if ([(NSObject *)item isKindOfClass:[NSMenuItem class]]) {
@@ -7426,6 +7578,7 @@ static TextCheckingResult textCheckingResultFromNSTextCheckingResult(NSTextCheck
             [menuItem setState:checkMark ? NSOnState : NSOffState];
         }
         return YES;
+#endif
     }
     FOR_EACH_RESPONDER_SELECTOR(VALIDATE)
 
@@ -7538,6 +7691,19 @@ static BOOL findString(NSView <WebDocumentSearching> *searchView, NSString *stri
 
     return kit(_private->page->rangeOfString(string, core(previousRange), coreOptions(options)).get());
 }
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+// FIXME: Remove once WebKit no longer needs to support versions of Safari that call this.
+- (void)setHoverFeedbackSuspended:(BOOL)newValue
+{
+}
+
+// FIXME: Remove once WebKit no longer needs to support versions of Safari that call this.
+- (BOOL)isHoverFeedbackSuspended
+{
+    return NO;
+}
+#endif
 
 - (void)setMainFrameDocumentReady:(BOOL)mainFrameDocumentReady
 {
@@ -7856,7 +8022,8 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 - (void)addVisitedLinks:(NSArray *)visitedLinks
 {
     WebVisitedLinkStore& visitedLinkStore = _private->group->visitedLinkStore();
-    for (NSString *urlString in visitedLinks)
+    NSEnumerator *enumerator = [visitedLinks objectEnumerator];
+    while (NSString *urlString = [enumerator nextObject])
         visitedLinkStore.addVisitedLink(urlString);
 }
 
@@ -8087,7 +8254,11 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
             _private->page->setTabKeyCyclesThroughElements(!flag);
 #if PLATFORM(MAC)
         if (flag) {
+#if COMPILER(SUPPORTS_BLOCKS)
             dispatch_async(dispatch_get_main_queue(), [] {
+#else
+            callOnMainThread([] {
+#endif
                 [[NSSpellChecker sharedSpellChecker] _preflightChosenSpellServer];
             });
         }
@@ -8189,7 +8360,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
         [defaultCenter addObserver:_private->editingDelegate selector:selector name:name object:self];
 }
 
-- (void)setEditingDelegate:(id)delegate
+- (void)setEditingDelegate:(id<WebEditingDelegate>)delegate
 {
     if (_private->editingDelegate == delegate)
         return;
@@ -8215,7 +8386,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
     [self registerForEditingDelegateNotification:WebViewDidChangeSelectionNotification selector:@selector(webViewDidChangeSelection:)];
 }
 
-- (id)editingDelegate
+- (id<WebEditingDelegate>)editingDelegate
 {
     return _private->editingDelegate;
 }
@@ -8247,7 +8418,13 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
     
     grammarCheckingEnabled = flag;
     [[NSUserDefaults standardUserDefaults] setBool:grammarCheckingEnabled forKey:WebGrammarCheckingEnabled];    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[NSSpellChecker sharedSpellChecker] updatePanels];
+#else
+    NSSpellChecker *spellChecker = [NSSpellChecker sharedSpellChecker];
+    if ([spellChecker respondsToSelector:@selector(_updateGrammar)])
+        [spellChecker performSelector:@selector(_updateGrammar)];
+#endif
 
     // We call _preflightSpellChecker when turning continuous spell checking on, but we don't need to do that here
     // because grammar checking only occurs on code paths that already preflight spell checking appropriately.
@@ -8269,7 +8446,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (BOOL)isAutomaticQuoteSubstitutionEnabled
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
     return NO;
 #else
     return automaticQuoteSubstitutionEnabled;
@@ -8278,7 +8455,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (BOOL)isAutomaticLinkDetectionEnabled
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
     return NO;
 #else
     return automaticLinkDetectionEnabled;
@@ -8287,7 +8464,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (BOOL)isAutomaticDashSubstitutionEnabled
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
     return NO;
 #else
     return automaticDashSubstitutionEnabled;
@@ -8296,7 +8473,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (BOOL)isAutomaticTextReplacementEnabled
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
     return NO;
 #else
     return automaticTextReplacementEnabled;
@@ -8305,14 +8482,14 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (BOOL)isAutomaticSpellingCorrectionEnabled
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
     return NO;
 #else
     return automaticSpellingCorrectionEnabled;
 #endif
 }
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
 - (void)setAutomaticQuoteSubstitutionEnabled:(BOOL)flag
 {
@@ -8555,11 +8732,19 @@ static WebFrameView *containingFrameView(NSView *view)
 
     NSWindow *window = [self window];
     NSWindow *hostWindow = [self hostWindow];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (window)
         return [window backingScaleFactor];
     if (hostWindow)
         return [hostWindow backingScaleFactor];
     return [[NSScreen mainScreen] backingScaleFactor];
+#else
+    if (window)
+        return [window userSpaceScaleFactor];
+    if (hostWindow)
+        return [hostWindow userSpaceScaleFactor];
+    return [[NSScreen mainScreen] userSpaceScaleFactor];
+#endif
 }
 #endif
 
@@ -8968,7 +9153,11 @@ static WebFrameView *containingFrameView(NSView *view)
     if (![selectedString length])
         return;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[NSWorkspace sharedWorkspace] showSearchResultsForQueryString:selectedString];
+#else
+    (void)HISearchWindowShow((CFStringRef)selectedString, kNilOptions);
+#endif
 }
 #endif // !PLATFORM(IOS)
 
@@ -9095,6 +9284,16 @@ static WebFrameView *containingFrameView(NSView *view)
 - (void)_setNeedsOneShotDrawingSynchronization:(BOOL)needsSynchronization
 {
     _private->needsOneShotDrawingSynchronization = needsSynchronization;
+#if PLATFORM(MAC)
+    if (!needsSynchronization)
+        return;
+
+    NSWindow *window = [self window];
+    if (window)
+        // Disable screen updates to minimize the chances of the race between the CA
+        // display link and AppKit drawing causing flashes.
+        [window disableScreenUpdatesUntilFlush];
+#endif
 }
 
 /*
@@ -9168,7 +9367,7 @@ bool LayerFlushController::flushLayers()
         // AppKit may have disabled screen updates, thinking an upcoming window flush will re-enable them.
         // In case setNeedsDisplayInRect() has prevented the window from needing to be flushed, re-enable screen
         // updates here.
-        if (![window isFlushWindowDisabled])
+        if (![window isFlushWindowDisabled] && ![m_webView _needsOneShotDrawingSynchronization])
             [window _enableScreenUpdatesIfNeeded];
 #endif
 
@@ -9380,6 +9579,7 @@ bool LayerFlushController::flushLayers()
 }
 
 #if PLATFORM(MAC)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 - (WebImmediateActionController *)_immediateActionController
 {
     return _private->immediateActionController;
@@ -9398,6 +9598,7 @@ bool LayerFlushController::flushLayers()
         return [self _convertRectFromRootView:rectInRootViewCoordinates];
     });
 }
+#endif
 
 - (NSEvent *)_pressureEvent
 {
@@ -9419,8 +9620,15 @@ bool LayerFlushController::flushLayers()
     if (!_private->textIndicatorWindow)
         _private->textIndicatorWindow = std::make_unique<TextIndicatorWindow>(self);
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     NSRect textBoundingRectInWindowCoordinates = [self convertRect:[self _convertRectFromRootView:textIndicator.textBoundingRectInRootViewCoordinates()] toView:nil];
     NSRect textBoundingRectInScreenCoordinates = [self.window convertRectToScreen:textBoundingRectInWindowCoordinates];
+#else
+    NSRect rect = textIndicator.textBoundingRectInRootViewCoordinates();
+    NSPoint windowPoint = [self convertPoint:rect.origin toView:nil];
+    NSPoint screenPoint = [[self window] convertBaseToScreen:windowPoint];
+    NSRect textBoundingRectInScreenCoordinates = NSMakeRect(screenPoint.x, screenPoint.y, rect.size.width, rect.size.height);
+#endif
     _private->textIndicatorWindow->setTextIndicator(textIndicator, NSRectToCGRect(textBoundingRectInScreenCoordinates), lifetime);
 }
 
@@ -9437,6 +9645,7 @@ bool LayerFlushController::flushLayers()
         _private->textIndicatorWindow->setAnimationProgress(progress);
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
 - (void)_prepareForDictionaryLookup
 {
     if (_private->hasInitializedLookupObserver)
@@ -9447,13 +9656,16 @@ bool LayerFlushController::flushLayers()
     if (canLoadLUNotificationPopoverWillClose())
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_dictionaryLookupPopoverWillClose:) name:getLUNotificationPopoverWillClose() object:nil];
 }
+#endif
 
 - (void)_showDictionaryLookupPopup:(const DictionaryPopupInfo&)dictionaryPopupInfo
 {
     if (!dictionaryPopupInfo.attributedString)
         return;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
     [self _prepareForDictionaryLookup];
+#endif
 
     DictionaryLookup::showPopup(dictionaryPopupInfo, self, [self](TextIndicator& textIndicator) {
         [self _setTextIndicator:textIndicator withLifetime:TextIndicatorWindowLifetime::Permanent];
@@ -9462,17 +9674,18 @@ bool LayerFlushController::flushLayers()
     });
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
 - (void)_dictionaryLookupPopoverWillClose:(NSNotification *)notification
 {
     [self _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
 }
-
+#endif
 #endif // PLATFORM(MAC)
 
 - (void)showFormValidationMessage:(NSString *)message withAnchorRect:(NSRect)anchorRect
 {
     // FIXME: We should enable this on iOS as well.
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     double minimumFontSize = _private->page ? _private->page->settings().minimumFontSize() : 0;
     _private->formValidationBubble = ValidationBubble::create(self, message, { minimumFontSize });
     _private->formValidationBubble->showRelativeTo(enclosingIntRect([self _convertRectFromRootView:anchorRect]));
@@ -9484,7 +9697,9 @@ bool LayerFlushController::flushLayers()
 
 - (void)hideFormValidationMessage
 {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     _private->formValidationBubble = nullptr;
+#endif
 }
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
@@ -9975,6 +10190,16 @@ static NSTextAlignment nsTextAlignmentFromRenderStyle(const RenderStyle* style)
 #endif // ENABLE(GEOLOCATION)
 }
 
+- (void)_geolocationDidFailWithError:(NSError *)error
+{
+#if ENABLE(GEOLOCATION)
+    if (_private && _private->page) {
+        RefPtr<GeolocationError> geolocatioError = GeolocationError::create(GeolocationError::PositionUnavailable, [error localizedDescription]);
+        WebCore::GeolocationController::from(_private->page)->errorOccurred(geolocatioError.get());
+    }
+#endif // ENABLE(GEOLOCATION)
+}
+
 - (void)_geolocationDidFailWithMessage:(NSString *)errorMessage
 {
 #if ENABLE(GEOLOCATION)
@@ -10051,7 +10276,9 @@ static NSTextAlignment nsTextAlignmentFromRenderStyle(const RenderStyle* style)
     UNUSED_PARAM(whitelist);
 #else
     Vector<String> vector;
-    for (NSString *string in whitelist)
+    NSEnumerator *enumerator = [whitelist objectEnumerator];
+    NSString* string;
+    while ((string = [enumerator nextObject]) != nil)
         vector.append(string);
     WebCore::FontCache::setFontWhitelist(vector);
 #endif
@@ -10121,4 +10348,64 @@ void WebInstallMemoryPressureHandler(void)
             memoryPressureHandler.install();
         });
     }
+}
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+
+static IMP originalRecursivelyRemoveMailAttributesImp;
+
+static id objectElementDataAttribute(DOMHTMLObjectElement *self, SEL)
+{
+    return [self getAttribute:@"data"];
+}
+
+static void recursivelyRemoveMailAttributes(DOMNode *self, SEL selector, BOOL a, BOOL b, BOOL c)
+{
+    // While inside this Mail function, change the behavior of -[DOMHTMLObjectElement data] back to what it used to be
+    // before we fixed a bug in it (see http://trac.webkit.org/changeset/30044 for that change).
+
+    // It's a little bit strange to patch a method defined by WebKit, but it helps keep this workaround self-contained.
+
+    Method methodToPatch = class_getInstanceMethod(objc_getRequiredClass("DOMHTMLObjectElement"), @selector(data));
+    IMP originalDataImp = method_setImplementation(methodToPatch, reinterpret_cast<IMP>(objectElementDataAttribute));
+    wtfCallIMP<id>(originalRecursivelyRemoveMailAttributesImp, self, selector, a, b, c);
+    method_setImplementation(methodToPatch, originalDataImp);
+}
+
+#endif
+
+static void patchMailRemoveAttributesMethod()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (!WKAppVersionCheckLessThan(@"com.apple.mail", -1, 4.0))
+        return;
+    Method methodToPatch = class_getInstanceMethod(objc_getRequiredClass("DOMNode"), @selector(recursivelyRemoveMailAttributes:convertObjectsToImages:convertEditableElements:));
+    if (!methodToPatch)
+        return;
+    originalRecursivelyRemoveMailAttributesImp = method_setImplementation(methodToPatch, reinterpret_cast<IMP>(recursivelyRemoveMailAttributes));
+#endif
+}
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+
+@interface NSCTFont : NSFont
+@end
+
+static BOOL _isHiraginoFont(NSCTFont *self, SEL)
+{
+    auto familyName = adoptCF(CTFontCopyFamilyName(toCTFont(self)));
+    if (familyName && CFStringFindWithOptionsAndLocale(familyName.get(), CFSTR("Hiragino"), CFRangeMake(0, CFStringGetLength(familyName.get())), 0, NULL, NULL))
+        return TRUE;
+
+    return FALSE;
+}
+
+#endif
+
+static void patch_NSCTFont_isHiraginoFont()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    Method methodToPatch = class_getInstanceMethod(objc_getRequiredClass("NSCTFont"), @selector(_isHiraginoFont));
+    method_setImplementation(methodToPatch, reinterpret_cast<IMP>(_isHiraginoFont));
+#endif
 }

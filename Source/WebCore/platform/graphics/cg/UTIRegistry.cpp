@@ -53,7 +53,9 @@ HashSet<String>& allowedImageUTIs()
         "com.microsoft.ico",
         "public.jpeg",
         "public.jpeg-2000",
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 10110)
         "public.mpo-image",
+#endif
         "public.png",
         "public.tiff",
     };

@@ -57,11 +57,12 @@ and/or on disk.
 
 Examples: Safari, OmniWeb, Shiira.
 */
-typedef NS_ENUM(NSUInteger, WebCacheModel) {
+enum {
     WebCacheModelDocumentViewer = 0,
     WebCacheModelDocumentBrowser = 1,
     WebCacheModelPrimaryWebBrowser = 2
 };
+typedef NSUInteger WebCacheModel;
 
 typedef struct WebPreferencesPrivate WebPreferencesPrivate;
 
@@ -90,7 +91,7 @@ extern NSString *WebPreferencesChangedNotification;
     for the WebPreferences.
     @result Returns a new instance of WebPreferences or a previously allocated instance with the same identifier.
 */
-- (instancetype)initWithIdentifier:(NSString *)anIdentifier;
+- (id)initWithIdentifier:(NSString *)anIdentifier;
 
 /*!
     @property identifier
@@ -162,7 +163,7 @@ extern NSString *WebPreferencesChangedNotification;
     @property userStyleSheetLocation
     @abstract The location of the user style sheet.
 */
-@property (nonatomic, strong) NSURL *userStyleSheetLocation;
+@property (nonatomic, retain) NSURL *userStyleSheetLocation;
 
 /*!
     @property javaEnabled
@@ -271,5 +272,15 @@ extern NSString *WebPreferencesChangedNotification;
     @property allowsAirPlayForMediaPlayback
  */
 @property (nonatomic) BOOL allowsAirPlayForMediaPlayback;
+
+/*!
+    @property largeAnimatedImageFrameCachingEnabled
+*/
+@property (nonatomic) BOOL largeAnimatedImageFrameCachingEnabled;
+
+/*!
+    @property resourceUsageOverlayVisible
+*/
+@property (nonatomic) BOOL resourceUsageOverlayVisible;
 
 @end

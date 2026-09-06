@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMImplementation.h>
+#import <WebKit/DOMImplementation.h>
 
 namespace WebCore {
 class DOMImplementation;

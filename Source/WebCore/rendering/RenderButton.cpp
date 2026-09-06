@@ -41,6 +41,7 @@ RenderButton::RenderButton(HTMLFormControlElement& element, RenderStyle&& style)
     : RenderFlexibleBox(element, WTFMove(style))
     , m_buttonText(0)
     , m_inner(0)
+    , m_default(false)
 {
 }
 
@@ -107,6 +108,23 @@ void RenderButton::updateAnonymousChildStyle(const RenderObject& child, RenderSt
     childStyle.setAlignContent(style().alignContent());
 }
 
+void RenderButton::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
+{
+    RenderBlock::styleDidChange(diff, oldStyle);
+
+    if (!m_default && theme().isDefault(*this)) {
+        if (theme().defaultButtonHasAnimation()) {
+            if (!m_timer)
+                m_timer = std::make_unique<Timer>(*this, &RenderButton::timerFired);
+            m_timer->startRepeating(30_ms);
+        }
+        m_default = true;
+    } else if (m_default && !theme().isDefault(*this)) {
+        m_default = false;
+        m_timer = nullptr;
+    }
+}
+
 void RenderButton::updateFromElement()
 {
     // If we're an input element, we may need to change our button text.
@@ -153,6 +171,18 @@ LayoutRect RenderButton::controlClipRect(const LayoutPoint& additionalOffset) co
     return LayoutRect(additionalOffset.x() + borderLeft(), additionalOffset.y() + borderTop(), width() - borderLeft() - borderRight(), height() - borderTop() - borderBottom());
 }
 
+void RenderButton::timerFired()
+{
+    // FIXME Bug 25110: Ideally we would stop our timer when our Document
+    // enters the page cache. But we currently have no way of being notified
+    // when that happens, so we'll just ignore the timer firing as long as
+    // we're in the cache.
+    if (document().pageCacheState() == Document::InPageCache)
+        return;
+ 
+    repaint();
+}
+ 
 #if PLATFORM(IOS)
 void RenderButton::layout()
 {

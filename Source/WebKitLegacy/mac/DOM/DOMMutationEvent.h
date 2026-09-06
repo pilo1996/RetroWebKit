@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMEvent.h>
+#import <WebKit/DOMEvent.h>
 
 @class DOMNode;
 @class NSString;
@@ -36,7 +36,7 @@ enum {
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMMutationEvent : DOMEvent
-@property (readonly, strong) DOMNode *relatedNode;
+@property (readonly, retain) DOMNode *relatedNode;
 @property (readonly, copy) NSString *prevValue;
 @property (readonly, copy) NSString *newValue;
 - (NSString *)newValue NS_RETURNS_NOT_RETAINED;

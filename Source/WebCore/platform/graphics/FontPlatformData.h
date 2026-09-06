@@ -26,6 +26,9 @@
 
 #include "TextFlags.h"
 #include <wtf/Forward.h>
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <wtf/RefCounted.h>
+#endif
 #include <wtf/RetainPtr.h>
 
 
@@ -63,7 +66,25 @@ interface IDWriteFont;
 interface IDWriteFontFace;
 #endif
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+typedef UInt32 ATSFontContainerRef;
+#endif
+
 namespace WebCore {
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+class ATSFontContainerRefWrapper : public RefCounted<ATSFontContainerRefWrapper> {
+public:
+    static Ref<ATSFontContainerRefWrapper> create(ATSFontContainerRef atsContainer);
+
+    ~ATSFontContainerRefWrapper();
+ 
+private:
+    ATSFontContainerRefWrapper(ATSFontContainerRef atsContainer);
+ 
+    ATSFontContainerRef m_atsContainer;
+};
+#endif
 
 class FontDescription;
 class SharedBuffer;
@@ -80,6 +101,9 @@ public:
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT FontPlatformData(CTFontRef, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = Horizontal, FontWidthVariant = RegularWidth, TextRenderingMode = AutoTextRendering);
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    WEBCORE_EXPORT FontPlatformData(CTFontRef, RefPtr<ATSFontContainerRefWrapper>, float size, bool syntheticBold = false, bool syntheticOblique = false, FontOrientation = Horizontal, FontWidthVariant = RegularWidth, TextRenderingMode = AutoTextRendering);
+#endif
 #endif
 
     static FontPlatformData cloneWithOrientation(const FontPlatformData&, FontOrientation);
@@ -223,6 +247,10 @@ private:
     // FIXME: Get rid of one of these. These two fonts are subtly different, and it is not obvious which one to use where.
     RetainPtr<CTFontRef> m_font;
     mutable RetainPtr<CTFontRef> m_ctFont;
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    RefPtr<ATSFontContainerRefWrapper> m_atsContainer;
+#endif
 #elif PLATFORM(WIN)
     RefPtr<SharedGDIObject<HFONT>> m_font;
 #endif
@@ -280,12 +308,12 @@ private:
 // NSFonts and CTFontRefs are toll-free-bridged.
 inline CTFontRef toCTFont(NSFont *font)
 {
-    return (CTFontRef)font;
+    return reinterpret_cast<CTFontRef>(font);
 }
 
-inline NSFont *toNSFont(CTFontRef font)
+inline const NSFont *toNSFont(CTFontRef font)
 {
-    return (NSFont *)font;
+    return (const NSFont *)font;
 }
 
 #endif

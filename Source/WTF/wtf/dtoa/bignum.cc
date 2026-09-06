@@ -103,7 +103,14 @@ namespace double_conversion {
     }
     
     
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-overflow"
+#endif
     void Bignum::AssignDecimalString(BufferReference<const char> value) {
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
         // 2^64 = 18446744073709551616 > 10^19
         const int kMaxUint64DecimalDigits = 19;
         Zero();

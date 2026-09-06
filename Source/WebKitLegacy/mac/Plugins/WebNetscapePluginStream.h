@@ -31,7 +31,7 @@
 
 #import <WebCore/Timer.h>
 #import <WebCore/NetscapePlugInStreamLoader.h>
-#import <WebKitLegacy/npfunctions.h>
+#import <WebKit/npfunctions.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
 #import <wtf/RefPtr.h>

@@ -127,7 +127,22 @@ static inline CFStringRef shouldSniffConnectionProperty()
 #endif
 }
 
-void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, CFDictionaryRef clientProperties)
+static bool shouldRelaxThirdPartyCookiePolicy(NetworkingContext* context, const URL& url)
+{
+    // If a URL already has cookies, then we'll relax the 3rd party cookie policy and accept new cookies.
+
+    RetainPtr<CFHTTPCookieStorageRef> cfCookieStorage = context->storageSession().cookieStorage();
+    CFHTTPCookieStorageAcceptPolicy cookieAcceptPolicy = CFHTTPCookieStorageGetCookieAcceptPolicy(cfCookieStorage.get());
+
+    if (cookieAcceptPolicy != CFHTTPCookieStorageAcceptPolicyOnlyFromMainDocumentDomain)
+        return false;
+
+    RetainPtr<CFURLRef> cfURL = url.createCFURL();
+    RetainPtr<CFArrayRef> cookies = adoptCF(CFHTTPCookieStorageCopyCookiesForURL(cfCookieStorage.get(), cfURL.get(), false));
+    return CFArrayGetCount(cookies.get());
+}
+
+void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, CFDictionaryRef clientProperties)
 {
     if ((!d->m_user.isEmpty() || !d->m_pass.isEmpty()) && !firstRequest().url().protocolIsInHTTPFamily()) {
         // Credentials for ftp can only be passed in URL, the didReceiveAuthenticationChallenge delegate call won't be made.
@@ -138,6 +153,9 @@ void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool
     }
 
     String partition = firstRequest().cachePartition();
+
+    if (shouldRelaxThirdPartyCookiePolicy)
+        firstRequest().setFirstPartyForCookies(firstRequest().url());
 
     // <rdar://problem/7174050> - For URLs that match the paths of those previously challenged for HTTP Basic authentication,
     // try and reuse the credential preemptively, as allowed by RFC 2617.
@@ -173,12 +191,12 @@ void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool
 #else
     if (allowsAnyHTTPSCertificateHosts().contains(firstRequest().url().host())) {
         sslProps = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
         CFDictionaryAddValue(sslProps.get(), kCFStreamSSLAllowsAnyRoot, kCFBooleanTrue);
         CFDictionaryAddValue(sslProps.get(), kCFStreamSSLAllowsExpiredRoots, kCFBooleanTrue);
         CFDictionaryAddValue(sslProps.get(), kCFStreamSSLAllowsExpiredCertificates, kCFBooleanTrue);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("clang diagnostic pop")
         CFDictionaryAddValue(sslProps.get(), kCFStreamSSLValidatesCertificateChain, kCFBooleanFalse);
     }
 
@@ -211,7 +229,7 @@ void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool
         CFDictionarySetValue(streamProperties, CFSTR("_WebKitSynchronousRequest"), kCFBooleanTrue);
     }
 
-#if PLATFORM(COCOA)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
     RetainPtr<CFDataRef> sourceApplicationAuditData = d->m_context->sourceApplicationAuditData();
     if (sourceApplicationAuditData)
         CFDictionarySetValue(streamProperties, CFSTR("kCFStreamPropertySourceApplication"), sourceApplicationAuditData.get());
@@ -250,10 +268,10 @@ void ResourceHandle::createCFURLConnection(bool shouldUseCredentialStorage, bool
     if (shouldUseCredentialStorage)
         client.shouldUseCredentialStorage = 0;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     d->m_connection = adoptCF(CFURLConnectionCreateWithProperties(0, request.get(), reinterpret_cast<CFURLConnectionClient*>(&client), propertiesDictionary.get()));
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 }
 
 bool ResourceHandle::start()
@@ -276,7 +294,7 @@ bool ResourceHandle::start()
 
     SchedulingBehavior schedulingBehavior = client()->loadingSynchronousXHR() ? SchedulingBehavior::Synchronous : SchedulingBehavior::Asynchronous;
 
-    createCFURLConnection(shouldUseCredentialStorage, d->m_shouldContentSniff, schedulingBehavior, client()->connectionProperties(this).get());
+    createCFURLConnection(shouldUseCredentialStorage, shouldRelaxThirdPartyCookiePolicy(d->m_context.get(), firstRequest().url()), d->m_shouldContentSniff, schedulingBehavior, client()->connectionProperties(this).get());
 
     d->m_connectionDelegate->setupConnectionScheduling(d->m_connection.get());
     CFURLConnectionStart(d->m_connection.get());
@@ -594,7 +612,7 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
         return;
     }
 
-    handle->createCFURLConnection(storedCredentials == AllowStoredCredentials, ResourceHandle::shouldContentSniffURL(request.url()),
+    handle->createCFURLConnection(storedCredentials == AllowStoredCredentials, shouldRelaxThirdPartyCookiePolicy(context, request.url()), ResourceHandle::shouldContentSniffURL(request.url()),
         SchedulingBehavior::Synchronous, handle->client()->connectionProperties(handle.get()).get());
 
     CFURLConnectionScheduleWithRunLoop(handle->connection(), CFRunLoopGetCurrent(), synchronousLoadRunLoopMode());

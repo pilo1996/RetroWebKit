@@ -185,6 +185,7 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 #if !defined(ENABLE_REMOTE_INSPECTOR)
 #define ENABLE_REMOTE_INSPECTOR 1
 #endif
@@ -192,12 +193,13 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #if !defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS)
 #define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 1
 #endif
+#endif
 
-#if !defined(ENABLE_SMOOTH_SCROLLING)
+#if !defined(ENABLE_SMOOTH_SCROLLING) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #define ENABLE_SMOOTH_SCROLLING 1
 #endif
 
-#if !defined(ENABLE_ASYNC_SCROLLING)
+#if !defined(ENABLE_ASYNC_SCROLLING) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 #define ENABLE_ASYNC_SCROLLING 1
 #endif
 
@@ -243,7 +245,7 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_DATA_DETECTION 0
 #endif
 
-#if !defined(ENABLE_LEGACY_ENCRYPTED_MEDIA)
+#if !defined(ENABLE_LEGACY_ENCRYPTED_MEDIA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1090)
 #define ENABLE_LEGACY_ENCRYPTED_MEDIA 1
 #endif
 

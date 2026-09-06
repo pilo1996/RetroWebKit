@@ -35,14 +35,18 @@ class GraphicsContext3D;
 }
 
 #if PLATFORM(MAC)
+#if USE(IOSURFACE)
 @interface WebGLLayer : CALayer
+#else
+@interface WebGLLayer : CAOpenGLLayer
+#endif
 #else
 @interface WebGLLayer : CAEAGLLayer
 #endif
 {
     WebCore::GraphicsContext3D* _context;
     float _devicePixelRatio;
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
     std::unique_ptr<WebCore::IOSurface> _contentsBuffer;
     std::unique_ptr<WebCore::IOSurface> _drawingBuffer;
     std::unique_ptr<WebCore::IOSurface> _spareBuffer;
@@ -57,7 +61,7 @@ class GraphicsContext3D;
 
 - (CGImageRef)copyImageSnapshotWithColorSpace:(CGColorSpaceRef)colorSpace;
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
 - (void)allocateIOSurfaceBackingStoreWithSize:(WebCore::IntSize)size usingAlpha:(BOOL)usingAlpha;
 - (void)bindFramebufferToNextAvailableSurface;
 #endif

@@ -46,11 +46,22 @@ WebGLExtension::ExtensionName WebGLDrawBuffers::getName() const
     return WebGLExtension::WebGLDrawBuffersName;
 }
 
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
+
+bool WebGLDrawBuffers::supported(WebGLRenderingContextBase&)
+{
+    return false;
+}
+
+#else
+
 bool WebGLDrawBuffers::supported(WebGLRenderingContextBase& context)
 {
     return context.graphicsContext3D()->getExtensions().supports("GL_EXT_draw_buffers")
         && satisfiesWebGLRequirements(context);
 }
+
+#endif
 
 void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GC3Denum>& buffers)
 {

@@ -34,9 +34,12 @@
 #import "WebCoreFrameView.h"
 #import <wtf/BlockObjCExceptions.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 @interface NSScrollView ()
 - (NSEdgeInsets)contentInsets;
+@property BOOL automaticallyAdjustsContentInsets;
 @end
+#endif
 
 @interface NSWindow (WebWindowDetails)
 - (BOOL)_needsToResetDragMargins;
@@ -49,7 +52,7 @@ inline NSScrollView<WebCoreFrameScrollView> *ScrollView::scrollView() const
 {
     ASSERT(!platformWidget() || [platformWidget() isKindOfClass:[NSScrollView class]]);
     ASSERT(!platformWidget() || [platformWidget() conformsToProtocol:@protocol(WebCoreFrameScrollView)]);
-    return static_cast<NSScrollView<WebCoreFrameScrollView> *>(platformWidget());
+    return reinterpret_cast<NSScrollView<WebCoreFrameScrollView> *>(platformWidget());
 }
 
 NSView *ScrollView::documentView() const
@@ -110,15 +113,18 @@ bool ScrollView::platformCanBlitOnScroll() const
 
 float ScrollView::platformTopContentInset() const
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     return scrollView().contentInsets.top;
     END_BLOCK_OBJC_EXCEPTIONS;
+#endif
 
     return 0;
 }
 
 void ScrollView::platformSetTopContentInset(float topContentInset)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     if (topContentInset)
         scrollView().automaticallyAdjustsContentInsets = NO;
@@ -129,6 +135,9 @@ void ScrollView::platformSetTopContentInset(float topContentInset)
     contentInsets.top = topContentInset;
     scrollView().contentInsets = contentInsets;
     END_BLOCK_OBJC_EXCEPTIONS;
+#else
+    UNUSED_PARAM(topContentInset);
+#endif
 }
 
 IntRect ScrollView::platformVisibleContentRect(bool includeScrollbars) const
@@ -136,8 +145,10 @@ IntRect ScrollView::platformVisibleContentRect(bool includeScrollbars) const
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     IntRect visibleContentRect = platformVisibleContentRectIncludingObscuredArea(includeScrollbars);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     visibleContentRect.move(scrollView().contentInsets.left, scrollView().contentInsets.top);
     visibleContentRect.contract(scrollView().contentInsets.left + scrollView().contentInsets.right, scrollView().contentInsets.top + scrollView().contentInsets.bottom);
+#endif
 
     return visibleContentRect;
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -195,10 +206,12 @@ void ScrollView::platformSetScrollPosition(const IntPoint& scrollPoint)
     NSPoint floatPoint = scrollPoint;
     NSPoint tempPoint = { std::max(-[scrollView() scrollOrigin].x, floatPoint.x), std::max(-[scrollView() scrollOrigin].y, floatPoint.y) };  // Don't use NSMakePoint to work around 4213314.
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     // AppKit has the inset factored into all of its scroll positions. In WebCore, we use positions that ignore
     // the insets so that they are equivalent whether or not there is an inset.
     tempPoint.x = tempPoint.x - scrollView().contentInsets.left;
     tempPoint.y = tempPoint.y - scrollView().contentInsets.top;
+#endif
 
     [documentView() scrollPoint:tempPoint];
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -228,10 +241,10 @@ IntRect ScrollView::platformContentsToScreen(const IntRect& rect) const
     if (NSView* documentView = this->documentView()) {
         NSRect tempRect = rect;
         tempRect = [documentView convertRect:tempRect toView:nil];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         tempRect.origin = [[documentView window] convertBaseToScreen:tempRect.origin];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         return enclosingIntRect(tempRect);
     }
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -242,10 +255,10 @@ IntPoint ScrollView::platformScreenToContents(const IntPoint& point) const
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     if (NSView* documentView = this->documentView()) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         NSPoint windowCoord = [[documentView window] convertScreenToBase: point];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         return IntPoint([documentView convertPoint:windowCoord fromView:nil]);
     }
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -257,6 +270,7 @@ bool ScrollView::platformIsOffscreen() const
     return ![platformWidget() window] || ![[platformWidget() window] isVisible];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static inline NSScrollerKnobStyle toNSScrollerKnobStyle(ScrollbarOverlayStyle style)
 {
     switch (style) {
@@ -268,10 +282,15 @@ static inline NSScrollerKnobStyle toNSScrollerKnobStyle(ScrollbarOverlayStyle st
         return NSScrollerKnobStyleDefault;
     }
 }
+#endif
 
 void ScrollView::platformSetScrollbarOverlayStyle(ScrollbarOverlayStyle overlayStyle)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [scrollView() setScrollerKnobStyle:toNSScrollerKnobStyle(overlayStyle)];
+#else
+    UNUSED_PARAM(overlayStyle);
+#endif
 }
 
 void ScrollView::platformSetScrollOrigin(const IntPoint& origin, bool updatePositionAtAll, bool updatePositionSynchronously)

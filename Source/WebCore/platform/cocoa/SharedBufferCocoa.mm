@@ -49,6 +49,7 @@ using namespace WebCore;
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
 #endif // !USE(WEB_THREAD)
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (void)dealloc
@@ -57,6 +58,11 @@ using namespace WebCore;
         return;
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    [super finalize];
 }
 
 - (id)initWithSharedBufferDataSegment:(const SharedBuffer::DataSegment&)dataSegment
@@ -90,7 +96,7 @@ Ref<SharedBuffer> SharedBuffer::create(NSData *nsData)
 
 RetainPtr<NSData> SharedBuffer::createNSData() const
 {
-    return adoptNS((NSData *)createCFData().leakRef());
+    return adoptNS((const NSData *)createCFData().leakRef());
 }
 
 RetainPtr<CFDataRef> SharedBuffer::createCFData() const
@@ -114,7 +120,7 @@ RetainPtr<NSArray> SharedBuffer::createNSDataArray() const
 {
     auto dataArray = adoptNS([[NSMutableArray alloc] initWithCapacity:m_segments.size()]);
     for (const auto& segment : m_segments)
-        [dataArray addObject:adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataSegment:segment.segment]).get()];
+        [dataArray.get() addObject:adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataSegment:segment.segment]).get()];
     return WTFMove(dataArray);
 }
 

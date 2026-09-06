@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSRuleList.h>
+#import <WebKit/DOMCSSRuleList.h>
 
 namespace WebCore {
 class CSSRuleList;

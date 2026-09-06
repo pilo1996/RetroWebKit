@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLLinkElement.h>
+#import <WebKit/DOMHTMLLinkElement.h>
 
 namespace WebCore {
 class HTMLLinkElement;

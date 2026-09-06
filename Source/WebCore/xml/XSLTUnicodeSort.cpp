@@ -43,9 +43,12 @@
 
 #if OS(DARWIN) && !PLATFORM(GTK)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 SOFT_LINK_LIBRARY(libxslt)
 SOFT_LINK(libxslt, xsltComputeSortResult, xmlXPathObjectPtr*, (xsltTransformContextPtr ctxt, xmlNodePtr sort), (ctxt, sort))
 SOFT_LINK(libxslt, xsltEvalAttrValueTemplate, xmlChar*, (xsltTransformContextPtr ctxt, xmlNodePtr node, const xmlChar *name, const xmlChar *ns), (ctxt, node, name, ns))
+#pragma GCC diagnostic pop
 
 static void xsltTransformErrorTrampoline(xsltTransformContextPtr, xsltStylesheetPtr, xmlNodePtr, const char* message, ...) WTF_ATTRIBUTE_PRINTF(4, 5);
 
@@ -299,12 +302,12 @@ void xsltUnicodeSortFunction(xsltTransformContextPtr ctxt, xmlNodePtr *sorts, in
         comp = static_cast<xsltStylePreComp*>(sorts[j]->psvi);
         if (tempstype[j] == 1) {
             /* The data-type needs to be recomputed each time */
-            xmlFree((void *)(comp->stype));
+            xmlFree(const_cast<xmlChar*>(comp->stype));
             comp->stype = NULL;
         }
         if (temporder[j] == 1) {
             /* The order needs to be recomputed each time */
-            xmlFree((void *)(comp->order));
+            xmlFree(const_cast<xmlChar*>(comp->order));
             comp->order = NULL;
         }
         if (resultsTab[j] != NULL) {

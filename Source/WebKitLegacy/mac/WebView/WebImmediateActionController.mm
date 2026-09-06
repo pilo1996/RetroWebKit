@@ -59,8 +59,10 @@
 #import <objc/objc.h>
 #import <wtf/SoftLinking.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 SOFT_LINK_FRAMEWORK_IN_UMBRELLA(Quartz, QuickLookUI)
 SOFT_LINK_CLASS(QuickLookUI, QLPreviewMenuItem)
+#endif
 
 @interface WebImmediateActionController () <QLPreviewMenuItemDelegate>
 @end
@@ -75,6 +77,7 @@ using namespace WebCore;
 
 @implementation WebImmediateActionController
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 - (instancetype)initWithWebView:(WebView *)webView recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer
 {
     if (!(self = [super init]))
@@ -495,6 +498,7 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
     
     return menuItems.lastObject;
 }
+#endif
 
 #pragma mark Text action
 
@@ -527,8 +531,10 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
     popupInfo.options = lookupOptions;
 
     NSAttributedString *nsAttributedString = editingAttributedStringFromRange(range, IncludeImagesInAttributedString::No);
-    RetainPtr<NSMutableAttributedString> scaledNSAttributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[nsAttributedString string]]);
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    RetainPtr<NSMutableAttributedString> scaledNSAttributedString = adoptNS([[NSMutableAttributedString alloc] initWithString:[nsAttributedString string]]);
 
     [nsAttributedString enumerateAttributesInRange:NSMakeRange(0, [nsAttributedString length]) options:0 usingBlock:^(NSDictionary *attributes, NSRange attributeRange, BOOL *stop) {
         RetainPtr<NSMutableDictionary> scaledAttributes = adoptNS([attributes mutableCopy]);
@@ -541,6 +547,20 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
 
         [scaledNSAttributedString addAttributes:scaledAttributes.get() range:attributeRange];
     }];
+#else
+    RetainPtr<NSMutableAttributedString> scaledNSAttributedString = adoptNS([[NSMutableAttributedString alloc] initWithAttributedString:nsAttributedString]);
+
+    unsigned int length = [scaledNSAttributedString.get() length];
+    NSRange effectiveRange = NSMakeRange(0, 0);
+
+    while (NSMaxRange(effectiveRange) < length) {
+        NSFont *font = [scaledNSAttributedString.get() attribute:NSFontAttributeName atIndex:NSMaxRange(effectiveRange) effectiveRange:&effectiveRange];
+        if (font) {
+            font = [fontManager convertFont:font toSize:[font pointSize] * frame->page()->pageScaleFactor()];
+            [scaledNSAttributedString.get() addAttribute:NSFontAttributeName value:font range:effectiveRange];
+        }
+    }
+#endif
 
     popupInfo.attributedString = scaledNSAttributedString.get();
 
@@ -551,6 +571,7 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
     return popupInfo;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 - (id<NSImmediateActionAnimationController>)_animationControllerForText
 {
     if (!getLULookupDefinitionModuleClass())
@@ -575,7 +596,8 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
 
     return [_webView _animationControllerForDictionaryLookupPopupInfo:dictionaryPopupInfo];
 }
+#endif
 
 @end
 
-#endif // PLATFORM(MAC)
+#endif // PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000

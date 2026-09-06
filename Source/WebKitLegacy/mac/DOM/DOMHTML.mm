@@ -182,6 +182,48 @@ using namespace WebCore;
     return core(self)->isTextField();
 }
 
+#if PLATFORM(MAC)
+
+- (NSRect)_rectOnScreen
+{
+    // Returns bounding rect of text field, in screen coordinates.
+    NSRect result = [self boundingBox];
+    if (!core(self)->document().view())
+        return result;
+
+    NSView* view = core(self)->document().view()->documentView();
+    result = [view convertRect:result toView:nil];
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
+    result.origin = [[view window] convertBaseToScreen:result.origin];
+CLANG_PRAGMA(diagnostic pop)
+    return result;
+}
+
+#endif
+
+- (void)_replaceCharactersInRange:(NSRange)targetRange withString:(NSString *)replacementString selectingFromIndex:(int)index
+{
+    WebCore::HTMLInputElement* inputElement = core(self);
+    if (inputElement) {
+        WTF::String newValue = inputElement->value();
+        newValue.replace(targetRange.location, targetRange.length, replacementString);
+        inputElement->setValue(newValue);
+        inputElement->setSelectionRange(index, newValue.length());
+    }
+}
+
+- (NSRange)_selectedRange
+{
+    WebCore::HTMLInputElement* inputElement = core(self);
+    if (inputElement) {
+        int start = inputElement->selectionStart();
+        int end = inputElement->selectionEnd();
+        return NSMakeRange(start, end - start); 
+    }
+    return NSMakeRange(NSNotFound, 0);
+}
+
 @end
 
 @implementation DOMHTMLSelectElement (FormAutoFillTransition)
@@ -204,8 +246,6 @@ using namespace WebCore;
 
 @end
 
-#if PLATFORM(IOS)
-
 @implementation DOMHTMLInputElement (FormPromptAdditions)
 
 - (BOOL)_isEdited
@@ -223,6 +263,8 @@ using namespace WebCore;
 }
 
 @end
+
+#if PLATFORM(IOS)
 
 static WebAutocapitalizeType webAutocapitalizeType(AutocapitalizeType type)
 {

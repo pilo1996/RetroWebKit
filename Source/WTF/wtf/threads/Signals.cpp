@@ -28,7 +28,7 @@
 
 #if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 extern "C" {
 #include "MachExceptionsServer.h"
 };
@@ -38,7 +38,7 @@ extern "C" {
 #include <mutex>
 #include <signal.h>
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 #include <dispatch/dispatch.h>
 #include <mach/mach.h>
 #include <mach/thread_act.h>
@@ -60,7 +60,7 @@ static LazyNeverDestroyed<LocklessBag<SignalHandler>> handlers[static_cast<size_
 static std::once_flag initializeOnceFlags[static_cast<size_t>(Signal::NumberOfSignals)];
 static struct sigaction oldActions[static_cast<size_t>(Signal::NumberOfSignals)];
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 // You can read more about mach exceptions here:
 // http://www.cs.cmu.edu/afs/cs/project/mach/public/doc/unpublished/exception.ps
 // and the Mach interface Generator (MiG) here:
@@ -264,7 +264,7 @@ static void jscSignalHandler(int, siginfo_t*, void*);
 void installSignalHandler(Signal signal, SignalHandler&& handler)
 {
     ASSERT(signal < Signal::Unknown);
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
     ASSERT(!useMach || signal != Signal::Usr);
 
     if (useMach)
@@ -291,7 +291,7 @@ void installSignalHandler(Signal signal, SignalHandler&& handler)
 
     handlers[static_cast<size_t>(signal)]->add(WTFMove(handler));
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
     auto locker = holdLock(threadLock);
     if (useMach) {
         activeExceptions |= toMachMask(signal);

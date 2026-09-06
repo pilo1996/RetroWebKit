@@ -58,11 +58,22 @@ void ResourceResponse::initNSURLResponse() const
     }
 
     // FIXME: We lose the status text and the HTTP version here.
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    RetainPtr<CFHTTPMessageRef> cfHttpMessage = adoptCF(CFHTTPMessageCreateResponse(kCFAllocatorDefault, m_httpStatusCode, 0, kCFHTTPVersion1_1));
+#else
     NSMutableDictionary* headerDictionary = [NSMutableDictionary dictionary];
+#endif
     for (auto& header : m_httpHeaderFields)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+        CFHTTPMessageSetHeaderFieldValue(cfHttpMessage.get(), header.key.createCFString().get(), header.value.createCFString().get());
+
+    RetainPtr<CFURLResponseRef> cfResponse = adoptCF(CFURLResponseCreateWithHTTPResponse(kCFAllocatorDefault, m_url.createCFURL().get(), cfHttpMessage.get(), kCFURLCacheStorageAllowed));
+    m_nsResponse = [NSURLResponse _responseWithCFURLResponse:cfResponse.get()];
+#else
         [headerDictionary setObject:(NSString *)header.value forKey:(NSString *)header.key];
 
-    m_nsResponse = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_url statusCode:m_httpStatusCode HTTPVersion:(NSString*)kCFHTTPVersion1_1 headerFields:headerDictionary]);
+    m_nsResponse = adoptNS([[NSHTTPURLResponse alloc] initWithURL:m_url statusCode:m_httpStatusCode HTTPVersion:(const NSString*)kCFHTTPVersion1_1 headerFields:headerDictionary]);
+#endif
 
     // Mime type sniffing doesn't work with a synthesized response.
     [m_nsResponse.get() _setMIMEType:(NSString *)m_mimeType];
@@ -80,7 +91,7 @@ CertificateInfo ResourceResponse::platformCertificateInfo() const
     CFURLResponseRef cfResponse = m_cfResponse.get();
 #else
     ASSERT(m_nsResponse);
-    CFURLResponseRef cfResponse = [m_nsResponse _CFURLResponse];
+    CFURLResponseRef cfResponse = [m_nsResponse.get() _CFURLResponse];
 #endif
 
     if (!cfResponse)
@@ -94,23 +105,42 @@ CertificateInfo ResourceResponse::platformCertificateInfo() const
     if (!trustValue)
         return { };
     ASSERT(CFGetTypeID(trustValue) == SecTrustGetTypeID());
-    auto trust = (SecTrustRef)trustValue;
+    auto trust = (SecTrustRef)const_cast<void*>(trustValue);
 
     SecTrustResultType trustResultType;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+    CFArrayRef certificateChain;
+    CSSM_TP_APPLE_EVIDENCE_INFO *statusChain;
+    OSStatus result = SecTrustGetResult(trust, &trustResultType, &certificateChain, &statusChain);
+#else
     OSStatus result = SecTrustGetTrustResult(trust, &trustResultType);
-    if (result != errSecSuccess)
+#endif
+    if (!result)
         return { };
 
     if (trustResultType == kSecTrustResultInvalid) {
         result = SecTrustEvaluate(trust, &trustResultType);
-        if (result != errSecSuccess)
+        if (!result)
             return { };
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+        result = SecTrustGetResult(trust, &trustResultType, &certificateChain, &statusChain);
+        if (!result)
+            return { };
+#endif
     }
 
 #if HAVE(SEC_TRUST_SERIALIZATION)
     return CertificateInfo(trust);
 #else
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     return CertificateInfo(CertificateInfo::certificateChainFromSecTrust(trust));
+#else
+    if (!certificateChain)
+        return { };
+
+    return CertificateInfo(adoptCF(certificateChain));
+#endif
 #endif
 }
 

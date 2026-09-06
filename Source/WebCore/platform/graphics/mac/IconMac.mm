@@ -36,10 +36,10 @@ Icon::Icon(NSImage *image)
     : m_nsImage(image)
 {
     // Need this because WebCore uses AppKit's flipped coordinate system exclusively.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     [image setFlipped:YES];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
 
 Icon::~Icon()
@@ -98,7 +98,7 @@ void Icon::paint(GraphicsContext& context, const FloatRect& rect)
 
     LocalCurrentGraphicsContext localCurrentGC(context);
 
-    [m_nsImage drawInRect:rect fromRect:NSMakeRect(0, 0, [m_nsImage size].width, [m_nsImage size].height) operation:NSCompositingOperationSourceOver fraction:1.0f];
+    [m_nsImage.get() drawInRect:rect fromRect:NSMakeRect(0, 0, [m_nsImage.get() size].width, [m_nsImage.get() size].height) operation:NSCompositingOperationSourceOver fraction:1.0f];
 }
 
 }

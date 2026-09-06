@@ -97,7 +97,11 @@ extern CFStringRef const DDBinderParsecSourceKey;
 extern CFStringRef const DDBinderSignatureBlockKey;
 extern NSString * const DDURLScheme;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 @interface DDScannerResult : NSObject <NSCoding, NSSecureCoding>
+#else
+@interface DDScannerResult : NSObject <NSCoding>
+#endif
 + (NSArray *)resultsFromCoreResults:(CFArrayRef)coreResults;
 - (DDResultRef)coreResult;
 @end

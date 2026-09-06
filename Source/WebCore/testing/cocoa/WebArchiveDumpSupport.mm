@@ -40,18 +40,18 @@ namespace WebCoreTestSupport {
 
 static CFURLResponseRef createCFURLResponseFromResponseData(CFDataRef responseData)
 {
-    RetainPtr<NSKeyedUnarchiver> unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingWithData:(NSData *)responseData]);
+    RetainPtr<NSKeyedUnarchiver> unarchiver = adoptNS([[NSKeyedUnarchiver alloc] initForReadingWithData:(const NSData *)responseData]);
     NSURLResponse *response;
 #if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || PLATFORM(IOS)
     // Because of <rdar://problem/34063313> we can't use this for decoding in older OS's.
-    [unarchiver setRequiresSecureCoding:YES];
+    [unarchiver.get() setRequiresSecureCoding:YES];
     @try {
-        response = [unarchiver decodeObjectOfClass:[NSURLResponse class] forKey:@"WebResourceResponse"]; // WebResourceResponseKey in WebResource.m
+        response = [unarchiver.get() decodeObjectOfClass:[NSURLResponse class] forKey:@"WebResourceResponse"]; // WebResourceResponseKey in WebResource.m
 #else
     @try {
-        response = [unarchiver decodeObjectForKey:@"WebResourceResponse"]; // WebResourceResponseKey in WebResource.m
+        response = [unarchiver.get() decodeObjectForKey:@"WebResourceResponse"]; // WebResourceResponseKey in WebResource.m
 #endif
-        [unarchiver finishDecoding];
+        [unarchiver.get() finishDecoding];
     } @catch (NSException *exception) {
         LOG_ERROR("Failed to decode NS(HTTP)URLResponse: %@", exception);
         response = nil;
@@ -66,7 +66,9 @@ static CFURLResponseRef createCFURLResponseFromResponseData(CFDataRef responseDa
     RetainPtr<CFHTTPMessageRef> httpMessage = adoptCF(CFHTTPMessageCreateResponse(kCFAllocatorDefault, httpResponse.statusCode, nullptr, kCFHTTPVersion1_1));
 
     NSDictionary *headerFields = httpResponse.allHeaderFields;
-    for (NSString *headerField in [headerFields keyEnumerator])
+    NSEnumerator *enumerator = [headerFields keyEnumerator];
+    NSString *headerField;
+    while (headerField == [enumerator nextObject])
         CFHTTPMessageSetHeaderFieldValue(httpMessage.get(), (CFStringRef)headerField, (CFStringRef)[headerFields objectForKey:headerField]);
 
     return CFURLResponseCreateWithHTTPResponse(kCFAllocatorDefault, (CFURLRef)response.URL, httpMessage.get(), kCFURLCacheStorageAllowed);
@@ -76,7 +78,7 @@ static CFArrayRef supportedNonImageMIMETypes()
 {
     auto array = adoptNS([[NSMutableArray alloc] init]);
     for (auto& mimeType : MIMETypeRegistry::getSupportedNonImageMIMETypes())
-        [array addObject:mimeType];
+        [array.get() addObject:mimeType];
     return (CFArrayRef)array.autorelease();
 }
 
@@ -89,7 +91,7 @@ static void convertMIMEType(CFMutableStringRef mimeType)
 
 static void convertWebResourceDataToString(CFMutableDictionaryRef resource)
 {
-    CFMutableStringRef mimeType = (CFMutableStringRef)CFDictionaryGetValue(resource, CFSTR("WebResourceMIMEType"));
+    CFMutableStringRef mimeType = (CFMutableStringRef)const_cast<void*>(CFDictionaryGetValue(resource, CFSTR("WebResourceMIMEType")));
     CFStringLowercase(mimeType, CFLocaleGetSystem());
     convertMIMEType(mimeType);
 
@@ -216,13 +218,12 @@ static CFComparisonResult compareResourceURLs(const void *val1, const void *val2
 
 CFStringRef createXMLStringFromWebArchiveData(CFDataRef webArchiveData)
 {
-    CFErrorRef error = 0;
-    CFPropertyListFormat format = kCFPropertyListBinaryFormat_v1_0;
-    RetainPtr<CFMutableDictionaryRef> propertyList = adoptCF((CFMutableDictionaryRef)CFPropertyListCreateWithData(kCFAllocatorDefault, webArchiveData, kCFPropertyListMutableContainersAndLeaves, &format, &error));
+    CFStringRef error = 0;
+    RetainPtr<CFMutableDictionaryRef> propertyList = adoptCF((CFMutableDictionaryRef)const_cast<void*>(CFPropertyListCreateFromXMLData(kCFAllocatorDefault, webArchiveData, kCFPropertyListMutableContainersAndLeaves, &error)));
 
     if (!propertyList) {
         if (error)
-            return CFErrorCopyDescription(error);
+            return error;
         return static_cast<CFStringRef>(CFRetain(CFSTR("An unknown error occurred converting data to property list.")));
     }
 
@@ -230,26 +231,26 @@ CFStringRef createXMLStringFromWebArchiveData(CFDataRef webArchiveData)
     CFArrayAppendValue(resources.get(), propertyList.get());
 
     while (CFArrayGetCount(resources.get())) {
-        RetainPtr<CFMutableDictionaryRef> resourcePropertyList = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(resources.get(), 0);
+        RetainPtr<CFMutableDictionaryRef> resourcePropertyList = (CFMutableDictionaryRef)const_cast<void*>(CFArrayGetValueAtIndex(resources.get(), 0));
         CFArrayRemoveValueAtIndex(resources.get(), 0);
 
-        CFMutableDictionaryRef mainResource = (CFMutableDictionaryRef)CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebMainResource"));
-        normalizeWebResourceURL((CFMutableStringRef)CFDictionaryGetValue(mainResource, CFSTR("WebResourceURL")));
+        CFMutableDictionaryRef mainResource = (CFMutableDictionaryRef)const_cast<void*>(CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebMainResource")));
+        normalizeWebResourceURL((CFMutableStringRef)const_cast<void*>(CFDictionaryGetValue(mainResource, CFSTR("WebResourceURL"))));
         convertWebResourceDataToString(mainResource);
 
         // Add subframeArchives to list for processing
-        CFMutableArrayRef subframeArchives = (CFMutableArrayRef)CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebSubframeArchives")); // WebSubframeArchivesKey in WebArchive.m
+        CFMutableArrayRef subframeArchives = (CFMutableArrayRef)const_cast<void*>(CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebSubframeArchives"))); // WebSubframeArchivesKey in WebArchive.m
         if (subframeArchives)
             CFArrayAppendArray(resources.get(), subframeArchives, CFRangeMake(0, CFArrayGetCount(subframeArchives)));
 
-        CFMutableArrayRef subresources = (CFMutableArrayRef)CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebSubresources")); // WebSubresourcesKey in WebArchive.m
+        CFMutableArrayRef subresources = (CFMutableArrayRef)const_cast<void*>(CFDictionaryGetValue(resourcePropertyList.get(), CFSTR("WebSubresources"))); // WebSubresourcesKey in WebArchive.m
         if (!subresources)
             continue;
 
         CFIndex subresourcesCount = CFArrayGetCount(subresources);
         for (CFIndex i = 0; i < subresourcesCount; ++i) {
-            CFMutableDictionaryRef subresourcePropertyList = (CFMutableDictionaryRef)CFArrayGetValueAtIndex(subresources, i);
-            normalizeWebResourceURL((CFMutableStringRef)CFDictionaryGetValue(subresourcePropertyList, CFSTR("WebResourceURL")));
+            CFMutableDictionaryRef subresourcePropertyList = (CFMutableDictionaryRef)const_cast<void*>(CFArrayGetValueAtIndex(subresources, i));
+            normalizeWebResourceURL((CFMutableStringRef)const_cast<void*>(CFDictionaryGetValue(subresourcePropertyList, CFSTR("WebResourceURL"))));
             convertWebResourceResponseToDictionary(subresourcePropertyList);
             convertWebResourceDataToString(subresourcePropertyList);
         }
@@ -260,11 +261,9 @@ CFStringRef createXMLStringFromWebArchiveData(CFDataRef webArchiveData)
 
     error = 0;
 
-    RetainPtr<CFDataRef> xmlData = adoptCF(CFPropertyListCreateData(kCFAllocatorDefault, propertyList.get(), kCFPropertyListXMLFormat_v1_0, 0, &error));
+    RetainPtr<CFDataRef> xmlData = adoptCF(CFPropertyListCreateXMLData(kCFAllocatorDefault, propertyList.get()));
 
     if (!xmlData) {
-        if (error)
-            return CFErrorCopyDescription(error);
         return static_cast<CFStringRef>(CFRetain(CFSTR("An unknown error occurred converting property list to data.")));
     }
 

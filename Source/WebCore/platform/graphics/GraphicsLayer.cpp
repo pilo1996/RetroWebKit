@@ -640,6 +640,26 @@ int GraphicsLayer::validateTransformOperations(const KeyframeValueList& valueLis
     return firstIndex;
 }
 
+String GraphicsLayer::displayListAsText(DisplayList::AsTextFlags) const
+{
+    return String();
+}
+
+void GraphicsLayer::setIsTrackingDisplayListReplay(bool isTracking)
+{
+    m_isTrackingDisplayListReplay = isTracking;
+}
+
+bool GraphicsLayer::isTrackingDisplayListReplay() const
+{
+    return m_isTrackingDisplayListReplay;
+}
+
+String GraphicsLayer::replayDisplayListAsText(DisplayList::AsTextFlags) const
+{
+    return String();
+}
+
 double GraphicsLayer::backingStoreMemoryEstimate() const
 {
     if (!drawsContent())

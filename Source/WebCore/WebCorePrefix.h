@@ -31,8 +31,6 @@
 #include "cmakeconfig.h"
 #endif
 
-#include <wtf/Platform.h>
-
 #if defined(__APPLE__)
 #ifdef __cplusplus
 #define NULL __null
@@ -40,6 +38,8 @@
 #define NULL ((void *)0)
 #endif
 #endif
+
+#include <wtf/Platform.h>
 
 #if OS(WINDOWS)
 
@@ -104,6 +104,7 @@
 #endif
 
 #include <CoreFoundation/CFBase.h>
+#endif
 
 #ifndef CF_ENUM
 #define CF_ENUM(_type, _name) _type _name; enum
@@ -117,6 +118,8 @@
 #ifndef CF_ENUM_AVAILABLE
 #define CF_ENUM_AVAILABLE(_mac, _ios)
 #endif
+#ifndef NS_ENUM
+#define NS_ENUM(_type, _name) _type _name; enum
 #endif
 
 #if PLATFORM(WIN_CAIRO)
@@ -146,6 +149,10 @@
 #else
 #if !PLATFORM(IOS)
 #include <CoreServices/CoreServices.h>
+// Undefine some offending Carbon debugging macros
+#ifdef verify
+#undef verify
+#endif
 #endif // !PLATFORM(IOS)
 #endif // OS(WINDOWS)
 
@@ -162,16 +169,20 @@
 #endif // PLATFORM(IOS)
 #endif
 
-#ifdef __cplusplus
-#define new ("if you use new/delete make sure to include config.h at the top of the file"()) 
-#define delete ("if you use new/delete make sure to include config.h at the top of the file"()) 
-#endif
-
 /* When C++ exceptions are disabled, the C++ library defines |try| and |catch|
  * to allow C++ code that expects exceptions to build. These definitions
  * interfere with Objective-C++ uses of Objective-C exception handlers, which
  * use |@try| and |@catch|. As a workaround, undefine these macros. */
 #ifdef __OBJC__
+#ifdef __cplusplus
+#include <ios>
+#endif
 #undef try
 #undef catch
 #endif
+
+#ifdef __cplusplus
+#define new ("if you use new/delete make sure to include config.h at the top of the file"()) 
+#define delete ("if you use new/delete make sure to include config.h at the top of the file"()) 
+#endif
+

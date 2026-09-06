@@ -120,28 +120,36 @@ void ResourceRequest::doUpdateResourceRequest()
         m_httpMethod = method;
     m_allowCookies = [m_nsRequest.get() HTTPShouldHandleCookies];
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (resourcePrioritiesEnabled())
         m_priority = toResourceLoadPriority(m_nsRequest ? CFURLRequestGetRequestPriority([m_nsRequest _CFURLRequest]) : 0);
+#endif
 
     m_httpHeaderFields.clear();
-    [[m_nsRequest allHTTPHeaderFields] enumerateKeysAndObjectsUsingBlock: ^(NSString *name, NSString *value, BOOL *) {
-        m_httpHeaderFields.set(name, value);
-    }];
+    NSDictionary *headers = [m_nsRequest.get() allHTTPHeaderFields];
+    NSEnumerator *enumerator = [headers keyEnumerator];
+    NSString *name;
+    while ((name = [enumerator nextObject]))
+        m_httpHeaderFields.set(name, [headers objectForKey:name]);
 
     m_responseContentDispositionEncodingFallbackArray.clear();
     NSArray *encodingFallbacks = [m_nsRequest.get() contentDispositionEncodingFallbackArray];
     m_responseContentDispositionEncodingFallbackArray.reserveCapacity([encodingFallbacks count]);
-    for (NSNumber *encodingFallback in [m_nsRequest contentDispositionEncodingFallbackArray]) {
+    enumerator = [encodingFallbacks objectEnumerator];
+    NSNumber *encodingFallback;
+    while ((encodingFallback = [enumerator nextObject])) {
         CFStringEncoding encoding = CFStringConvertNSStringEncodingToEncoding([encodingFallback unsignedLongValue]);
         if (encoding != kCFStringEncodingInvalidId)
             m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(CFStringConvertEncodingToIANACharSetName(encoding));
     }
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     if (m_nsRequest) {
         NSString* cachePartition = [NSURLProtocol propertyForKey:(NSString *)wkCachePartitionKey() inRequest:m_nsRequest.get()];
         if (cachePartition)
             m_cachePartition = cachePartition;
     }
+#endif
 }
 
 void ResourceRequest::doUpdateResourceHTTPBody()
@@ -172,6 +180,7 @@ void ResourceRequest::doUpdatePlatformRequest()
     else
         nsRequest = [[NSMutableURLRequest alloc] initWithURL:url()];
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (ResourceRequest::httpPipeliningEnabled())
         CFURLRequestSetShouldPipelineHTTP([nsRequest _CFURLRequest], true, true);
 
@@ -180,6 +189,7 @@ void ResourceRequest::doUpdatePlatformRequest()
 
     [nsRequest setCachePolicy:toPlatformRequestCachePolicy(cachePolicy())];
     _CFURLRequestSetProtocolProperty([nsRequest _CFURLRequest], kCFURLRequestAllowAllPOSTCaching, kCFBooleanTrue);
+#endif
 
     double timeoutInterval = ResourceRequestBase::timeoutInterval();
     if (timeoutInterval)
@@ -192,7 +202,9 @@ void ResourceRequest::doUpdatePlatformRequest()
     [nsRequest setHTTPShouldHandleCookies:allowCookies()];
 
     // Cannot just use setAllHTTPHeaderFields here, because it does not remove headers.
-    for (NSString *oldHeaderName in [nsRequest allHTTPHeaderFields])
+    NSEnumerator *enumerator = [[nsRequest allHTTPHeaderFields] objectEnumerator];
+    NSString *oldHeaderName;
+    while ((oldHeaderName = [enumerator nextObject]))
         [nsRequest setValue:nil forHTTPHeaderField:oldHeaderName];
     for (const auto& header : httpHeaderFields())
         [nsRequest setValue:header.value forHTTPHeaderField:header.key];
@@ -205,11 +217,13 @@ void ResourceRequest::doUpdatePlatformRequest()
     }
     [nsRequest setContentDispositionEncodingFallbackArray:encodingFallbacks];
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     String partition = cachePartition();
     if (!partition.isNull() && !partition.isEmpty()) {
         NSString *partitionValue = [NSString stringWithUTF8String:partition.utf8().data()];
         [NSURLProtocol setProperty:partitionValue forKey:(NSString *)wkCachePartitionKey() inRequest:nsRequest];
     }
+#endif
 
 #if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
     if (m_url.isLocalFile()) {
@@ -245,7 +259,7 @@ void ResourceRequest::doUpdatePlatformHTTPBody()
 
     if (NSInputStream *bodyStream = [nsRequest HTTPBodyStream]) {
         // For streams, provide a Content-Length to avoid using chunked encoding, and to get accurate total length in callbacks.
-        NSString *lengthString = [bodyStream propertyForKey:(NSString *)formDataStreamLengthPropertyName()];
+        NSString *lengthString = [bodyStream propertyForKey:(const NSString *)formDataStreamLengthPropertyName()];
         if (lengthString) {
             [nsRequest setValue:lengthString forHTTPHeaderField:@"Content-Length"];
             // Since resource request is already marked updated, we need to keep it up to date too.

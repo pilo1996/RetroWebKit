@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSPrimitiveValue.h>
+#import <WebKit/DOMCSSPrimitiveValue.h>
 
 namespace WebCore {
 class DeprecatedCSSOMPrimitiveValue;

@@ -783,10 +783,14 @@ void WebChromeClient::setCursor(const WebCore::Cursor& cursor)
         return;
 
     NSWindow *window = [m_webView window];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     if (!window)
         return;
 
     if ([window windowNumber] != [NSWindow windowNumberAtPoint:[NSEvent mouseLocation] belowWindowWithWindowNumber:0])
+#else
+    if (!window || ![window isKeyWindow])
+#endif
         return;
 
     NSCursor *platformCursor = cursor.platformCursor();
@@ -830,14 +834,14 @@ void WebChromeClient::makeFirstResponder(NSResponder *responder)
 
 void WebChromeClient::enableSuddenTermination()
 {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     [[NSProcessInfo processInfo] enableSuddenTermination];
 #endif
 }
 
 void WebChromeClient::disableSuddenTermination()
 {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     [[NSProcessInfo processInfo] disableSuddenTermination];
 #endif
 }
@@ -868,12 +872,20 @@ void WebChromeClient::elementDidBlur(WebCore::Element& element)
 
 bool WebChromeClient::selectItemWritingDirectionIsNatural()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     return false;
+#else
+    return true;
+#endif
 }
 
 bool WebChromeClient::selectItemAlignmentFollowsMenuWritingDirection()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     return true;
+#else
+    return false;
+#endif
 }
 
 bool WebChromeClient::hasOpenedPopup() const

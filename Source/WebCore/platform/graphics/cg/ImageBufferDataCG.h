@@ -31,7 +31,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(COCOA) && USE(CA) && !PLATFORM(IOS_SIMULATOR)
+#if PLATFORM(COCOA) && USE(CA) && !PLATFORM(IOS_SIMULATOR) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 #define USE_IOSURFACE_CANVAS_BACKING_STORE 1
 #endif
 

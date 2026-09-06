@@ -98,7 +98,7 @@ private:
     void removedFrom(ContainerNode& insertionPoint) override;
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
-    bool m_resetStyleInheritance { false };
+    bool m_resetStyleInheritance : 8;
     ShadowRootMode m_type { ShadowRootMode::UserAgent };
 
     Element* m_host { nullptr };

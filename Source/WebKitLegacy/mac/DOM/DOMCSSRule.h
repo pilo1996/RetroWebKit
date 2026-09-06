@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMCSSRule;
 @class DOMCSSStyleSheet;
@@ -50,6 +50,6 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSRule : DOMObject
 @property (readonly) unsigned short type;
 @property (copy) NSString *cssText;
-@property (readonly, strong) DOMCSSStyleSheet *parentStyleSheet;
-@property (readonly, strong) DOMCSSRule *parentRule;
+@property (readonly, retain) DOMCSSStyleSheet *parentStyleSheet;
+@property (readonly, retain) DOMCSSRule *parentRule;
 @end

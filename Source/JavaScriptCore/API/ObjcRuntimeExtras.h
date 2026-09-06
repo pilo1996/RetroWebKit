@@ -28,6 +28,8 @@
 #import <wtf/HashSet.h>
 #import <wtf/Vector.h>
 
+#if JSC_OBJC_API_ENABLED
+
 inline bool protocolImplementsProtocol(Protocol *candidate, Protocol *target)
 {
     unsigned protocolProtocolsCount;
@@ -244,3 +246,5 @@ extern "C" {
     bool _Block_has_signature(void *);
     const char * _Block_signature(void *);
 }
+
+#endif

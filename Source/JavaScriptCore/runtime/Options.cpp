@@ -361,7 +361,7 @@ static void overrideDefaults()
     Options::useWebAssemblyFastMemory() = false;
 #endif
 
-#if !HAVE(MACH_EXCEPTIONS)
+#if !HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
     Options::useMachForExceptions() = false;
 #endif
 }
@@ -563,7 +563,7 @@ void Options::initialize()
             dumpOptionsIfNeeded();
             ensureOptionsAreCoherent();
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
             if (Options::useMachForExceptions())
                 handleSignalsWithMach();
 #endif

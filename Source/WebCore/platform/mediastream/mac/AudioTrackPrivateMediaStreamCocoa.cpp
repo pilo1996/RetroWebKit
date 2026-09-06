@@ -34,7 +34,7 @@
 
 #include "CoreMediaSoftLink.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && ENABLE(MEDIA_STREAM)
 
 namespace WebCore {
 

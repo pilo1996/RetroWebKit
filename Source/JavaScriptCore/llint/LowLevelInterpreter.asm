@@ -331,6 +331,11 @@ else
     const TagOffset = 4
     const PayloadOffset = 0
 end
+if JSVALUE64
+    const CellPayloadOffset = 0
+else
+    const CellPayloadOffset = PayloadOffset
+end
 
 # Constant for reasoning about butterflies.
 const IsArray                  = 0x01
@@ -904,21 +909,13 @@ macro assertNotConstant(index)
 end
 
 macro functionForCallCodeBlockGetter(targetRegister)
-    if JSVALUE64
-        loadp Callee[cfr], targetRegister
-    else
-        loadp Callee + PayloadOffset[cfr], targetRegister
-    end
+    loadp Callee + CellPayloadOffset[cfr], targetRegister
     loadp JSFunction::m_executable[targetRegister], targetRegister
     loadp FunctionExecutable::m_codeBlockForCall[targetRegister], targetRegister
 end
 
 macro functionForConstructCodeBlockGetter(targetRegister)
-    if JSVALUE64
-        loadp Callee[cfr], targetRegister
-    else
-        loadp Callee + PayloadOffset[cfr], targetRegister
-    end
+    loadp Callee + CellPayloadOffset[cfr], targetRegister
     loadp JSFunction::m_executable[targetRegister], targetRegister
     loadp FunctionExecutable::m_codeBlockForConstruct[targetRegister], targetRegister
 end
@@ -1551,7 +1548,7 @@ _llint_op_check_traps:
     loadp CodeBlock[cfr], t1
     loadp CodeBlock::m_vm[t1], t1
     loadb VM::m_traps+VMTraps::m_needTrapHandling[t1], t0
-    btpnz t0, .handleTraps
+    btbnz t0, .handleTraps
 .afterHandlingTraps:
     dispatch(1)
 .handleTraps:

@@ -29,7 +29,7 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 // Some platforms provide UI for suggesting alternative dictation text.
 #define USE_DICTATION_ALTERNATIVES 1
 #endif

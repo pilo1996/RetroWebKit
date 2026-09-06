@@ -29,7 +29,14 @@
 #include <CoreVideo/CoreVideo.h>
 #include <wtf/SoftLinking.h>
 
+#if USE(IOSURFACE)
 typedef struct __IOSurface* IOSurfaceRef;
+#endif
+
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#endif
 
 SOFT_LINK_FRAMEWORK_FOR_HEADER(WebCore, CoreVideo)
 
@@ -59,8 +66,10 @@ SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreate, CVRet
 #define CVPixelBufferPoolCreate softLink_CoreVideo_CVPixelBufferPoolCreate
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferPoolCreatePixelBuffer, CVReturn, (CFAllocatorRef allocator, CVPixelBufferPoolRef pixelBufferPool, CVPixelBufferRef* pixelBufferOut), (allocator, pixelBufferPool, pixelBufferOut))
 #define CVPixelBufferPoolCreatePixelBuffer softLink_CoreVideo_CVPixelBufferPoolCreatePixelBuffer
+#if USE(IOSURFACE)
 SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVPixelBufferGetIOSurface, IOSurfaceRef, (CVPixelBufferRef pixelBuffer), (pixelBuffer))
 #define CVPixelBufferGetIOSurface softLink_CoreVideo_CVPixelBufferGetIOSurface
+#endif
 
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferPixelFormatTypeKey, CFStringRef)
 #define kCVPixelBufferPixelFormatTypeKey get_CoreVideo_kCVPixelBufferPixelFormatTypeKey()
@@ -131,6 +140,10 @@ SOFT_LINK_FUNCTION_FOR_HEADER(WebCore, CoreVideo, CVOpenGLTextureGetCleanTexCoor
 
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, CoreVideo, kCVPixelBufferIOSurfaceOpenGLFBOCompatibilityKey, CFStringRef)
 #define kCVPixelBufferIOSurfaceOpenGLFBOCompatibilityKey get_CoreVideo_kCVPixelBufferIOSurfaceOpenGLFBOCompatibilityKey()
+#endif
+
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
 #endif
 
 #endif // CoreVideoSoftLink_h

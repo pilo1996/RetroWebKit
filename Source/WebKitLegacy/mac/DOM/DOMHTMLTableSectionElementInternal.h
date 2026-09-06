@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLTableSectionElement.h>
+#import <WebKit/DOMHTMLTableSectionElement.h>
 
 namespace WebCore {
 class HTMLTableSectionElement;

@@ -43,22 +43,39 @@ namespace WebCore {
 
 static inline const char* sansSerifTraditionalHanFontFamily()
 {
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000) || PLATFORM(IOS)
     return "PingFang TC";
+#elif (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
+    return "Heiti TC";
+#else
+    return "STHeiti";
+#endif
 }
 
 static inline const char* sansSerifSimplifiedHanFontFamily()
 {
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000) || PLATFORM(IOS)
     return "PingFang SC";
+#elif (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
+    return "Heiti SC";
+#else
+    return "STHeiti";
+#endif
 }
 
 #if PLATFORM(MAC)
 
 static bool osakaMonoIsInstalled()
 {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     int one = 1;
     RetainPtr<CFNumberRef> yes = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &one));
     CFTypeRef keys[] = { kCTFontEnabledAttribute, kCTFontNameAttribute };
     CFTypeRef values[] = { yes.get(), CFSTR("Osaka-Mono") };
+#else
+    CFTypeRef keys[] = { kCTFontNameAttribute };
+    CFTypeRef values[] = { CFSTR("Osaka-Mono") };
+#endif
     RetainPtr<CFDictionaryRef> attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(values), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     RetainPtr<CTFontDescriptorRef> descriptor = adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get()));
     RetainPtr<CFSetRef> mandatoryAttributes = adoptCF(CFSetCreate(kCFAllocatorDefault, keys, WTF_ARRAY_LENGTH(keys), &kCFTypeSetCallBacks));
@@ -67,14 +84,24 @@ static bool osakaMonoIsInstalled()
 
 void Settings::initializeDefaultFontFamilies()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     setStandardFontFamily("Songti TC", USCRIPT_TRADITIONAL_HAN);
     setSerifFontFamily("Songti TC", USCRIPT_TRADITIONAL_HAN);
+#else
+    setStandardFontFamily("Apple LiSung", USCRIPT_TRADITIONAL_HAN);
+    setSerifFontFamily("Apple LiSung", USCRIPT_TRADITIONAL_HAN);
+#endif
     setFixedFontFamily(sansSerifTraditionalHanFontFamily(), USCRIPT_TRADITIONAL_HAN);
     setSansSerifFontFamily(sansSerifTraditionalHanFontFamily(), USCRIPT_TRADITIONAL_HAN);
     setCursiveFontFamily("Kaiti TC", USCRIPT_TRADITIONAL_HAN);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     setStandardFontFamily("Songti SC", USCRIPT_SIMPLIFIED_HAN);
     setSerifFontFamily("Songti SC", USCRIPT_SIMPLIFIED_HAN);
+#else
+    setStandardFontFamily("STSong", USCRIPT_SIMPLIFIED_HAN);
+    setSerifFontFamily("STSong", USCRIPT_SIMPLIFIED_HAN);
+#endif
     setFixedFontFamily(sansSerifSimplifiedHanFontFamily(), USCRIPT_SIMPLIFIED_HAN);
     setSansSerifFontFamily(sansSerifSimplifiedHanFontFamily(), USCRIPT_SIMPLIFIED_HAN);
     setCursiveFontFamily("Kaiti SC", USCRIPT_SIMPLIFIED_HAN);
@@ -86,8 +113,13 @@ void Settings::initializeDefaultFontFamilies()
 
     setStandardFontFamily("AppleMyungjo", USCRIPT_HANGUL);
     setSerifFontFamily("AppleMyungjo", USCRIPT_HANGUL);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     setFixedFontFamily("Apple SD Gothic Neo", USCRIPT_HANGUL);
     setSansSerifFontFamily("Apple SD Gothic Neo", USCRIPT_HANGUL);
+#else
+    setFixedFontFamily("AppleGothic", USCRIPT_HANGUL);
+    setSansSerifFontFamily("AppleGothic", USCRIPT_HANGUL);
+#endif
 
     setStandardFontFamily("Times", USCRIPT_COMMON);
     setFixedFontFamily("Courier", USCRIPT_COMMON);

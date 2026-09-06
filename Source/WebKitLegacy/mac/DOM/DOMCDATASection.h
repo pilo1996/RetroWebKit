@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMText.h>
+#import <WebKit/DOMText.h>
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCDATASection : DOMText

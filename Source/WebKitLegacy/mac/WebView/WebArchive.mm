@@ -58,7 +58,7 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
     RefPtr<LegacyWebArchive> coreArchive;
 }
 
-- (instancetype)initWithCoreArchive:(RefPtr<LegacyWebArchive>&&)coreArchive;
+- (id)initWithCoreArchive:(RefPtr<LegacyWebArchive>&&)coreArchive;
 - (LegacyWebArchive*)coreArchive;
 - (void)setCoreArchive:(Ref<LegacyWebArchive>&&)newCoreArchive;
 @end
@@ -72,9 +72,10 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
-- (instancetype)init
+- (id)init
 {
     self = [super init];
     if (!self)
@@ -83,7 +84,7 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
     return self;
 }
 
-- (instancetype)initWithCoreArchive:(RefPtr<LegacyWebArchive>&&)_coreArchive
+- (id)initWithCoreArchive:(RefPtr<LegacyWebArchive>&&)_coreArchive
 {
     self = [super init];
     if (!self|| !_coreArchive) {
@@ -121,7 +122,7 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
 
 @implementation WebArchive
 
-- (instancetype)init
+- (id)init
 {
     WebCoreThreadViolationCheckRoundTwo();
 
@@ -132,6 +133,8 @@ static NSString * const WebSubframeArchivesKey = @"WebSubframeArchives";
     return self;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 static BOOL isArrayOfClass(id object, Class elementClass)
 {
     if (![object isKindOfClass:[NSArray class]])
@@ -143,9 +146,15 @@ static BOOL isArrayOfClass(id object, Class elementClass)
             return NO;
     return YES;
 }
+#pragma GCC diagnostic pop
 
-- (instancetype)initWithMainResource:(WebResource *)mainResource subresources:(NSArray *)subresources subframeArchives:(NSArray *)subframeArchives
+- (id)initWithMainResource:(WebResource *)mainResource subresources:(NSArray *)subresources subframeArchives:(NSArray *)subframeArchives
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] initWithMainResource:mainResource subresources:subresources subframeArchives:subframeArchives];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     self = [super init];
@@ -175,18 +184,22 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     }
 
     Vector<Ref<ArchiveResource>> coreResources;
-    for (WebResource *subresource in subresources)
+    NSEnumerator *enumerator = [subresources objectEnumerator];
+    WebResource *subresource;
+    while ((subresource = [enumerator nextObject]) != nil)
         coreResources.append([subresource _coreResource]);
 
     Vector<Ref<LegacyWebArchive>> coreArchives;
-    for (WebArchive *subframeArchive in subframeArchives)
+    enumerator = [subframeArchives objectEnumerator];
+    WebArchive *subframeArchive;
+    while ((subframeArchive = [enumerator nextObject]) != nil)
         coreArchives.append(*[subframeArchive->_private coreArchive]);
 
     [_private setCoreArchive:LegacyWebArchive::create([mainResource _coreResource], WTFMove(coreResources), WTFMove(coreArchives))];
     return self;
 }
 
-- (instancetype)initWithData:(NSData *)data
+- (id)initWithData:(NSData *)data
 {
     WebCoreThreadViolationCheckRoundTwo();
 
@@ -216,7 +229,7 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     return self;
 }
 
-- (instancetype)initWithCoder:(NSCoder *)decoder
+- (id)initWithCoder:(NSCoder *)decoder
 {    
     WebResource *mainResource = nil;
     NSArray *subresources = nil;
@@ -260,6 +273,11 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
 - (WebResource *)mainResource
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] mainResource];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
@@ -276,6 +294,11 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
 - (NSArray *)subresources
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] subresources];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
@@ -303,6 +326,11 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 
 - (NSArray *)subframeArchives
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] subframeArchives];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created

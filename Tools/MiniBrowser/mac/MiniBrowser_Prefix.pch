@@ -25,11 +25,14 @@
 
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #import <WebKit/WebKit.h>
+#endif
 
 #if __MAC_OS_X_VERSION_MAX_ALLOWED < 101200
 static const NSEventModifierFlags NSEventModifierFlagCommand =  NSCommandKeyMask;
 static const NSEventModifierFlags NSEventModifierFlagOption = NSAlternateKeyMask;
+#endif
 #endif
 
 #endif

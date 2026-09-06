@@ -178,5 +178,6 @@ int testPingPongStackOverflow()
     Options::useLLInt() = origUseLLInt;
     Options::maxPerThreadStackUsage() = origMaxPerThreadStackUsage;
 
+    UNUSED_PARAM(scriptResult);
     return failed;
 }

@@ -31,7 +31,9 @@
 namespace WebCore {
 RetainPtr<CFStringRef> mimeTypeFromUTITree(CFStringRef uti);
 RetainPtr<CFStringRef> UTIFromMIMEType(CFStringRef mime);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 bool isDeclaredUTI(CFStringRef UTI);
+#endif
 }
 
 #endif // UTIUtilities_h

@@ -33,6 +33,7 @@
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
+#include "CoreGraphicsSPI.h"
 #if PLATFORM(WIN)
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #endif
@@ -184,7 +185,7 @@ SubsamplingLevel ImageSource::subsamplingLevelForScaleFactor(GraphicsContext& co
 {
 #if USE(CG)
     // Never use subsampled images for drawing into PDF contexts.
-    if (wkCGContextIsPDFContext(context.platformContext()))
+    if (CGContextGetType(context.platformContext()) == kCGContextTypePDF)
         return SubsamplingLevel::Default;
 
     float scale = std::min(float(1), std::max(scaleFactor.width(), scaleFactor.height()));

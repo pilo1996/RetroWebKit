@@ -86,7 +86,6 @@ JSObject* addErrorInfo(ExecState*, JSObject* error, int line, const SourceCode&)
 JS_EXPORT_PRIVATE JSObject* throwConstructorCannotBeCalledAsFunctionTypeError(ExecState*, ThrowScope&, const char* constructorName);
 JS_EXPORT_PRIVATE JSObject* throwTypeError(ExecState*, ThrowScope&);
 JS_EXPORT_PRIVATE JSObject* throwTypeError(ExecState*, ThrowScope&, ASCIILiteral errorMessage);
-JS_EXPORT_PRIVATE JSObject* throwTypeError(ExecState*, ThrowScope&, const String& errorMessage);
 JS_EXPORT_PRIVATE JSObject* throwSyntaxError(ExecState*, ThrowScope&);
 JS_EXPORT_PRIVATE JSObject* throwSyntaxError(ExecState*, ThrowScope&, const String& errorMessage);
 inline JSObject* throwRangeError(ExecState* state, ThrowScope& scope, const String& errorMessage) { return throwException(state, scope, createRangeError(state, errorMessage)); }

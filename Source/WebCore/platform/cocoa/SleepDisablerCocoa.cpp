@@ -41,23 +41,39 @@ std::unique_ptr<SleepDisabler> SleepDisabler::create(const char* reason, Type ty
 SleepDisablerCocoa::SleepDisablerCocoa(const char* reason, Type type)
     : SleepDisabler(reason, type)
     , m_sleepAssertion(0)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    , m_systemActivityTimer([] { UpdateSystemActivity(IdleActivity); })
+#endif
 {
     RetainPtr<CFStringRef> reasonCF = adoptCF(CFStringCreateWithCString(kCFAllocatorDefault, reason, kCFStringEncodingUTF8));
 
     CFStringRef assertionType;
     switch (type) {
     case Type::Display:
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         assertionType = kIOPMAssertionTypePreventUserIdleDisplaySleep;
+#else
+        assertionType = kIOPMAssertionTypeNoDisplaySleep;
+#endif
         break;
     case Type::System:
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         assertionType = kIOPMAssertionTypePreventUserIdleSystemSleep;
+#else
+        assertionType = kIOPMAssertionTypeNoIdleSleep;
+#endif
         break;
     default:
         ASSERT_NOT_REACHED();
         assertionType = nullptr;
         break;
     }
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     IOPMAssertionCreateWithDescription(assertionType, reasonCF.get(), nullptr, nullptr, nullptr, 0, nullptr, &m_sleepAssertion);
+#else
+    IOPMAssertionCreateWithName(assertionType, kIOPMAssertionLevelOn, reasonCF.get(), &m_sleepAssertion);
+    m_systemActivityTimer.startRepeating(2_min);
+#endif
 }
 
 SleepDisablerCocoa::~SleepDisablerCocoa()

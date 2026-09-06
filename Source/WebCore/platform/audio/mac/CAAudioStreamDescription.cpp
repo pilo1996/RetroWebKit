@@ -26,6 +26,13 @@
 #include "config.h"
 #include "CAAudioStreamDescription.h"
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+enum {
+    kLinearPCMFormatFlagsSampleFractionShift    = 7,
+    kLinearPCMFormatFlagsSampleFractionMask     = (0x3F << kLinearPCMFormatFlagsSampleFractionShift),
+};
+#endif
+
 namespace WebCore {
 
 CAAudioStreamDescription::CAAudioStreamDescription()

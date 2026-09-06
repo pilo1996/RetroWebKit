@@ -30,17 +30,24 @@
 #import "AutodrainedPool.h"
 
 #import <Foundation/Foundation.h>
+#import <objc/objc-auto.h>
 
 namespace WTF {
 
 AutodrainedPool::AutodrainedPool()
-    : m_pool([[NSAutoreleasePool alloc] init])
-{ 
+{
+    // If GC is enabled an autorelease pool is unnecessary, and the
+    // pool cannot be protected from GC so may be collected leading
+    // to a crash when we try to drain the release pool.
+    if (objc_collectingEnabled())
+        m_pool = nullptr;
+    m_pool = [[NSAutoreleasePool alloc] init];
 }
 
 AutodrainedPool::~AutodrainedPool()
 {
-    [m_pool drain];
+    if (m_pool)
+        [m_pool drain];
 }
 
 } // namespace WTF

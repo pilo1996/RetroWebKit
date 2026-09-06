@@ -51,6 +51,7 @@
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 @end

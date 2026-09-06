@@ -187,9 +187,14 @@ if (isAppleCocoaWebKit()) {
         push @options, $option unless $option eq "";
     }
 
-    # ANGLE and libwebrtc must come before WebCore
-    splice @projects, 0, 0, ("Source/ThirdParty/ANGLE");
-    if (not $archs32bit and ((portName() eq Mac and not architecture() eq "i386") or 
+    # ANGLE, brotli, woff2, lz4 and ots and libwebrtc must come before WebCore
+    my $webCoreIndex = first { $projects[$_] eq "Source/WebCore" } 0..$#projects;
+    splice @projects, $webCoreIndex, 0, "Source/ThirdParty/ANGLE";
+    splice @projects, $webCoreIndex + 1, 0, "Source/ThirdParty/brotli";
+    splice @projects, $webCoreIndex + 2, 0, "Source/ThirdParty/woff2";
+    splice @projects, $webCoreIndex + 3, 0, "Source/ThirdParty/lz4";
+    splice @projects, $webCoreIndex + 4, 0, "Source/ThirdParty/ots";
+    if (not $archs32bit and ((portName() eq Mac and not (architecture() eq "i386" or architecture() eq "ppc" or architecture() eq "ppc64")) or 
         (portName() eq iOS and (architecture() eq "arm64" or architecture() eq "x86_64")))) {
         splice @projects, 0, 0, ("Source/ThirdParty/libwebrtc");
     }
@@ -299,21 +304,23 @@ if (isAppleWinWebKit() || isWinCairo()) {
         }
 
         # Build ImageDiff for host
-        my @command = File::Spec->catfile(getcwd(), "/Tools/Scripts/build-imagediff");
-        chdirWebKit();
-        if (!-e $command[0]) {
-          die "build-imagediff script not found";
-        }
+        if (osXVersion()->{"minor"} >= 8) {
+            my @command = File::Spec->catfile(getcwd(), "/Tools/Scripts/build-imagediff");
+            chdirWebKit();
+            if (!-e $command[0]) {
+                die "build-imagediff script not found";
+            }
 
-        if ($clean) {
-          push @command, " --clean";
-        }
-        push @command, argumentsForConfiguration();
-        push @command, @ARGV;
-        @command = extractNonMacOSHostConfiguration(\@command);
-        $result = system(@command);
-        if (exitStatus($result)) {
-            exit exitStatus($result);
+            if ($clean) {
+                push @command, " --clean";
+            }
+            push @command, argumentsForConfiguration();
+            push @command, @ARGV;
+            @command = extractNonMacOSHostConfiguration(\@command);
+            $result = system(@command);
+            if (exitStatus($result)) {
+                exit exitStatus($result);
+            }
         }
     }
 }

@@ -374,7 +374,7 @@ void DocumentLoader::notifyFinished(CachedResource& resource)
         return;
     }
 
-    if (m_request.cachePolicy() == ReturnCacheDataDontLoad && !m_mainResource->wasCanceled()) {
+    if (m_request.cachePolicy() == ReturnCacheDataDontLoad && !m_mainResource->wasCanceled()/* && isBackForwardLoadType(frameLoader()->loadType())*/) {
         frameLoader()->retryAfterFailedCacheOnlyMainResourceLoad();
         return;
     }

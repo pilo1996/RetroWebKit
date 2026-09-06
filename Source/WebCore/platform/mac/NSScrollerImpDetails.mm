@@ -26,7 +26,10 @@
 
 
 #include "config.h"
+
 #include "NSScrollerImpDetails.h"
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #include "Settings.h"
 
@@ -36,7 +39,11 @@ NSScrollerStyle recommendedScrollerStyle()
 {
     if (Settings::usesOverlayScrollbars())
         return NSScrollerStyleOverlay;
-    return [NSScroller preferredScrollerStyle];
+    if ([NSScroller respondsToSelector:@selector(preferredScrollerStyle)])
+        return [NSScroller preferredScrollerStyle];
+    return NSScrollerStyleLegacy;
 }
 
 }
+
+#endif

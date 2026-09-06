@@ -24,17 +24,20 @@
 
 #pragma once
 
-#import <wtf/Assertions.h>
-#import <dlfcn.h>
-#import <objc/runtime.h>
+#include <wtf/Assertions.h>
+#include <dlfcn.h>
+#include <mutex>
+#include <objc/runtime.h>
 
 #pragma mark - Soft-link macros for use within a single source file
 
 #define SOFT_LINK_LIBRARY(lib) \
     static void* lib##Library() \
     { \
-        static void* dylib = ^{ \
-            void *result = dlopen("/usr/lib/" #lib ".dylib", RTLD_NOW); \
+        static void* dylib = []{ \
+            void *result = dlopen("@loader_path/../../../" #lib ".dylib", RTLD_NOW); \
+            if (!result) \
+                result = dlopen("/usr/lib/" #lib ".dylib", RTLD_NOW); \
             RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
             return result; \
         }(); \
@@ -44,7 +47,7 @@
 #define SOFT_LINK_FRAMEWORK(framework) \
     static void* framework##Library() \
     { \
-        static void* frameworkLibrary = ^{ \
+        static void* frameworkLibrary = []{ \
             void* result = dlopen("/System/Library/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
             RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
             return result; \
@@ -55,7 +58,7 @@
 #define SOFT_LINK_PRIVATE_FRAMEWORK(framework) \
     static void* framework##Library() \
     { \
-        static void* frameworkLibrary = ^{ \
+        static void* frameworkLibrary = []{ \
             void* result = dlopen("/System/Library/PrivateFrameworks/" #framework ".framework/" #framework, RTLD_NOW); \
             RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
             return result; \
@@ -80,8 +83,10 @@
 #define SOFT_LINK_STAGED_FRAMEWORK(framework, unstagedLocation, version) \
     static void* framework##Library() \
     { \
-        static void* frameworkLibrary = ^{ \
-            void* result = dlopen("/System/Library/" #unstagedLocation "/" #framework ".framework/Versions/" #version "/" #framework, RTLD_LAZY); \
+        static void* frameworkLibrary = []{ \
+            void* result = dlopen("@loader_path/../../../" #framework ".framework/Versions/" #version "/" #framework, RTLD_LAZY); \
+            if (!result) \
+                result = dlopen("/System/Library/" #unstagedLocation "/" #framework ".framework/Versions/" #version "/" #framework, RTLD_LAZY); \
             if (!result) \
                 result = dlopen("/System/Library/StagedFrameworks/Safari/" #framework ".framework/Versions/" #version "/" #framework, RTLD_LAZY); \
             RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
@@ -93,7 +98,7 @@
 #define SOFT_LINK_FRAMEWORK_IN_UMBRELLA(umbrella, framework) \
     static void* framework##Library() \
     { \
-        static void* frameworkLibrary = ^{ \
+        static void* frameworkLibrary = []{ \
             void* result = dlopen("/System/Library/Frameworks/" #umbrella ".framework/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
             RELEASE_ASSERT_WITH_MESSAGE(result, "%s", dlerror()); \
             return result; \
@@ -177,13 +182,13 @@
         get##className##Class = className##Function; \
         return class##className; \
     } \
-    _Pragma("clang diagnostic push") \
-    _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
+    CLANG_PRAGMA("diagnostic push") \
+    CLANG_PRAGMA("diagnostic ignored \"-Wunused-function\"") \
     static className *alloc##className##Instance() \
     { \
         return [get##className##Class() alloc]; \
     } \
-    _Pragma("clang diagnostic pop")
+    CLANG_PRAGMA("diagnostic pop")
 
 #define SOFT_LINK_CLASS_OPTIONAL(framework, className) \
     @class className; \
@@ -203,13 +208,13 @@
         get##className##Class = className##Function; \
         return class##className; \
     } \
-    _Pragma("clang diagnostic push") \
-    _Pragma("clang diagnostic ignored \"-Wunused-function\"") \
+    CLANG_PRAGMA("diagnostic push") \
+    CLANG_PRAGMA("diagnostic ignored \"-Wunused-function\"") \
     static className *alloc##className##Instance() \
     { \
         return [get##className##Class() alloc]; \
     } \
-    _Pragma("clang diagnostic pop")
+    CLANG_PRAGMA("diagnostic pop")
 
 #define SOFT_LINK_POINTER(framework, name, type) \
     static type init##name(); \
@@ -314,8 +319,8 @@
     void* framework##Library(bool isOptional) \
     { \
         static void* frameworkLibrary; \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, [isOptional]{ \
             frameworkLibrary = dlopen("/System/Library/Frameworks/" #framework ".framework/" #framework, RTLD_NOW); \
             if (!isOptional) \
                 RELEASE_ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
@@ -330,8 +335,8 @@
     void* framework##Library(bool isOptional) \
     { \
         static void* frameworkLibrary; \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, [isOptional]{ \
             frameworkLibrary = dlopen("/System/Library/PrivateFrameworks/" #framework ".framework/" #framework, RTLD_NOW); \
             if (!isOptional) \
                 RELEASE_ASSERT_WITH_MESSAGE(frameworkLibrary, "%s", dlerror()); \
@@ -365,8 +370,8 @@
     \
     static Class init##className() \
     { \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, []{ \
             framework##Library(); \
             class##className = objc_getClass(#className); \
             RELEASE_ASSERT(class##className); \
@@ -393,8 +398,8 @@
     variableType get_##framework##_##variableName() \
     { \
         static variableType constant##framework##variableName; \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, []{ \
             void* constant = dlsym(framework##Library(), #variableName); \
             RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
             constant##framework##variableName = *static_cast<variableType*>(constant); \
@@ -462,8 +467,8 @@
     resultType (*softLink##framework##functionName) parameterDeclarations = init##framework##functionName; \
     static resultType init##framework##functionName parameterDeclarations \
     { \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, []{ \
             softLink##framework##functionName = (resultType (*) parameterDeclarations) dlsym(framework##Library(), #functionName); \
             RELEASE_ASSERT_WITH_MESSAGE(softLink##framework##functionName, "%s", dlerror()); \
         }); \
@@ -529,8 +534,8 @@
     \
     static variableType init##framework##variableName() \
     { \
-        static dispatch_once_t once; \
-        dispatch_once(&once, ^{ \
+        static std::once_flag onceToken; \
+        std::call_once(onceToken, []{ \
             void** pointer = static_cast<void**>(dlsym(framework##Library(), #variableName)); \
             RELEASE_ASSERT_WITH_MESSAGE(pointer, "%s", dlerror()); \
             pointer##framework##variableName = static_cast<variableType>(*pointer); \

@@ -33,7 +33,7 @@
 
 // These functions are only available for 32-bit.
 
-#include <WebKitLegacy/WebKitAvailability.h>
+#include <WebKit/WebKitAvailability.h>
 
 #ifdef __OBJC__
 #import <ApplicationServices/ApplicationServices.h>

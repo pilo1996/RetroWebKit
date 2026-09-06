@@ -42,7 +42,7 @@
 #include <array>
 #include <mutex>
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
 #include <dispatch/dispatch.h>
 #endif
 
@@ -74,7 +74,7 @@ public:
 
     void scavenge(std::lock_guard<StaticMutex>&);
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
     void setScavengerThreadQOSClass(qos_class_t overrideClass) { m_requestedScavengerThreadQOSClass = overrideClass; }
 #endif
 
@@ -137,7 +137,7 @@ private:
 
     VMHeap m_vmHeap;
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
     dispatch_source_t m_pressureHandlerDispatchSource;
     qos_class_t m_requestedScavengerThreadQOSClass { QOS_CLASS_USER_INITIATED };
 #endif

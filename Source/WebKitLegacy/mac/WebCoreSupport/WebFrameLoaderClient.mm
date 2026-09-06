@@ -124,8 +124,8 @@
 #import <WebCore/WebGLBlacklist.h>
 #import <WebCore/WebScriptObjectPrivate.h>
 #import <WebCore/Widget.h>
-#import <WebKitLegacy/DOMElement.h>
-#import <WebKitLegacy/DOMHTMLFormElement.h>
+#import <WebKit/DOMElement.h>
+#import <WebKit/DOMHTMLFormElement.h>
 #import <WebKitSystemInterface.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/BlockObjCExceptions.h>
@@ -295,10 +295,10 @@ void WebFrameLoaderClient::convertMainResourceLoadToDownload(DocumentLoader* doc
 
     if (!mainResourceLoader) {
         // The resource has already been cached, or the conversion is being attmpted when not calling SubresourceLoader::didReceiveResponse().
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         WebDownload *webDownload = [[WebDownload alloc] initWithRequest:request.nsURLRequest(UpdateHTTPBody) delegate:[webView downloadDelegate]];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         [webDownload autorelease];
         return;
     }
@@ -810,7 +810,7 @@ void WebFrameLoaderClient::dispatchDidReachLayoutMilestone(LayoutMilestones mile
         WebDynamicScrollBarsView *scrollView = [m_webFrame->_private->webFrameView _scrollView];
         if ([getWebView(m_webFrame.get()) drawsBackground])
             [scrollView setDrawsBackground:YES];
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
         [scrollView setVerticalScrollElasticity:NSScrollElasticityAutomatic];
         [scrollView setHorizontalScrollElasticity:NSScrollElasticityAutomatic];
 #endif
@@ -908,7 +908,7 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const Navigat
 
 void WebFrameLoaderClient::cancelPolicyCheck()
 {
-    [m_policyListener invalidate];
+    [m_policyListener.get() invalidate];
     m_policyListener = nullptr;
 }
 
@@ -1144,7 +1144,7 @@ ResourceError WebFrameLoaderClient::blockedError(const ResourceRequest& request)
     return [NSError _webKitErrorWithDomain:WebKitErrorDomain code:WebKitErrorCannotUseRestrictedPort URL:request.url()];
 }
 
-ResourceError WebFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest& request)
+NO_RETURN ResourceError WebFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest& request)
 {
     RELEASE_ASSERT_NOT_REACHED(); // Content blockers are not enabled in WebKit1.
 }
@@ -1293,7 +1293,7 @@ void WebFrameLoaderClient::provisionalLoadStarted()
 
     WebDynamicScrollBarsView *scrollView = [m_webFrame->_private->webFrameView _scrollView];
     [scrollView setDrawsBackground:NO];
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
     [scrollView setVerticalScrollElasticity:NSScrollElasticityNone];
     [scrollView setHorizontalScrollElasticity:NSScrollElasticityNone];
 #endif
@@ -1516,7 +1516,7 @@ void WebFrameLoaderClient::dispatchDidBecomeFrameset(bool)
 RetainPtr<WebFramePolicyListener> WebFrameLoaderClient::setUpPolicyListener(FramePolicyFunction&& function, NSURL *appLinkURL)
 {
     // FIXME: <rdar://5634381> We need to support multiple active policy listeners.
-    [m_policyListener invalidate];
+    [m_policyListener.get() invalidate];
 
 #if HAVE(APP_LINKS)
     if (appLinkURL)
@@ -1601,7 +1601,7 @@ NSDictionary *WebFrameLoaderClient::actionDictionary(const NavigationAction& act
 bool WebFrameLoaderClient::canCachePage() const
 {
     // We can only cache HTML pages right now
-    if (![[[m_webFrame _dataSource] representation] isKindOfClass:[WebHTMLRepresentation class]])
+    if (![[[m_webFrame.get() _dataSource] representation] isKindOfClass:[WebHTMLRepresentation class]])
         return false;
     
     // We only cache pages if the back forward list is enabled and has a non-zero capacity.
@@ -1897,7 +1897,7 @@ private:
 
 static bool shouldBlockPlugin(WebBasePluginPackage *pluginPackage)
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     auto loadPolicy = PluginBlacklist::loadPolicyForPluginVersion(pluginPackage.bundleIdentifier, pluginPackage.bundleVersion);
     return loadPolicy == PluginBlacklist::LoadPolicy::BlockedForSecurity || loadPolicy == PluginBlacklist::LoadPolicy::BlockedForCompatibility;
 #else
@@ -2096,8 +2096,24 @@ RefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& size,
             if (is<RenderEmbeddedObject>(element.renderer()))
                 downcast<RenderEmbeddedObject>(*element.renderer()).setPluginUnavailabilityReason(RenderEmbeddedObject::InsecurePluginVersion);
         } else {
+            if ([pluginPackage isKindOfClass:[WebPluginPackage class]]) { 
+                // For some reason, the Java plug-in requires that we pass the dimension of the plug-in as attributes. 
+                NSMutableArray *names = kit(paramNames); 
+                NSMutableArray *values = kit(paramValues); 
+                if (parameterValue(paramNames, paramValues, "width").isNull()) { 
+                    [names addObject:@"width"]; 
+                    [values addObject:[NSString stringWithFormat:@"%d", size.width()]]; 
+                } 
+                if (parameterValue(paramNames, paramValues, "height").isNull()) { 
+                    [names addObject:@"height"]; 
+                    [values addObject:[NSString stringWithFormat:@"%d", size.height()]]; 
+                } 
+                view = pluginView(m_webFrame.get(), (WebPluginPackage *)pluginPackage, names, values, baseURL, kit(&element), NO); 
+                if (view) 
+                    return adoptRef(new PluginWidget(view)); 
+            } 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-            if ([pluginPackage isKindOfClass:[WebNetscapePluginPackage class]]) {
+            else if ([pluginPackage isKindOfClass:[WebNetscapePluginPackage class]]) {
                 view = [[[NETSCAPE_PLUGIN_VIEW alloc] initWithFrame:NSMakeRect(0, 0, size.width(), size.height())
                     pluginPackage:(WebNetscapePluginPackage *)pluginPackage
                     URL:nil
@@ -2141,7 +2157,7 @@ String WebFrameLoaderClient::overrideMediaType() const
 #if ENABLE(WEBGL)
 static bool shouldBlockWebGL()
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     return WebGLBlacklist::shouldBlockWebGL();
 #else
     return false;
@@ -2356,6 +2372,7 @@ void WebFrameLoaderClient::finishedLoadingIcon(uint64_t callbackID, SharedBuffer
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)initWithFrame:(Frame*)frame policyFunction:(FramePolicyFunction&&)policyFunction

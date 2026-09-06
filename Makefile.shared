@@ -39,7 +39,6 @@ VERBOSITY ?= $(DEFAULT_VERBOSITY)
 
 ifeq ($(VERBOSITY),default)
 OUTPUT_FILTER = cat
-XCODE_OPTIONS += -hideShellScriptEnvironment
 else
 ifeq ($(VERBOSITY),noisy)
 OUTPUT_FILTER = cat

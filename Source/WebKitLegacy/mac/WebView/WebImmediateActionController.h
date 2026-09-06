@@ -42,7 +42,9 @@ class Range;
 struct DictionaryPopupInfo;
 };
 
-@interface WebImmediateActionController : NSObject <NSImmediateActionGestureRecognizerDelegate> {
+@interface WebImmediateActionController : NSObject <NSImmediateActionGestureRecognizerDelegate>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
+{
 @private
     WebView *_webView;
     WebImmediateActionType _type;
@@ -55,12 +57,13 @@ struct DictionaryPopupInfo;
     BOOL _contentPreventsDefault;
 }
 
-- (instancetype)initWithWebView:(WebView *)webView recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer;
+- (id)initWithWebView:(WebView *)webView recognizer:(NSImmediateActionGestureRecognizer *)immediateActionRecognizer;
 - (void)webViewClosed;
 
 - (void)webView:(WebView *)webView didHandleScrollWheel:(NSEvent *)event;
 
 - (NSImmediateActionGestureRecognizer *)immediateActionRecognizer;
+#endif
 
 + (WebCore::DictionaryPopupInfo)_dictionaryPopupInfoForRange:(WebCore::Range&)range inFrame:(WebCore::Frame*)frame withLookupOptions:(NSDictionary *)lookupOptions indicatorOptions:(WebCore::TextIndicatorOptions)indicatorOptions transition:(WebCore::TextIndicatorPresentationTransition)presentationTransition;
 

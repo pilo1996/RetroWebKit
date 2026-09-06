@@ -39,6 +39,13 @@
 #include <emmintrin.h>
 #endif
 
+#if CPU(PPC) || CPU(PPC64)
+#include <altivec.h>
+#undef vector
+#undef pixel
+#undef bool
+#endif
+
 // Input buffer layout, dividing the total buffer into regions (r0 - r5):
 //
 // |----------------|----------------------------------------------------------------|----------------|
@@ -320,6 +327,104 @@ void SincResampler::process(AudioSourceProvider* sourceProvider, float* destinat
                 float* groupSumP = reinterpret_cast<float*>(&sums1);
                 sum1 += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3];
                 groupSumP = reinterpret_cast<float*>(&sums2);
+                sum2 += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3];
+
+                n %= 4;
+                while (n) {
+                    CONVOLVE_ONE_SAMPLE
+                    n--;
+                }
+#elif CPU(PPC) || CPU(PPC64)
+                // If the sourceP address is not 16-byte aligned, the first several frames (at most three) should be processed seperately.
+                while ((reinterpret_cast<uintptr_t>(inputP) & 0x0F) && n) {
+                    CONVOLVE_ONE_SAMPLE
+                    n--;
+                }
+
+                // Now the inputP is aligned and start to apply SSE.
+                float* endP = inputP + n - n % 4;
+                unsigned int i = 0;
+                register __vector float mInput;
+                register __vector float mK1;
+                register __vector float mK2;
+                register __vector unsigned char mask;
+                register __vector unsigned char mask_2;
+                register __vector float vector1;
+                register __vector float vector1_2;
+                register __vector float vector2;
+
+                register __vector float sums1 = (__vector float) vec_splat_u32(0);
+                register __vector float sums2 = (__vector float) vec_splat_u32(0);
+                bool k1Aligned = !(reinterpret_cast<uintptr_t>(k1) & 0x0F);
+                bool k2Aligned = !(reinterpret_cast<uintptr_t>(k2) & 0x0F);
+
+                if (!k1Aligned) {
+                    mask = vec_lvsl(0, k1);
+                    vector1 = vec_ldl(0, k1);
+                }
+
+                if (!k2Aligned) {
+                    mask_2 = vec_lvsl(0, k2);
+                    vector1_2 = vec_ldl(0, k2);
+                }
+
+// Safe to use with aligned and unaligned addresses
+#define LoadUnaligned(return, index, target, MSQ, LSQ, mask) \
+                LSQ = vec_ldl(index + 15, target);           \
+                return = vec_perm(MSQ, LSQ, mask);           \
+                MSQ = LSQ;
+
+#define LoadAligned(return, index, target)       \
+                return = vec_ldl(index, target);
+
+#define CONVOLVE_4_SAMPLES                            \
+                sums1 = vec_madd(mInput, mK1, sums1); \
+                sums2 = vec_madd(mInput, mK2, sums2); \
+                i += 16;
+
+                if (k1Aligned && k2Aligned) { // both aligned
+                    while ((inputP + i) < endP) {
+                        LoadAligned(mInput, i, inputP)
+                        LoadAligned(mK1, i, k1)
+                        LoadAligned(mK2, i, k2)
+                        CONVOLVE_4_SAMPLES
+                    }
+                } else if (!k1Aligned && k2Aligned) { // only k2 aligned
+                    mask = vec_lvsl(0, k1);
+                    vector1 = vec_ldl(0, k1);
+                    while ((inputP + i) < endP) {
+                        LoadAligned(mInput, i, inputP)
+                        LoadUnaligned(mK1, i, k1, vector1, vector2, mask)
+                        LoadAligned(mK2, i, k2)
+                        CONVOLVE_4_SAMPLES
+                    }
+                } else if (k1Aligned && !k2Aligned) { // only k1 aligned
+                    mask_2 = vec_lvsl(0, k2);
+                    vector1_2 = vec_ldl(0, k2);
+                    while ((inputP + i) < endP) {
+                        LoadAligned(mInput, i, inputP)
+                        LoadAligned(mK1, i, k1)
+                        LoadUnaligned(mK2, i, k2, vector1_2, vector2, mask_2)
+                        CONVOLVE_4_SAMPLES
+                    }
+                } else { // both non-aligned
+                    mask = vec_lvsl(0, k1);
+                    vector1 = vec_ldl(0, k1);
+                    mask_2 = vec_lvsl(0, k2);
+                    vector1_2 = vec_ldl(0, k2);
+                    while ((inputP + i) < endP) {
+                        LoadAligned(mInput, i, inputP)
+                        LoadUnaligned(mK1, i, k1, vector1, vector2, mask)
+                        LoadUnaligned(mK2, i, k2, vector1_2, vector2, mask_2)
+                        CONVOLVE_4_SAMPLES
+                    }
+                }
+
+                // Summarize the SSE results to sum1 and sum2.
+                float groupSumP[4] __attribute__ ((aligned (16)));
+                vec_st(sums1, 0, groupSumP);
+                sum1 += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3];
+                vec_st(sums2, 0, groupSumP);
                 sum2 += groupSumP[0] + groupSumP[1] + groupSumP[2] + groupSumP[3];
 
                 n %= 4;

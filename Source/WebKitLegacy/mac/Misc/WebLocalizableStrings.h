@@ -40,7 +40,10 @@ typedef CFStringRef WebLocalizedStringType;
 
 typedef struct {
     const char *identifier;
-    __unsafe_unretained NSBundle *bundle;
+#if __has_feature(objc_arc)
+    __unsafe_unretained
+#endif
+    NSBundle *bundle;
 } WebLocalizableStringsBundle;
 
 #ifdef __cplusplus

@@ -26,10 +26,10 @@
 #ifndef PowerObserverMac_h
 #define PowerObserverMac_h
 
-#import <IOKit/IOMessage.h>
-#import <IOKit/pwr_mgt/IOPMLib.h>
-#import <wtf/Function.h>
-#import <wtf/Noncopyable.h>
+#include <IOKit/IOMessage.h>
+#include <IOKit/pwr_mgt/IOPMLib.h>
+#include <wtf/Function.h>
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -47,7 +47,12 @@ private:
     io_connect_t m_powerConnection;
     IONotificationPortRef m_notificationPort;
     io_object_t m_notifierReference;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    CFRunLoopSourceRef m_runLoopSource;
+    static void runLoopCallBack(CFRunLoopObserverRef observer, CFRunLoopActivity /*activity*/, void* info);
+#else
     dispatch_queue_t m_dispatchQueue;
+#endif
 };
 
 } // namespace WebCore

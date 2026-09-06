@@ -64,7 +64,7 @@
     @abstract The color that should be used for any special drawing when
     plug-in is selected.
 */
-@property (nonatomic, readonly, strong) NSColor *webPlugInContainerSelectionColor;
+@property (nonatomic, readonly, retain) NSColor *webPlugInContainerSelectionColor;
 #endif
 
 /*!
@@ -73,6 +73,6 @@
     contains the plug-in.  This method will not be implemented by containers that 
     are not WebKit based.
 */
-@property (nonatomic, readonly, strong) WebFrame *webFrame;
+@property (nonatomic, readonly, retain) WebFrame *webFrame;
 
 @end

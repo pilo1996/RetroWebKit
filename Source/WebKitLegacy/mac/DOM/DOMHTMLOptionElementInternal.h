@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLOptionElement.h>
+#import <WebKit/DOMHTMLOptionElement.h>
 
 namespace WebCore {
 class HTMLOptionElement;

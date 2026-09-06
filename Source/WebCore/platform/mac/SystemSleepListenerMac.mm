@@ -30,6 +30,61 @@
 
 #import <wtf/MainThread.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+@interface WebSystemSleepObserver : NSObject {
+@private
+    WTF::WeakPtr<WebCore::SystemSleepListenerMac> _weakThis;
+}
+
+@property (nonatomic, readonly) WTF::WeakPtr<WebCore::SystemSleepListenerMac> weakThis;
+
+- (id)initWithSystemSleepListenerMac:(WTF::WeakPtr<WebCore::SystemSleepListenerMac>)weakThis;
+- (void)willSleep:(NSNotification *)notification;
+- (void)didWake:(NSNotification *)notification;
+
+@end
+
+@implementation WebSystemSleepObserver
+
+@synthesize weakThis = _weakThis;
+
+- (id)initWithSystemSleepListenerMac:(WTF::WeakPtr<WebCore::SystemSleepListenerMac>)weakThis
+{
+    self = [super init];
+    if (self != nil)
+        _weakThis = weakThis;
+    return self;
+}
+
+- (void)willSleep:(NSNotification *)notification
+{
+    UNUSED_PARAM(notification);
+
+    WebSystemSleepObserver *sleepObserver = [self retain];
+
+    callOnMainThread([sleepObserver] {
+        if ([sleepObserver weakThis])
+            [sleepObserver weakThis]->client().systemWillSleep();
+        [sleepObserver release];
+    });
+}
+
+- (void)didWake:(NSNotification *)notification
+{
+    UNUSED_PARAM(notification);
+
+    WebSystemSleepObserver *sleepObserver = [self retain];
+
+    callOnMainThread([sleepObserver] {
+        if ([sleepObserver weakThis])
+            [sleepObserver weakThis]->client().systemDidWake();
+        [sleepObserver release];
+    });
+}
+
+@end
+#endif
+
 namespace WebCore {
 
 std::unique_ptr<SystemSleepListener> SystemSleepListener::create(Client& client)
@@ -40,14 +95,21 @@ std::unique_ptr<SystemSleepListener> SystemSleepListener::create(Client& client)
 SystemSleepListenerMac::SystemSleepListenerMac(Client& client)
     : SystemSleepListener(client)
     , m_weakPtrFactory(this)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     , m_sleepObserver(nil)
     , m_wakeObserver(nil)
+#else
+    , m_sleepWakeObserver(nil)
+#endif
 {
     NSNotificationCenter *center = [[NSWorkspace sharedWorkspace] notificationCenter];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSOperationQueue *queue = [NSOperationQueue mainQueue];
+#endif
 
     auto weakThis = m_weakPtrFactory.createWeakPtr();
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     m_sleepObserver = [center addObserverForName:NSWorkspaceWillSleepNotification object:nil queue:queue usingBlock:^(NSNotification *) {
         callOnMainThread([weakThis] {
             if (weakThis)
@@ -61,13 +123,24 @@ SystemSleepListenerMac::SystemSleepListenerMac(Client& client)
                 weakThis->m_client.systemDidWake();
         });
     }];
+#else
+    m_sleepWakeObserver = adoptNS([[WebSystemSleepObserver alloc] initWithSystemSleepListenerMac:weakThis]);
+
+    [center addObserver:m_sleepWakeObserver.get() selector:@selector(willSleep:) name:NSWorkspaceWillSleepNotification object:nil];
+
+    [center addObserver:m_sleepWakeObserver.get() selector:@selector(didWake:) name:NSWorkspaceDidWakeNotification object:nil];
+#endif
 }
 
 SystemSleepListenerMac::~SystemSleepListenerMac()
 {
     NSNotificationCenter* center = [[NSWorkspace sharedWorkspace] notificationCenter];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [center removeObserver:m_sleepObserver];
     [center removeObserver:m_wakeObserver];
+#else
+    [center removeObserver:m_sleepWakeObserver.get()];
+#endif
 }
 
 }

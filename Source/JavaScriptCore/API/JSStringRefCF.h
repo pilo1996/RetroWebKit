@@ -29,6 +29,10 @@
 #include "JSBase.h"
 #include <CoreFoundation/CoreFoundation.h>
 
+#ifndef CF_RETURNS_RETAINED
+#define CF_RETURNS_RETAINED
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

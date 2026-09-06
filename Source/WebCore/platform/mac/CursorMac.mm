@@ -63,21 +63,37 @@ static RetainPtr<NSCursor> createCustomCursor(Image* image, const IntPoint& hotS
         NSRect toRect = NSMakeRect(0, expandedSize.height - size.height, size.width, size.height);
         NSRect fromRect = NSMakeRect(0, 0, image->width(), image->height());
 
-        [expandedImage lockFocus];
-        [nsImage drawInRect:toRect fromRect:fromRect operation:NSCompositingOperationSourceOver fraction:1];
-        [expandedImage unlockFocus];
+        [expandedImage.get() lockFocus];
+        [nsImage.get() drawInRect:toRect fromRect:fromRect operation:NSCompositingOperationSourceOver fraction:1];
+        [expandedImage.get() unlockFocus];
 
         return adoptNS([[NSCursor alloc] initWithImage:expandedImage.get() hotSpot:hotSpot]);
     }
 
     // Scale the image and its representation to match retina resolution.
-    [nsImage setSize:expandedSize];
-    [[[nsImage representations] objectAtIndex:0] setSize:expandedSize];
+    [nsImage.get() setSize:expandedSize];
+    [[[nsImage.get() representations] objectAtIndex:0] setSize:expandedSize];
 #endif
 
     return adoptNS([[NSCursor alloc] initWithImage:nsImage.get() hotSpot:hotSpot]);
     END_BLOCK_OBJC_EXCEPTIONS;
     return nullptr;
+}
+
+static RetainPtr<NSCursor> createNamedCursor(const char* name, int x, int y)
+{
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+    RetainPtr<NSString> resourceName = adoptNS([[NSString alloc] initWithUTF8String:name]);
+    RetainPtr<NSImage> cursorImage = adoptNS([[NSImage alloc] initWithContentsOfFile:[[NSBundle bundleForClass:[WebCoreCursorBundle class]] pathForResource:resourceName.get() ofType:@"png"]]);
+    
+    RetainPtr<NSCursor> cursor;
+
+    if (cursorImage)
+        cursor = adoptNS([[NSCursor alloc] initWithImage:cursorImage.get() hotSpot:NSMakePoint(x, y)]);
+
+    return cursor;
+    END_BLOCK_OBJC_EXCEPTIONS;
+    return nil;
 }
 
 void Cursor::ensurePlatformCursor() const
@@ -95,7 +111,13 @@ void Cursor::ensurePlatformCursor() const
         break;
 
     case Cursor::Hand:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = [NSCursor pointingHandCursor];
+#else
+        // The pointingHandCursor from NSCursor does not have a shadow on
+        // older versions of OS X, so use our own custom cursor.
+        m_platformCursor = createNamedCursor("linkCursor", 6, 1);
+#endif
         break;
 
     case Cursor::IBeam:
@@ -103,72 +125,132 @@ void Cursor::ensurePlatformCursor() const
         break;
 
     case Cursor::Wait:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("BusyButClickable");
+#else
+        m_platformCursor = createNamedCursor("waitCursor", 7, 7);
+#endif
         break;
 
     case Cursor::Help:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("Help");
+#else
+        m_platformCursor = createNamedCursor("helpCursor", 8, 8);
+#endif
         break;
 
     case Cursor::Move:
     case Cursor::MiddlePanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("Move");
+#else
+        m_platformCursor = createNamedCursor("moveCursor", 7, 7);
+#endif
         break;
 
     case Cursor::EastResize:
     case Cursor::EastPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeEast");
+#else
+        m_platformCursor = createNamedCursor("eastResizeCursor", 14, 7);
+#endif
         break;
 
     case Cursor::NorthResize:
     case Cursor::NorthPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNorth");
+#else
+        m_platformCursor = createNamedCursor("northResizeCursor", 7, 1);
+#endif
         break;
 
     case Cursor::NorthEastResize:
     case Cursor::NorthEastPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNortheast");
+#else
+        m_platformCursor = createNamedCursor("northEastResizeCursor", 14, 1);
+#endif
         break;
 
     case Cursor::NorthWestResize:
     case Cursor::NorthWestPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNorthwest");
+#else
+        m_platformCursor = createNamedCursor("northWestResizeCursor", 0, 0);
+#endif
         break;
 
     case Cursor::SouthResize:
     case Cursor::SouthPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeSouth");
+#else
+        m_platformCursor = createNamedCursor("southResizeCursor", 7, 14);
+#endif
         break;
 
     case Cursor::SouthEastResize:
     case Cursor::SouthEastPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeSoutheast");
+#else
+        m_platformCursor = createNamedCursor("southEastResizeCursor", 14, 14);
+#endif
         break;
 
     case Cursor::SouthWestResize:
     case Cursor::SouthWestPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeSouthwest");
+#else
+        m_platformCursor = createNamedCursor("southWestResizeCursor", 1, 14);
+#endif
         break;
 
     case Cursor::WestResize:
     case Cursor::WestPanning:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeWest");
+#else
+        m_platformCursor = createNamedCursor("westResizeCursor", 1, 7);
+#endif
         break;
 
     case Cursor::NorthSouthResize:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNorthSouth");
+#else
+        m_platformCursor = createNamedCursor("northSouthResizeCursor", 7, 7);
+#endif
         break;
 
     case Cursor::EastWestResize:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeEastWest");
+#else
+        m_platformCursor = createNamedCursor("eastWestResizeCursor", 7, 7);
+#endif
         break;
 
     case Cursor::NorthEastSouthWestResize:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNortheastSouthwest");
+#else
+        m_platformCursor = createNamedCursor("northEastSouthWestResizeCursor", 7, 7);
+#endif
         break;
 
     case Cursor::NorthWestSouthEastResize:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ResizeNorthwestSoutheast");
+#else
+        m_platformCursor = createNamedCursor("northWestSouthEastResizeCursor", 7, 7);
+#endif
         break;
 
     case Cursor::ColumnResize:
@@ -180,47 +262,87 @@ void Cursor::ensurePlatformCursor() const
         break;
 
     case Cursor::VerticalText:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = [NSCursor IBeamCursorForVerticalLayout];
+#else
+        m_platformCursor = createNamedCursor("verticalTextCursor", 7, 7);
+#endif
         break;
 
     case Cursor::Cell:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("Cell");
+#else
+        m_platformCursor = createNamedCursor("cellCursor", 7, 7);
+#endif
         break;
 
     case Cursor::ContextMenu:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         m_platformCursor = [NSCursor contextualMenuCursor];
+#else
+        m_platformCursor = createNamedCursor("contextMenuCursor", 3, 2);
+#endif
         break;
 
     case Cursor::Alias:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("MakeAlias");
+#else
+        m_platformCursor = createNamedCursor("aliasCursor", 11, 3);
+#endif
         break;
 
     case Cursor::Progress:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("BusyButClickable");
+#else
+        m_platformCursor = createNamedCursor("progressCursor", 3, 2);
+#endif
         break;
 
     case Cursor::NoDrop:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         m_platformCursor = [NSCursor operationNotAllowedCursor];
+#else
+        m_platformCursor = createNamedCursor("noDropCursor", 3, 1);
+#endif
         break;
 
     case Cursor::Copy:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         m_platformCursor = [NSCursor dragCopyCursor];
+#else
+        m_platformCursor = createNamedCursor("copyCursor", 3, 2);
+#endif
         break;
 
     case Cursor::None:
-        m_platformCursor = adoptNS([[NSCursor alloc] initWithImage:adoptNS([[NSImage alloc] initWithSize:NSMakeSize(1, 1)]).get() hotSpot:NSZeroPoint]);
+        m_platformCursor = createNamedCursor("noneCursor", 7, 7);
         break;
 
     case Cursor::NotAllowed:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         m_platformCursor = [NSCursor operationNotAllowedCursor];
+#else
+        m_platformCursor = createNamedCursor("notAllowedCursor", 11, 11);
+#endif
         break;
 
     case Cursor::ZoomIn:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ZoomIn");
+#else
+        m_platformCursor = createNamedCursor("zoomInCursor", 7, 7);
+#endif
         break;
 
     case Cursor::ZoomOut:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         m_platformCursor = wkCursor("ZoomOut");
+#else
+        m_platformCursor = createNamedCursor("zoomOutCursor", 7, 7);
+#endif
         break;
 
     case Cursor::Grab:

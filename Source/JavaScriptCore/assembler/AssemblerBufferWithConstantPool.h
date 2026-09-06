@@ -204,6 +204,24 @@ public:
         putIntegralWithConstantInt(insn, constant, isReusable);
     }
 
+    void putIntWithMultipleConstantInts(uint32_t insn, int nr_ints, uint32_t constant = 0)
+    {
+        if (!m_numConsts)
+            m_maxDistance = maxPoolSize;
+        flushIfNoSpaceFor(4, nr_ints*4);
+
+        m_loadOffsets.append(AssemblerBuffer::codeSize());
+
+        AssemblerBuffer::putInt(AssemblerType::patchConstantPoolLoad(insn, m_numConsts));
+        for (int i = 0; i < nr_ints; i++) {
+            m_pool[m_numConsts] = constant;
+            m_mask[m_numConsts] = static_cast<char>(UniqueConst);
+            ++m_numConsts;
+        }
+
+        correctDeltas(4, nr_ints*4);
+    }
+
     // This flushing mechanism can be called after any unconditional jumps.
     void flushWithoutBarrier(bool isForced = false)
     {

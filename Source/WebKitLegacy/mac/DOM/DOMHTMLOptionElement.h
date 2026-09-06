@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLFormElement;
 @class NSString;
@@ -31,7 +31,7 @@
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLOptionElement : DOMHTMLElement
 @property BOOL disabled;
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @property (copy) NSString *label;
 @property BOOL defaultSelected;
 @property BOOL selected;

@@ -126,9 +126,9 @@
 #import <WebCore/WebCoreObjCExtras.h>
 #import <WebCore/WebNSAttributedStringExtras.h>
 #import <WebCore/markup.h>
-#import <WebKitLegacy/DOM.h>
-#import <WebKitLegacy/DOMExtensions.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOM.h>
+#import <WebKit/DOMExtensions.h>
+#import <WebKit/DOMPrivate.h>
 #import <WebKitSystemInterface.h>
 #import <dlfcn.h>
 #import <limits>
@@ -702,6 +702,9 @@ extern NSString *NSTextInputReplacementRangeAttributeName;
 #if PLATFORM(IOS)
 - (void)centerSelectionInVisibleArea:(id)sender;
 #endif
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)_updateLayerGeometryFromView;
+#endif
 @end
 
 #if !PLATFORM(IOS)
@@ -840,6 +843,8 @@ static NSString * const WebMarkedTextUpdatedNotification = @"WebMarkedTextUpdate
 #endif
 @end
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+
 @interface WebHTMLView (WebHTMLViewTextCheckingInternal)
 - (void)orderFrontSubstitutionsPanel:(id)sender;
 - (BOOL)smartInsertDeleteEnabled;
@@ -862,17 +867,23 @@ static NSString * const WebMarkedTextUpdatedNotification = @"WebMarkedTextUpdate
 - (void)toggleAutomaticSpellingCorrection:(id)sender;
 @end
 
+#endif
+
 @interface WebHTMLView (WebForwardDeclaration) // FIXME: Put this in a normal category and stop doing the forward declaration trick.
 - (void)_setPrinting:(BOOL)printing minimumPageLogicalWidth:(float)minPageWidth logicalHeight:(float)minPageHeight originalPageWidth:(float)pageLogicalWidth originalPageHeight:(float)pageLogicalHeight maximumShrinkRatio:(float)maximumShrinkRatio adjustViewSize:(BOOL)adjustViewSize paginateScreenContent:(BOOL)paginateScreenContent;
 #if !PLATFORM(IOS)
 - (void)_updateSecureInputState;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)_updateLayerHostingViewPosition;
+#endif
 #endif
 @end
 
 #if !PLATFORM(IOS)
-@class NSTextInputContext;
+@interface NSInputContext : NSObject
+@end
 @interface NSResponder (AppKitDetails)
-- (NSTextInputContext *)inputContext;
+- (NSInputContext *)inputContext;
 @end
 
 @interface NSObject (NSTextInputContextDetails)
@@ -1005,6 +1016,11 @@ struct WebHTMLViewInterpretKeyEventsParameters {
 #if ENABLE(SERVICE_CONTROLS)
     RetainPtr<WebSharingServicePickerController> currentSharingServicePickerController;
 #endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    NSRect layerViewFrame;
+    NSRect layerViewFrameForComparison;
+#endif
 }
 - (void)clear;
 @end
@@ -1034,7 +1050,8 @@ static NSCellStateValue kit(TriState state)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
-
+    WebCoreObjCFinalizeOnMainThread(self);
+    
 #if !PLATFORM(IOS)
     if (!oldSetCursorForMouseLocationIMP) {
         Method setCursorMethod = class_getInstanceMethod([NSWindow class], @selector(_setCursorForMouseLocation:));
@@ -1075,12 +1092,24 @@ static NSCellStateValue kit(TriState state)
         promisedDragTIFFDataSource->removeClient(promisedDataClient());
 
     if (flagsChangedEventMonitor) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [NSEvent removeMonitor:flagsChangedEventMonitor];
+#endif
         flagsChangedEventMonitor = nil;
     }
 #endif
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+#if !PLATFORM(IOS)
+    if (promisedDragTIFFDataSource)
+        promisedDragTIFFDataSource->removeClient(promisedDataClient());
+#endif
+
+    [super finalize];
 }
 
 - (void)clear
@@ -1269,6 +1298,17 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
                                              subresources:0]))
         return fragment;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if ([types containsObject:NSPICTPboardType] &&
+        (fragment = [self _documentFragmentFromPasteboard:pasteboard 
+                                                  forType:NSPICTPboardType
+                                                inContext:context
+                                             subresources:0]))
+        return fragment;
+#endif
+
+    // Only 10.5 and higher support setting and retrieving pasteboard types with UTIs, but we don't believe
+    // that any applications on Tiger put types for which we only have a UTI, like PNG, on the pasteboard.
     if ([types containsObject:(NSString*)kUTTypePNG] &&
         (fragment = [self _documentFragmentFromPasteboard:pasteboard 
                                                   forType:(NSString*)kUTTypePNG
@@ -1339,10 +1379,25 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
     DOMRange *range = [self _selectedRange];
     Frame* coreFrame = core([self _frame]);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     DOMDocumentFragment *fragment = [self _documentFragmentFromPasteboard:pasteboard inContext:range allowPlainText:allowPlainText];
     if (fragment && [self _shouldInsertFragment:fragment replacingDOMRange:range givenAction:WebViewInsertActionPasted])
         coreFrame->editor().pasteAsFragment(*core(fragment), [self _canSmartReplaceWithPasteboard:pasteboard], false);
-
+#else
+    // Mail is ignoring the frament passed to the delegate and creates a new one.
+    // We want to avoid creating the fragment twice.
+    if (MacApplication::isAppleMail()) {
+        if ([self _shouldInsertFragment:nil replacingDOMRange:range givenAction:WebViewInsertActionPasted]) {
+            DOMDocumentFragment *fragment = [self _documentFragmentFromPasteboard:pasteboard inContext:range allowPlainText:allowPlainText];
+            if (fragment)
+                coreFrame->editor().pasteAsFragment(*core(fragment), [self _canSmartReplaceWithPasteboard:pasteboard], false);
+        }        
+    } else {
+        DOMDocumentFragment *fragment = [self _documentFragmentFromPasteboard:pasteboard inContext:range allowPlainText:allowPlainText];
+        if (fragment && [self _shouldInsertFragment:fragment replacingDOMRange:range givenAction:WebViewInsertActionPasted])
+            coreFrame->editor().pasteAsFragment(*core(fragment), [self _canSmartReplaceWithPasteboard:pasteboard], false);
+    }
+#endif
     [webView _setInsertionPasteboard:nil];
     [webView release];
 }
@@ -1477,7 +1532,7 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
         if (attributedString == nil) {
             attributedString = [self selectedAttributedString];
         }        
-        NSData *RTFDData = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:@{ }];
+        NSData *RTFDData = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:[NSDictionary dictionary]];
         [pasteboard setData:RTFDData forType:NSRTFDPboardType];
     }        
     if ([types containsObject:NSRTFPboardType]) {
@@ -1485,7 +1540,7 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
             attributedString = [self selectedAttributedString];
         if ([attributedString containsAttachments])
             attributedString = attributedStringByStrippingAttachmentCharacters(attributedString);
-        NSData *RTFData = [attributedString RTFFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:@{ }];
+        NSData *RTFData = [attributedString RTFFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:[NSDictionary dictionary]];
         [pasteboard setData:RTFData forType:NSRTFPboardType];
     }
     
@@ -1653,7 +1708,26 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
 #if !PLATFORM(IOS)
 + (void)_postFlagsChangedEvent:(NSEvent *)flagsChangedEvent
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     // This is obsolete SPI needed only for older versions of Safari
+#else
+    // This is a workaround for: <rdar://problem/2981619> NSResponder_Private should include notification for FlagsChanged
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
+    NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSMouseMoved
+        location:[[flagsChangedEvent window] convertScreenToBase:[NSEvent mouseLocation]]
+        modifierFlags:[flagsChangedEvent modifierFlags]
+        timestamp:[flagsChangedEvent timestamp]
+        windowNumber:[flagsChangedEvent windowNumber]
+        context:[flagsChangedEvent context]
+        eventNumber:0 clickCount:0 pressure:0];
+CLANG_PRAGMA(diagnostic pop)
+
+    // Pretend it's a mouse move.
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName:WKMouseMovedNotification() object:self
+        userInfo:[NSDictionary dictionaryWithObject:fakeEvent forKey:@"NSEvent"]];
+#endif
 }
 
 - (id)_bridge
@@ -1668,10 +1742,10 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
 {
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
         location:[[self window]
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         convertScreenToBase:[NSEvent mouseLocation]]
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         modifierFlags:[[NSApp currentEvent] modifierFlags]
         timestamp:[NSDate timeIntervalSinceReferenceDate]
         windowNumber:[[self window] windowNumber]
@@ -1704,6 +1778,10 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
         [webView _didScrollDocumentInFrameView:[self _frameView]];
     }
     _private->lastScrollPosition = origin;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    [self _updateLayerHostingViewPosition];
+    [_private->layerHostingView _updateLayerGeometryFromView];  // Workaround for <rdar://problem/7071636>
+#endif
 }
 
 - (void)_setAsideSubviews
@@ -1890,8 +1968,12 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
 #if !PLATFORM(IOS)
 static BOOL isQuickLookEvent(NSEvent *event)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     const int kCGSEventSystemSubtypeHotKeyCombinationReleased = 9;
     return [event type] == NSEventTypeSystemDefined && [event subtype] == kCGSEventSystemSubtypeHotKeyCombinationReleased && [event data1] == 'lkup';
+#else
+    return NO;
+#endif
 }
 #endif
 
@@ -2176,6 +2258,9 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
     static NSArray *types = nil;
     if (!types) {
         types = [[NSArray alloc] initWithObjects:WebArchivePboardType, NSHTMLPboardType, NSFilenamesPboardType, NSTIFFPboardType, NSPDFPboardType,
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+            NSPICTPboardType,
+#endif
             NSURLPboardType, NSRTFDPboardType, NSRTFPboardType, NSStringPboardType, NSColorPboardType, kUTTypePNG, nil];
         CFRetain(types);
     }
@@ -2323,10 +2408,10 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
 #if !PLATFORM(IOS)
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDragged
         location:[[self window]
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         convertScreenToBase:[NSEvent mouseLocation]]
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         modifierFlags:[[NSApp currentEvent] modifierFlags]
         timestamp:[NSDate timeIntervalSinceReferenceDate]
         windowNumber:[[self window] windowNumber]
@@ -2400,7 +2485,7 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
 
     TextIndicatorData textIndicator;
     auto dragImage = createDragImageForSelection(*coreFrame, textIndicator);
-    [dragImage _web_dissolveToFraction:WebDragImageAlpha];
+    [dragImage.get() _web_dissolveToFraction:WebDragImageAlpha];
 
     return dragImage.autorelease();
 }
@@ -2551,7 +2636,10 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
         return [[self _frame] _documentFragmentWithMarkupString:HTMLString baseURLString:nil];
     }
 
-    if (pboardType == NSRTFPboardType || pboardType == NSRTFDPboardType) {
+    // The _hasHTMLDocument clause here is a workaround for a bug in NSAttributedString: Radar 5052369.
+    // If we call _documentFromRange on an XML document we'll get "setInnerHTML: method not found".
+    // FIXME: Remove this once bug 5052369 is fixed.
+    if ([self _hasHTMLDocument] && (pboardType == NSRTFPboardType || pboardType == NSRTFDPboardType)) {
         NSAttributedString *string = nil;
         if (pboardType == NSRTFDPboardType)
             string = [[NSAttributedString alloc] initWithRTFD:[pasteboard dataForType:NSRTFDPboardType] documentAttributes:NULL];
@@ -2608,7 +2696,20 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
         [resource release];
         return fragment;
     }
-
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (pboardType == NSPICTPboardType) {
+        WebResource *resource = [[WebResource alloc] initWithData:[pasteboard dataForType:NSPICTPboardType]
+                                                              URL:uniqueURLWithRelativePart(@"image.pict")
+                                                         MIMEType:@"image/pict" 
+                                                 textEncodingName:nil
+                                                        frameName:nil];
+        DOMDocumentFragment *fragment = [[self _dataSource] _documentFragmentWithImageResource:resource];
+        [resource release];
+        return fragment;
+    }
+#endif
+    // Only 10.5 and higher support setting and retrieving pasteboard types with UTIs, but we don't believe
+    // that any applications on Tiger put types for which we only have a UTI, like PNG, on the pasteboard.
     if ([pboardType isEqualToString:(NSString*)kUTTypePNG]) {
         WebResource *resource = [[WebResource alloc] initWithData:[pasteboard dataForType:(NSString*)kUTTypePNG]
                                                               URL:uniqueURLWithRelativePart(@"image.png")
@@ -2851,6 +2952,7 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)initWithFrame:(NSRect)frame
@@ -2896,6 +2998,15 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
     [_private release];
     _private = nil;
     [super dealloc];
+}
+
+- (void)finalize
+{
+    // We can't assert that close has already been called because
+    // this view can be removed from it's superview, even though
+    // it could be needed later, so close if needed.
+    [self close];
+    [super finalize];
 }
 
 // Returns YES if the delegate returns YES (so we should do no more work).
@@ -3268,6 +3379,7 @@ WEBCORE_COMMAND(toggleUnderline)
         return YES;
     }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     if (action == @selector(orderFrontSubstitutionsPanel:)) {
         NSMenuItem *menuItem = (NSMenuItem *)item;
         if ([menuItem isKindOfClass:[NSMenuItem class]]) {
@@ -3317,6 +3429,7 @@ WEBCORE_COMMAND(toggleUnderline)
             [menuItem setState:[self isAutomaticSpellingCorrectionEnabled] ? NSOnState : NSOffState];
         return [self _canEdit];
     }
+#endif
 
     Editor::Command command = [self coreCommandBySelector:action];
     if (command.isSupported()) {
@@ -3519,14 +3632,21 @@ WEBCORE_COMMAND(toggleUnderline)
 
 #if !PLATFORM(IOS)
         if (!_private->flagsChangedEventMonitor) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             __block WebHTMLView *weakSelf = self;
             _private->flagsChangedEventMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskFlagsChanged handler:^(NSEvent *flagsChangedEvent) {
                 [weakSelf _postFakeMouseMovedEventForFlagsChangedEvent:flagsChangedEvent];
                 return flagsChangedEvent;
             }];
+#else
+            // this is just a flag to enable posting the fake mouse moved event in flagsChanged:
+            _private->flagsChangedEventMonitor = self;
+#endif
         }
     } else {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [NSEvent removeMonitor:_private->flagsChangedEventMonitor];
+#endif
         _private->flagsChangedEventMonitor = nil;
 #endif
     }
@@ -3706,8 +3826,8 @@ static RetainPtr<NSArray> fixMenusToSendToOldClients(NSMutableArray *defaultMenu
 
         if ([secondToLastItem isSeparatorItem] && [lastItem tag] == WebMenuItemTagInspectElement) {
             savedItems = adoptNS([[NSMutableArray alloc] initWithCapacity:2]);
-            [savedItems addObject:secondToLastItem];
-            [savedItems addObject:lastItem];
+            [savedItems.get() addObject:secondToLastItem];
+            [savedItems.get() addObject:lastItem];
 
             [defaultMenuItems removeObject:secondToLastItem];
             [defaultMenuItems removeObject:lastItem];
@@ -3719,7 +3839,9 @@ static RetainPtr<NSArray> fixMenusToSendToOldClients(NSMutableArray *defaultMenu
     if (!preVersion3Client)
         return savedItems;
 
-    for (NSMenuItem *item in defaultMenuItems) {
+    NSEnumerator *enumerator = [defaultMenuItems objectEnumerator];
+    NSMenuItem *item;
+    while ((item = [enumerator nextObject]) != nil) {
         int tag = item.tag;
         int oldStyleTag = tag;
 
@@ -3761,16 +3883,16 @@ static RetainPtr<NSArray> fixMenusReceivedFromOldClients(NSArray *delegateSuppli
     auto newMenuItems = adoptNS([delegateSuppliedItems mutableCopy]);
 
     if (savedItems)
-        [newMenuItems addObjectsFromArray:savedItems];
+        [newMenuItems.get() addObjectsFromArray:savedItems];
 
     BOOL preVersion3Client = isPreVersion3Client();
     if (!preVersion3Client)
         return newMenuItems;
     
     // Restore the modern tags to the menu items whose tags we altered in fixMenusToSendToOldClients. 
-    unsigned newItemsCount = [newMenuItems count];
+    unsigned newItemsCount = [newMenuItems.get() count];
     for (unsigned i = 0; i < newItemsCount; ++i) {
-        NSMenuItem *item = [newMenuItems objectAtIndex:i];
+        NSMenuItem *item = [newMenuItems.get() objectAtIndex:i];
         
         int tag = [item tag];
         int modernTag = tag;
@@ -3882,32 +4004,35 @@ static RetainPtr<NSArray> fixMenusReceivedFromOldClients(NSArray *delegateSuppli
 
 static RetainPtr<NSMenuItem> createShareMenuItem(const HitTestResult& hitTestResult)
 {
+    if (![[NSMenuItem class] respondsToSelector:@selector(standardShareMenuItemForItems:)])
+        return nil;
+
     auto items = adoptNS([[NSMutableArray alloc] init]);
 
     if (!hitTestResult.absoluteLinkURL().isEmpty()) {
         NSURL *absoluteLinkURL = hitTestResult.absoluteLinkURL();
-        [items addObject:absoluteLinkURL];
+        [items.get() addObject:absoluteLinkURL];
     }
 
     if (!hitTestResult.absoluteMediaURL().isEmpty() && hitTestResult.isDownloadableMedia()) {
         NSURL *downloadableMediaURL = hitTestResult.absoluteMediaURL();
-        [items addObject:downloadableMediaURL];
+        [items.get() addObject:downloadableMediaURL];
     }
 
     if (Image* image = hitTestResult.image()) {
         if (RefPtr<SharedBuffer> buffer = image->data())
-            [items addObject:adoptNS([[NSImage alloc] initWithData:[NSData dataWithBytes:buffer->data() length:buffer->size()]]).get()];
+            [items.get() addObject:adoptNS([[NSImage alloc] initWithData:[NSData dataWithBytes:buffer->data() length:buffer->size()]]).get()];
     }
 
     if (!hitTestResult.selectedText().isEmpty()) {
         NSString *selectedText = hitTestResult.selectedText();
-        [items addObject:selectedText];
+        [items.get() addObject:selectedText];
     }
 
-    if (![items count])
+    if (![items.get() count])
         return nil;
 
-    return [NSMenuItem standardShareMenuItemForItems:items.get()];
+    return [NSMenuItem standardShareMenuItemForItems:(NSArray *)items.get()];
 }
 
 static RetainPtr<NSMutableArray> createMenuItems(const HitTestResult&, const Vector<ContextMenuItem>&);
@@ -3923,10 +4048,10 @@ static RetainPtr<NSMenuItem> createMenuItem(const HitTestResult& hitTestResult, 
         auto menuItem = adoptNS([[NSMenuItem alloc] initWithTitle:item.title() action:@selector(forwardContextMenuAction:) keyEquivalent:@""]);
 
         if (auto tag = toTag(item.action()))
-            [menuItem setTag:*tag];
-        [menuItem setEnabled:item.enabled()];
-        [menuItem setState:item.checked() ? NSOnState : NSOffState];
-        [menuItem setTarget:[WebMenuTarget sharedMenuTarget]];
+            [menuItem.get() setTag:*tag];
+        [menuItem.get() setEnabled:item.enabled()];
+        [menuItem.get() setState:item.checked() ? NSOnState : NSOffState];
+        [menuItem.get() setTarget:[WebMenuTarget sharedMenuTarget]];
 
         return menuItem;
     }
@@ -3938,19 +4063,22 @@ static RetainPtr<NSMenuItem> createMenuItem(const HitTestResult& hitTestResult, 
         auto menu = adoptNS([[NSMenu alloc] init]);
 
         auto submenuItems = createMenuItems(hitTestResult, item.subMenuItems());
-        for (NSMenuItem *menuItem in submenuItems.get())
-            [menu addItem:menuItem];
+        NSEnumerator *enumerator = [submenuItems.get() objectEnumerator];
+        NSMenuItem *submenuItem;
+        while ((submenuItem = [enumerator nextObject]) != nil)
+            [menu.get() addItem:submenuItem];
 
         auto menuItem = adoptNS([[NSMenuItem alloc] initWithTitle:item.title() action:nullptr keyEquivalent:@""]);
 
         if (auto tag = toTag(item.action()))
-            [menuItem setTag:*tag];
-        [menuItem setEnabled:item.enabled()];
-        [menuItem setSubmenu:menu.get()];
+            [menuItem.get() setTag:*tag];
+        [menuItem.get() setEnabled:item.enabled()];
+        [menuItem.get() setSubmenu:(NSMenu *)menu.get()];
 
         return menuItem;
     }
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 static RetainPtr<NSMutableArray> createMenuItems(const HitTestResult& hitTestResult, const Vector<ContextMenuItem>& items)
@@ -3959,7 +4087,7 @@ static RetainPtr<NSMutableArray> createMenuItems(const HitTestResult& hitTestRes
 
     for (auto& item : items) {
         if (auto menuItem = createMenuItem(hitTestResult, item))
-            [menuItems addObject:menuItem.get()];
+            [menuItems.get() addObject:menuItem.get()];
     }
 
     return menuItems;
@@ -3979,14 +4107,16 @@ static RetainPtr<NSArray> customMenuFromDefaultItems(WebView *webView, const Con
 
     BOOL preVersion3Client = isPreVersion3Client();
     if (preVersion3Client) {
-        DOMNode *node = [element objectForKey:WebElementDOMNodeKey];
+        DOMNode *node = [element.get() objectForKey:WebElementDOMNodeKey];
         if ([node isKindOfClass:[DOMHTMLInputElement class]] && [(DOMHTMLInputElement *)node _isTextField])
             return defaultMenuItems;
         if ([node isKindOfClass:[DOMHTMLTextAreaElement class]])
             return defaultMenuItems;
     }
 
-    for (NSMenuItem *menuItem in defaultMenuItems.get()) {
+    NSEnumerator *enumerator = [defaultMenuItems.get() objectEnumerator];
+    NSMenuItem *menuItem;
+    while ((menuItem = [enumerator nextObject]) != nil) {
         if (!menuItem.representedObject)
             menuItem.representedObject = element.get();
     }
@@ -4035,16 +4165,18 @@ static RetainPtr<NSArray> customMenuFromDefaultItems(WebView *webView, const Con
         return nil;
 
     auto menuItems = customMenuFromDefaultItems([self _webView], *contextMenu);
-    if (![menuItems count])
+    if (![menuItems.get() count])
         return nil;
 
     auto menu = adoptNS([[NSMenu alloc] init]);
 
-    for (NSMenuItem *item in menuItems.get()) {
-        [menu addItem:item];
+    NSEnumerator *enumerator = [menuItems.get() objectEnumerator];
+    NSMenuItem *item;
+    while ((item = [enumerator nextObject]) != nil) {
+        [menu.get() addItem:item];
 
         if (item.tag == ContextMenuItemTagShareMenu) {
-            ASSERT([item.representedObject isKindOfClass:[NSSharingServicePicker class]]);
+            ASSERT([item.representedObject isKindOfClass:NSClassFromString(@"NSSharingServicePicker")]);
 #if ENABLE(SERVICE_CONTROLS)
             _private->currentSharingServicePickerController = adoptNS([[WebSharingServicePickerController alloc] initWithSharingServicePicker:item.representedObject client:static_cast<WebContextMenuClient&>(page->contextMenuController().client())]);
 #endif
@@ -4053,7 +4185,7 @@ static RetainPtr<NSArray> customMenuFromDefaultItems(WebView *webView, const Con
 
     [[WebMenuTarget sharedMenuTarget] setMenuController:&page->contextMenuController()];
     
-    return menu.autorelease();
+    return (NSMenu *)menu.autorelease();
 }
 #endif // !PLATFORM(IOS)
 
@@ -4397,7 +4529,7 @@ static BOOL currentScrollIsBlit(NSView *clipView)
         frame->eventHandler().wheelEvent(event);
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     [[[self _webView] _immediateActionController] webView:[self _webView] didHandleScrollWheel:event];
 #endif
 }
@@ -4523,12 +4655,12 @@ static BOOL currentScrollIsBlit(NSView *clipView)
     if (Frame* coreframe = core([self _frame]))
         coreframe->eventHandler().mouseDown(event);
 #else
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
 
     if (![currentInputManager wantsToHandleMouseEvents] || ![currentInputManager handleMouseEvent:event]) {
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         [_private->completionController endRevertingChange:NO moveLeft:NO];
 
         // If the web page handles the context menu event and menuForEvent: returns nil, we'll get control click events here.
@@ -4581,12 +4713,12 @@ static BOOL currentScrollIsBlit(NSView *clipView)
     // the current event prevents that from causing a problem inside WebKit or AppKit code.
     [[event retain] autorelease];
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
     if ([currentInputManager wantsToHandleMouseEvents] && [currentInputManager handleMouseEvent:event])
         return;
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
     [self retain];
 
@@ -4695,8 +4827,8 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
     // FIXME: Report an error if we fail to create a file.
     NSString *path = [[dropDestination path] stringByAppendingPathComponent:[wrapper preferredFilename]];
     path = [[NSFileManager defaultManager] _webkit_pathWithUniqueFilenameForPath:path];
-    if (![wrapper writeToURL:[NSURL fileURLWithPath:path] options:NSFileWrapperWritingWithNameUpdating originalContentsURL:nil error:nullptr])
-        LOG_ERROR("Failed to create image file via -[NSFileWrapper writeToURL:options:originalContentsURL:error:]");
+    if (![wrapper writeToFile:path atomically:NO updateFilenames:YES])
+        LOG_ERROR("Failed to create image file via -[NSFileWrapper writeToFile:atomically:updateFilenames:]");
     
     if (draggingElementURL)
         [[NSFileManager defaultManager] _webkit_setMetadataURL:[draggingElementURL absoluteString] referrer:nil atPath:path];
@@ -4704,6 +4836,7 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
     return [NSArray arrayWithObject:[path lastPathComponent]];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 // MARK: NSDraggingSource
 
 - (NSDragOperation)draggingSession:(NSDraggingSession *)session sourceOperationMaskForDraggingContext:(NSDraggingContext)context
@@ -4738,6 +4871,7 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
     // This will also update the mouseover state.
     [self mouseUp:fakeEvent];
 }
+#endif
 
 #endif // ENABLE(DRAG_SUPPORT) && PLATFORM(MAC)
 
@@ -4759,12 +4893,12 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
     [self _setMouseDownEvent:nil];
 
 #if !PLATFORM(IOS)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
     if ([currentInputManager wantsToHandleMouseEvents] && [currentInputManager handleMouseEvent:event])
         return;
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 #endif
     [self retain];
 
@@ -4975,7 +5109,11 @@ static RefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
 #if !PLATFORM(IOS)
     if (!_private->installedTrackingArea) {
         NSTrackingAreaOptions options = NSTrackingMouseMoved | NSTrackingMouseEnteredAndExited | NSTrackingInVisibleRect | NSTrackingCursorUpdate;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         if (WKRecommendedScrollerStyle() == NSScrollerStyleLegacy
+#else
+        if (false
+#endif
 #if ENABLE(DASHBOARD_SUPPORT)
             || [[self _webView] _dashboardBehavior:WebDashboardBehaviorAlwaysSendMouseEventsToAllWindows]
 #endif
@@ -5311,6 +5449,12 @@ static RefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
     // the current event prevents that from causing a problem inside WebKit or AppKit code.
     [[event retain] autorelease];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (_private->flagsChangedEventMonitor) {
+        [self _postFakeMouseMovedEventForFlagsChangedEvent:event];
+    }
+#endif
+
     RetainPtr<WebHTMLView> selfProtector = self;
 
     Frame* coreFrame = core([self _frame]);
@@ -5352,10 +5496,10 @@ static RefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
 #if PLATFORM(IOS)
         return [accTree accessibilityHitTest:point];
 #else
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         NSPoint windowCoord = [[self window] convertScreenToBase:point];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         return [accTree accessibilityHitTest:[self convertPoint:windowCoord fromView:nil]];
 #endif
     }
@@ -5387,17 +5531,17 @@ static RefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
     Frame* coreFrame = core([self _frame]);
     NSAttributedString *string = [[NSAttributedString alloc] initWithString:@"x"
         attributes:coreFrame ? coreFrame->editor().fontAttributesForSelectionStart().get() : nil];
-    NSData *data = [string RTFFromRange:NSMakeRange(0, [string length]) documentAttributes:@{ }];
+    NSData *data = [string RTFFromRange:NSMakeRange(0, [string length]) documentAttributes:[NSDictionary dictionary]];
     [string release];
     return data;
 }
 
 - (NSDictionary *)_fontAttributesFromFontPasteboard
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     NSPasteboard *fontPasteboard = [NSPasteboard pasteboardWithName:NSFontPboard];
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
     if (fontPasteboard == nil)
         return nil;
     NSData *data = [fontPasteboard dataForType:NSFontPboardType];
@@ -5599,10 +5743,10 @@ static RefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
 
     // Put RTF with font attributes on the pasteboard.
     // Maybe later we should add a pasteboard type that contains CSS text for "native" copy and paste font.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     NSPasteboard *fontPasteboard = [NSPasteboard pasteboardWithName:NSFontPboard];
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
     [fontPasteboard declareTypes:[NSArray arrayWithObject:NSFontPboardType] owner:nil];
     [fontPasteboard setData:[self _selectionStartFontAttributesAsRTF] forType:NSFontPboardType];
 }
@@ -5683,7 +5827,7 @@ static RetainPtr<CFStringRef> fontNameForDescription(NSString *familyName, BOOL 
         // Postscript name to make the CSS specific enough.
         auto fontName = fontNameForDescription(aFamilyName, aIsItalic, aIsBold);
         auto aName = [a fontName];
-        if (!fontName || !aName || !CFEqual(fontName.get(), static_cast<CFStringRef>(aName)))
+        if (!fontName || !aName || !CFEqual(fontName.get(), reinterpret_cast<CFStringRef>(aName)))
             familyNameForCSS = aName;
 
         // FIXME: Need more sophisticated escaping code if we want to handle family names
@@ -6031,7 +6175,12 @@ static RetainPtr<CFStringRef> fontNameForDescription(NSString *familyName, BOOL 
 
 static BOOL writingDirectionKeyBindingsEnabled()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     return YES;
+#else
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    return [defaults boolForKey:@"NSAllowsBaseWritingDirectionKeyBindings"] || [defaults boolForKey:@"AppleTextDirection"];
+#endif
 }
 
 - (void)_changeBaseWritingDirectionTo:(NSWritingDirection)direction
@@ -6064,6 +6213,18 @@ static BOOL writingDirectionKeyBindingsEnabled()
     [self _changeBaseWritingDirectionTo:NSWritingDirectionRightToLeft];
 }
 #endif // !PLATFORM(IOS)
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)changeBaseWritingDirectionToLTR:(id)sender
+{
+    [self makeBaseWritingDirectionLeftToRight:sender];
+}
+
+- (void)changeBaseWritingDirectionToRTL:(id)sender
+{
+    [self makeBaseWritingDirectionRightToLeft:sender];
+}
+#endif
 
 - (void)makeBaseWritingDirectionNatural:(id)sender
 {
@@ -6107,7 +6268,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
     return haveWebCoreFrame;
 }
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 - (BOOL)_automaticFocusRingDisabled
 {
     // The default state for _automaticFocusRingDisabled is NO, which prevents focus rings
@@ -6149,7 +6310,8 @@ static BOOL writingDirectionKeyBindingsEnabled()
 #if !PLATFORM(IOS)
 - (void)otherMouseDown:(NSEvent *)event
 {
-    if (event.buttonNumber != 2 || [NSMenu menuTypeForEvent:event] == NSMenuTypeContextMenu) {
+    if ([event buttonNumber] != 2 || ([NSMenu respondsToSelector:@selector(menuTypeForEvent:)]
+        && [NSMenu menuTypeForEvent:event] == NSMenuTypeContextMenu)) {
         [super otherMouseDown:event];
         return;
     }
@@ -6221,7 +6383,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
 
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
     [fontManager setSelectedFont:font isMultiple:multipleFonts];
-    [fontManager setSelectedAttributes:(attributes ? attributes.get() : @{ }) isMultiple:multipleFonts];
+    [fontManager setSelectedAttributes:(attributes ? attributes.get() : [NSDictionary dictionary]) isMultiple:multipleFonts];
 }
 
 - (void)_setSoftSpaceRange:(NSRange)range
@@ -6284,6 +6446,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
     [[self _webView] toggleGrammarChecking:sender];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)orderFrontSubstitutionsPanel:(id)sender
 {
     COMMAND_PROLOGUE
@@ -6395,6 +6558,8 @@ static BOOL writingDirectionKeyBindingsEnabled()
     [[self _webView] toggleAutomaticSpellingCorrection:sender];
 }
 
+#endif
+
 - (void)_lookUpInDictionaryFromMenu:(id)sender
 {
     Frame* coreFrame = core([self _frame]);
@@ -6408,11 +6573,13 @@ static BOOL writingDirectionKeyBindingsEnabled()
     [[self _webView] _showDictionaryLookupPopup:[WebImmediateActionController _dictionaryPopupInfoForRange:*selectionRange inFrame:coreFrame withLookupOptions:nil indicatorOptions:TextIndicatorOptionIncludeSnapshotWithSelectionHighlight transition:TextIndicatorPresentationTransition::BounceAndCrossfade]];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 - (void)quickLookWithEvent:(NSEvent *)event
 {
     [[self _webView] _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
     [super quickLookWithEvent:event];
 }
+#endif
 #endif // !PLATFORM(IOS)
 
 - (void)_executeSavedKeypressCommands
@@ -6434,15 +6601,15 @@ static BOOL writingDirectionKeyBindingsEnabled()
     const Vector<KeypressCommand>& commands = parameters->event->keypressCommands();
 
     for (size_t i = 0; i < commands.size(); ++i) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         if (commands[i].commandName == "insertText:")
             [self insertText:commands[i].text];
         else if (commands[i].commandName == "noop:")
             ; // Do nothing. This case can be removed once <rdar://problem/9025012> is fixed.
         else
             [self doCommandBySelector:NSSelectorFromString(commands[i].commandName)];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
     }
     parameters->event->keypressCommands().clear();
     parameters->shouldSaveCommands = wasSavingCommands;
@@ -6627,7 +6794,9 @@ static BOOL writingDirectionKeyBindingsEnabled()
 #if !PLATFORM(IOS)
     if (!_private->layerHostingView) {
         NSView* hostingView = [[WebLayerHostingFlippedView alloc] initWithFrame:[self bounds]];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [hostingView setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+#endif
         [self addSubview:hostingView];
         [hostingView release];
         // hostingView is owned by being a subview of self
@@ -6637,14 +6806,31 @@ static BOOL writingDirectionKeyBindingsEnabled()
     // Make a container layer, which will get sized/positioned by AppKit and CA.
     CALayer* viewLayer = [WebRootLayer layer];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // Turn off default animations.
+    NSNull *nullValue = [NSNull null];
+    NSDictionary *actions = [NSDictionary dictionaryWithObjectsAndKeys:
+                             nullValue, @"anchorPoint",
+                             nullValue, @"bounds",
+                             nullValue, @"contents",
+                             nullValue, @"contentsRect",
+                             nullValue, @"opacity",
+                             nullValue, @"position",
+                             nullValue, @"sublayerTransform",
+                             nullValue, @"sublayers",
+                             nullValue, @"transform",
+                             nil];
+    [viewLayer setStyle:[NSDictionary dictionaryWithObject:actions forKey:@"actions"]];
+#endif
+
     if ([self layer]) {
         // If we are in a layer-backed view, we need to manually initialize the geometry for our layer.
         [viewLayer setBounds:NSRectToCGRect([_private->layerHostingView bounds])];
         [viewLayer setAnchorPoint:CGPointMake(0, [self isFlipped] ? 1 : 0)];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         CGPoint layerPosition = NSPointToCGPoint([self convertPointToBase:[_private->layerHostingView frame].origin]);
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         [viewLayer setPosition:layerPosition];
     }
     
@@ -6657,8 +6843,16 @@ static BOOL writingDirectionKeyBindingsEnabled()
     if ([[self _webView] _postsAcceleratedCompositingNotifications])
         [[NSNotificationCenter defaultCenter] postNotificationName:_WebViewDidStartAcceleratedCompositingNotification object:[self _webView] userInfo:nil];
 
+    // Do geometry flipping here, which flips all the compositing layers so they are top-down.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    _private->layerViewFrameForComparison = NSMakeRect(0, 0, 0, 0);
+    [self _updateLayerHostingViewPosition];
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    [viewLayer setGeometryFlipped:YES];
+#else
     if (WKExecutableWasLinkedOnOrBeforeLion())
         [viewLayer setGeometryFlipped:YES];
+#endif
 #endif // !PLATFORM(IOS)
 }
 
@@ -6666,13 +6860,85 @@ static BOOL writingDirectionKeyBindingsEnabled()
 {
 #if !PLATFORM(IOS)
     if (_private->layerHostingView) {
+        [_private->layerHostingView removeFromSuperview];
         [_private->layerHostingView setLayer:nil];
         [_private->layerHostingView setWantsLayer:NO];
-        [_private->layerHostingView removeFromSuperview];
         _private->layerHostingView = nil;
     }
 #endif
 }
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+// This method is necessary on Leopard to work around <rdar://problem/7067892>.
+- (void)_updateLayerHostingViewPosition
+{
+    if (!_private->layerHostingView)
+        return;
+    
+    const CGFloat maxHeight = 2048;
+    const CGFloat maxWidth = 2048;
+    NSRect layerViewFrame = [self bounds];
+
+    BOOL reset = false;
+    if (!NSEqualRects(_private->layerViewFrameForComparison, layerViewFrame)) {
+        _private->layerViewFrameForComparison = layerViewFrame;
+        reset = true;
+    }
+
+    const CATransform3D flipTransform = CATransform3DMakeScale(1, -1, 1);
+    CALayer *layer = [_private->layerHostingView layer];
+    if (layerViewFrame.size.height > maxHeight
+        || layerViewFrame.size.width > maxWidth)
+    {
+        NSRect visibleRect = [[self enclosingScrollView] documentVisibleRect];
+        if (!NSContainsRect(_private->layerViewFrame, visibleRect)
+            || reset)
+        {
+            CGFloat topOffset = 0;
+            CGFloat leftOffset = 0;
+
+            // Clamp the size of the view to <= maxHeight to avoid the bug.
+            if (layerViewFrame.size.height > maxHeight) {
+                _private->layerViewFrame.size.height = maxHeight;
+
+                // Place the layer-hosting view centered around the visibleRect, limited by the bottom or top of the view
+                topOffset = std::round((NSMinY(visibleRect) + visibleRect.size.height / 2.0) - maxHeight / 2.0);
+                if (topOffset < NSMinY(layerViewFrame))
+                    topOffset = NSMinY(layerViewFrame);
+                else if (topOffset + maxHeight > NSMaxY(layerViewFrame))
+                    topOffset = NSMaxY(layerViewFrame) - maxHeight;
+                _private->layerViewFrame.origin.y = topOffset;
+            } else {
+                _private->layerViewFrame.size.height = layerViewFrame.size.height;
+                _private->layerViewFrame.origin.y = layerViewFrame.origin.y;
+            }
+
+            // Clamp the size of the view to <= maxWidth to avoid the bug.
+            if (layerViewFrame.size.width > maxHeight) {
+                _private->layerViewFrame.size.width = maxWidth;
+
+                // Place the layer-hosting view centered around the visibleRect, limited by the left or right limit of the view
+                leftOffset = std::round((NSMinX(visibleRect) + visibleRect.size.width / 2.0) - maxWidth / 2.0);
+                if (leftOffset < NSMinX(layerViewFrame))
+                    leftOffset = NSMinX(layerViewFrame);
+                else if (leftOffset + maxWidth > NSMaxX(layerViewFrame))
+                    leftOffset = NSMaxX(layerViewFrame) - maxWidth;
+                _private->layerViewFrame.origin.x = leftOffset;
+            } else {
+                _private->layerViewFrame.size.width = layerViewFrame.size.width;
+                _private->layerViewFrame.origin.x = layerViewFrame.origin.x;
+            }
+
+            // Compensate for the moved view by adjusting the sublayer transform on the view's layer (using flipped coords).
+            [layer setSublayerTransform:CATransform3DTranslate(flipTransform, -leftOffset, -topOffset, 0)];
+            [_private->layerHostingView setFrame:_private->layerViewFrame];
+        }
+    } else if (reset) {
+        [layer setSublayerTransform:flipTransform];
+        [_private->layerHostingView setFrame:layerViewFrame];
+    }
+}
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
 
 #if PLATFORM(MAC)
 - (void)drawLayer:(CALayer *)layer inContext:(CGContextRef)ctx
@@ -6680,7 +6946,9 @@ static BOOL writingDirectionKeyBindingsEnabled()
     if (_private) {
         ASSERT(!_private->drawingIntoLayer);
         _private->drawingIntoLayer = YES;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         _private->drawingIntoAcceleratedLayer = [layer drawsAsynchronously];
+#endif
     }
 
     [super drawLayer:layer inContext:ctx];
@@ -6756,7 +7024,7 @@ static BOOL writingDirectionKeyBindingsEnabled()
     return validAttributes;
 }
 
-- (NSTextInputContext *)inputContext
+- (NSInputContext *)inputContext
 {
     return _private->exposeInputContext ? [super inputContext] : nil;
 }
@@ -6767,10 +7035,10 @@ static BOOL writingDirectionKeyBindingsEnabled()
         LOG(TextInput, "textStorage -> nil");
         return nil;
     }
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     NSAttributedString *result = [self attributedSubstringFromRange:NSMakeRange(0, UINT_MAX)];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
     LOG(TextInput, "textStorage -> \"%@\"", result ? [result string] : @"");
     
@@ -6787,8 +7055,12 @@ static BOOL writingDirectionKeyBindingsEnabled()
     WebFrame *frame = [self _frame];
 
     if (window) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         NSRect screenRect = { thePoint, NSZeroSize };
         thePoint = [window convertRectFromScreen:screenRect].origin;
+#else
+        thePoint = [window convertScreenToBase:thePoint];
+#endif
     }
     thePoint = [self convertPoint:thePoint fromView:nil];
 
@@ -6829,7 +7101,11 @@ static BOOL writingDirectionKeyBindingsEnabled()
 
     NSWindow *window = [self window];
     if (window)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         resultRect.origin = [window convertRectToScreen:resultRect].origin;
+#else
+        resultRect.origin = [window convertBaseToScreen:resultRect.origin];
+#endif
     
     LOG(TextInput, "firstRectForCharacterRange:(%u, %u) -> (%f, %f, %f, %f)", theRange.location, theRange.length, resultRect.origin.x, resultRect.origin.y, resultRect.size.width, resultRect.size.height);
     return resultRect;
@@ -7235,15 +7511,15 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
 
     unsigned start;
     unsigned end;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     if (coreFrame->editor().getCompositionSelection(start, end))
         [[NSInputManager currentInputManager] markedTextSelectionChanged:NSMakeRange(start, end - start) client:self];
     else {
         coreFrame->editor().cancelComposition();
         [[NSInputManager currentInputManager] markedTextAbandoned:self];
     }
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 #else
     // FIXME: The following code:
     //

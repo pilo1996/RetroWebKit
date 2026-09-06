@@ -53,18 +53,24 @@ namespace WebCore {
 void CryptoAlgorithmRegistry::platformRegisterAlgorithms()
 {
     registerAlgorithm<CryptoAlgorithmAES_CBC>();
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     registerAlgorithm<CryptoAlgorithmAES_CFB>();
     registerAlgorithm<CryptoAlgorithmAES_CTR>();
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
     registerAlgorithm<CryptoAlgorithmAES_GCM>();
+#endif
     registerAlgorithm<CryptoAlgorithmAES_KW>();
     registerAlgorithm<CryptoAlgorithmECDH>();
     registerAlgorithm<CryptoAlgorithmECDSA>();
     registerAlgorithm<CryptoAlgorithmHKDF>();
+#endif
     registerAlgorithm<CryptoAlgorithmHMAC>();
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     registerAlgorithm<CryptoAlgorithmPBKDF2>();
     registerAlgorithm<CryptoAlgorithmRSAES_PKCS1_v1_5>();
     registerAlgorithm<CryptoAlgorithmRSASSA_PKCS1_v1_5>();
     registerAlgorithm<CryptoAlgorithmRSA_OAEP>();
+#endif
 #if HAVE(RSA_PSS)
     registerAlgorithm<CryptoAlgorithmRSA_PSS>();
 #endif

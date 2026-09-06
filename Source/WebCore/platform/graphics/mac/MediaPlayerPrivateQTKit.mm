@@ -37,6 +37,7 @@
 #import "PlatformLayer.h"
 #import "PlatformTimeRanges.h"
 #import "QTKitSPI.h"
+#import "QuartzCoreSPI.h"
 #import "SecurityOrigin.h"
 #import "URL.h"
 #import "WebCoreSystemInterface.h"
@@ -47,12 +48,18 @@
 
 SOFT_LINK_FRAMEWORK(QTKit)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 SOFT_LINK(QTKit, QTMakeTime, QTTime, (long long timeValue, long timeScale), (timeValue, timeScale))
+#pragma GCC diagnostic pop
 
 SOFT_LINK_CLASS(QTKit, QTMovie)
 SOFT_LINK_CLASS(QTKit, QTMovieLayer)
 
 SOFT_LINK_POINTER(QTKit, QTTrackMediaTypeAttribute, NSString *)
+SOFT_LINK_POINTER(QTKit, QTTrackIDAttribute, NSString *)
+SOFT_LINK_POINTER(QTKit, QTTrackDisplayNameAttribute, NSString *)
+SOFT_LINK_POINTER(QTKit, QTTrackIsChapterTrackAttribute, NSString *)
 SOFT_LINK_POINTER(QTKit, QTMediaTypeAttribute, NSString *)
 SOFT_LINK_POINTER(QTKit, QTMediaTypeBase, NSString *)
 SOFT_LINK_POINTER(QTKit, QTMediaTypeMPEG, NSString *)
@@ -94,10 +101,17 @@ SOFT_LINK_POINTER_OPTIONAL(QTKit, QTSecurityPolicyNoRemoteToLocalSiteAttribute, 
 - (NSArray *)loadedRanges;
 @end
 
+@interface QTTrack(WebKitExtras)
+- (QTTrack *)chapterlist;
+@end
+
 #define QTMovie getQTMovieClass()
 #define QTMovieLayer getQTMovieLayerClass()
 
 #define QTTrackMediaTypeAttribute getQTTrackMediaTypeAttribute()
+#define QTTrackIDAttribute getQTTrackIDAttribute()
+#define QTTrackDisplayNameAttribute getQTTrackDisplayNameAttribute()
+#define QTTrackIsChapterTrackAttribute getQTTrackIsChapterTrackAttribute()
 #define QTMediaTypeAttribute getQTMediaTypeAttribute()
 #define QTMediaTypeBase getQTMediaTypeBase()
 #define QTMediaTypeMPEG getQTMediaTypeMPEG()
@@ -143,6 +157,12 @@ enum {
 };
 #endif
 
+#if ENABLE(VIDEO_TRACK)
+#import "VideoTrackPrivateQTKit.mm"
+#import "AudioTrackPrivateQTKit.mm"
+#import "InbandTextTrackPrivateQTKit.mm"
+#endif
+
 using namespace WebCore;
 
 @interface WebCoreMovieObserver : NSObject
@@ -167,6 +187,9 @@ using namespace WebCore;
 @protocol WebKitVideoRenderingDetails
 -(void)setMovie:(id)movie;
 -(void)drawInRect:(NSRect)rect;
+@end
+
+@interface QTVideoRendererWebKitOnly : NSObject <WebKitVideoRenderingDetails>
 @end
 
 namespace WebCore {
@@ -206,11 +229,16 @@ MediaPlayerPrivateQTKit::MediaPlayerPrivateQTKit(MediaPlayer* player)
 MediaPlayerPrivateQTKit::~MediaPlayerPrivateQTKit()
 {
     LOG(Media, "MediaPlayerPrivateQTKit::~MediaPlayerPrivateQTKit(%p)", this);
-    tearDownVideoRendering();
+    m_player = nullptr;
 
     [[NSNotificationCenter defaultCenter] removeObserver:m_objcObserver.get()];
     [m_objcObserver.get() disconnect];
+
+    tearDownVideoRendering();
+    if (m_qtMovie)
+        [m_qtMovie.get() stop];
 }
+
 
 NSMutableDictionary *MediaPlayerPrivateQTKit::commonMovieAttributes() 
 {
@@ -246,6 +274,7 @@ void MediaPlayerPrivateQTKit::createQTMovie(const String& url)
     NSMutableDictionary *movieAttributes = commonMovieAttributes();    
     [movieAttributes setValue:cocoaURL forKey:QTMovieURLAttribute];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     CFDictionaryRef proxySettings = CFNetworkCopySystemProxySettings();
     CFArrayRef proxiesForURL = CFNetworkCopyProxiesForURL((CFURLRef)cocoaURL, proxySettings);
     BOOL willUseProxy = YES;
@@ -274,6 +303,7 @@ void MediaPlayerPrivateQTKit::createQTMovie(const String& url)
         CFRelease(proxiesForURL);
     if (proxySettings)
         CFRelease(proxySettings);
+#endif
 
     createQTMovie(cocoaURL, movieAttributes);
 }
@@ -319,8 +349,12 @@ void MediaPlayerPrivateQTKit::createQTMovie(NSURL *url, NSDictionary *movieAttri
     bool recreating = false;
     if (m_qtMovie) {
         recreating = true;
-        destroyQTVideoRenderer();
-        m_qtMovie = 0;
+        tearDownVideoRendering();
+#if ENABLE(VIDEO_TRACK) 
+        clearTracks();
+#endif
+        [m_qtMovie.get() stop];
+        m_qtMovie = nil;
     }
     
     // Disable rtsp streams for now, <rdar://problem/5693967>
@@ -332,7 +366,7 @@ void MediaPlayerPrivateQTKit::createQTMovie(NSURL *url, NSDictionary *movieAttri
     
     if (!m_qtMovie)
         return;
-    
+
     [m_qtMovie.get() setVolume:m_player->volume()];
 
     if (recreating && hasVideo())
@@ -409,8 +443,12 @@ void MediaPlayerPrivateQTKit::destroyQTVideoRenderer()
                                                     name:QTVideoRendererWebKitOnlyNewImageAvailableNotification
                                                   object:m_qtVideoRenderer.get()];
 
+// this seems unnecessary as upon destruction the movie instance should be disassociated automatically,
+// and there are occasional crashes when doing it
+#if 0
     // disassociate our movie from our instance of QTVideoRendererWebKitOnly
     [(id<WebKitVideoRenderingDetails>)m_qtVideoRenderer.get() setMovie:nil];    
+#endif
 
     m_qtVideoRenderer = nil;
 }
@@ -424,11 +462,10 @@ void MediaPlayerPrivateQTKit::createQTMovieLayer()
     ASSERT(supportsAcceleratedRendering());
     
     if (!m_qtVideoLayer) {
-        m_qtVideoLayer = adoptNS([allocQTMovieLayerInstance() init]);
+        m_qtVideoLayer = adoptNS([allocQTMovieLayerInstance() initWithMovie:m_qtMovie.get()]);
         if (!m_qtVideoLayer)
             return;
 
-        [m_qtVideoLayer.get() setMovie:m_qtMovie.get()];
 #ifndef NDEBUG
         [(CALayer *)m_qtVideoLayer.get() setName:@"Video layer"];
 #endif
@@ -442,8 +479,12 @@ void MediaPlayerPrivateQTKit::destroyQTMovieLayer()
     if (!m_qtVideoLayer)
         return;
 
+// this seems unnecessary as upon destruction the movie instance should be disassociated automatically,
+// and there are occasional crashes when doing it
+#if 0
     // disassociate our movie from our instance of QTMovieLayer
     [m_qtVideoLayer.get() setMovie:nil];    
+#endif
     m_qtVideoLayer = nil;
 }
 
@@ -778,10 +819,12 @@ void MediaPlayerPrivateQTKit::setClosedCaptionsVisible(bool closedCaptionsVisibl
     if (metaDataAvailable()) {
         wkQTMovieSetShowClosedCaptions(m_qtMovie.get(), closedCaptionsVisible);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         if (closedCaptionsVisible && m_qtVideoLayer) {
             // Captions will be rendered upside down unless we flag the movie as flipped (again). See <rdar://7408440>.
             [m_qtVideoLayer.get() setGeometryFlipped:YES];
         }
+#endif
     }
 }
 
@@ -794,7 +837,7 @@ void MediaPlayerPrivateQTKit::setRate(float rate)
 
 double MediaPlayerPrivateQTKit::rate() const
 {
-    return m_qtMovie ? [m_qtMovie rate] : 0;
+    return m_qtMovie ? [m_qtMovie.get() rate] : 0;
 }
 
 void MediaPlayerPrivateQTKit::setPreservesPitch(bool preservesPitch)
@@ -831,7 +874,9 @@ static MediaTime maxValueForTimeRanges(NSArray *ranges)
         return MediaTime::zeroTime();
 
     MediaTime max;
-    for (NSValue *value in ranges) {
+    NSEnumerator *enumerator = [ranges objectEnumerator];
+    NSValue *value;
+    while ((value = [enumerator nextObject]) != nil) {
         QTTimeRange range = [value QTTimeRangeValue];
         if (!range.time.timeScale || !range.duration.timeScale)
             continue;
@@ -854,7 +899,7 @@ MediaTime MediaPlayerPrivateQTKit::maxMediaTimeSeekable() const
     if (durationMediaTime().isPositiveInfinite())
         return MediaTime::zeroTime();
 
-    NSArray* seekableRanges = [m_qtMovie availableRanges];
+    NSArray* seekableRanges = [m_qtMovie.get() availableRanges];
 
     return maxValueForTimeRanges(seekableRanges);
 }
@@ -863,9 +908,9 @@ MediaTime MediaPlayerPrivateQTKit::maxMediaTimeLoaded() const
 {
     if (!metaDataAvailable())
         return MediaTime::zeroTime();
-    if ([m_qtMovie respondsToSelector:@selector(loadedRanges)])
-        return maxValueForTimeRanges([m_qtMovie loadedRanges]);
-    return toMediaTime([m_qtMovie maxTimeLoaded]);
+    if ([m_qtMovie.get() respondsToSelector:@selector(loadedRanges)])
+        return maxValueForTimeRanges([m_qtMovie.get() loadedRanges]);
+    return toMediaTime([m_qtMovie.get() maxTimeLoaded]);
 }
 
 bool MediaPlayerPrivateQTKit::didLoadingProgress() const
@@ -888,11 +933,13 @@ unsigned long long MediaPlayerPrivateQTKit::totalBytes() const
 void MediaPlayerPrivateQTKit::cancelLoad()
 {
     LOG(Media, "MediaPlayerPrivateQTKit::cancelLoad(%p)", this);
-    // FIXME: Is there a better way to check for this?
-    if (m_networkState < MediaPlayer::Loading || m_networkState == MediaPlayer::Loaded)
-        return;
     
     tearDownVideoRendering();
+#if ENABLE(VIDEO_TRACK) 
+    clearTracks();
+#endif
+    if (m_qtMovie)
+        [m_qtMovie.get() stop];
     m_qtMovie = nil;
     
     updateStates();
@@ -903,6 +950,7 @@ void MediaPlayerPrivateQTKit::cacheMovieScale()
     NSSize initialSize = NSZeroSize;
     NSSize naturalSize = [[m_qtMovie.get() attributeForKey:QTMovieNaturalSizeAttribute] sizeValue];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     // QTMovieCurrentSizeAttribute is not allowed with instances of QTMovie that have been 
     // opened with QTMovieOpenForPlaybackAttribute, so ask for the display transform attribute instead.
     NSAffineTransform *displayTransform = [m_qtMovie.get() attributeForKey:@"QTMoviePreferredTransformAttribute"];
@@ -912,6 +960,9 @@ void MediaPlayerPrivateQTKit::cacheMovieScale()
         initialSize.width = naturalSize.width;
         initialSize.height = naturalSize.height;
     }
+#else
+    initialSize = [[m_qtMovie.get() attributeForKey:QTMovieCurrentSizeAttribute] sizeValue];
+#endif
 
     if (naturalSize.width)
         m_scaleFactor.setWidth(initialSize.width / naturalSize.width);
@@ -1065,7 +1116,7 @@ long MediaPlayerPrivateQTKit::platformErrorCode() const
     if (!m_qtMovie)
         return 0;
 
-    NSError* error = (NSError*)[m_qtMovie attributeForKey:QTMovieLoadStateErrorAttribute];
+    NSError* error = (NSError*)[m_qtMovie.get() attributeForKey:QTMovieLoadStateErrorAttribute];
     if (!error || ![error isKindOfClass:[NSError class]])
         return 0;
 
@@ -1237,16 +1288,19 @@ static bool shouldRejectMIMEType(const String& type)
 
 static void addFileTypesToCache(NSArray *fileTypes, HashSet<String, ASCIICaseInsensitiveHash> &cache)
 {
-    for (NSString *fileType : fileTypes) {
+    NSEnumerator *enumerator = [fileTypes objectEnumerator];
+    NSString *fileType;
+    while ((fileType = [enumerator nextObject]) != nil) {
         CFStringRef ext = reinterpret_cast<CFStringRef>(fileType);
         RetainPtr<CFStringRef> uti = adoptCF(UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, ext, NULL));
         if (!uti)
             continue;
         RetainPtr<CFStringRef> mime = adoptCF(UTTypeCopyPreferredTagWithClass(uti.get(), kUTTagClassMIMEType));
-        if (shouldRejectMIMEType(mime.get()))
-            continue;
-        if (mime)
+        if (mime) {
+            if (shouldRejectMIMEType(mime.get()))
+                continue;
             cache.add(mime.get());
+        }
 
         // -movieFileTypes: returns both file extensions and OSTypes. The later are surrounded by single
         // quotes, eg. 'MooV', so don't bother looking at those.
@@ -1338,8 +1392,9 @@ HashSet<RefPtr<SecurityOrigin>> MediaPlayerPrivateQTKit::originsInMediaCache(con
 {
     HashSet<RefPtr<SecurityOrigin>> origins;
     NSArray *mediaSites = wkQTGetSitesInMediaDownloadCache();
-    
-    for (NSString *site in mediaSites) {
+    NSEnumerator *enumerator = [mediaSites objectEnumerator];
+    NSString *site;
+    while ((site = [enumerator nextObject]) != nil) {
         URL siteAsURL = URL(URL(), site);
         if (siteAsURL.isValid())
             origins.add(SecurityOrigin::create(siteAsURL));
@@ -1401,7 +1456,7 @@ void MediaPlayerPrivateQTKit::disableUnsupportedTracks()
         QTTrack *track = [tracks objectAtIndex:trackIndex];
         if (!track)
             continue;
-        
+
         // Check to see if the track is disabled already, we should move along.
         // We don't need to re-disable it.
         if (![track isEnabled]) {
@@ -1422,13 +1477,31 @@ void MediaPlayerPrivateQTKit::disableUnsupportedTracks()
             m_hasUnsupportedTracks = true;
         }
 
+#if ENABLE(VIDEO_TRACK)
+        NSNumber *isChapterTrack = (NSNumber*)[track attributeForKey:QTTrackIsChapterTrackAttribute];
+        if (!(isChapterTrack && [isChapterTrack boolValue])) {
+            if ([mediaType isEqualToString:QTMediaTypeVideo]) {
+                RefPtr<VideoTrackPrivateQTKit> videoTrack = VideoTrackPrivateQTKit::create(track);
+                m_videoTracks.append(videoTrack);
+                m_player->addVideoTrack(*videoTrack);
+            }
+            else if ([mediaType isEqualToString:QTMediaTypeSound]) {
+                RefPtr<AudioTrackPrivateQTKit> audioTrack = AudioTrackPrivateQTKit::create(track);
+                m_audioTracks.append(audioTrack);
+                m_player->addAudioTrack(*audioTrack);
+            }
+            else if ([mediaType isEqualToString:QTMediaTypeText] || [mediaType isEqualToString:@"clcp"] || [mediaType isEqualToString:@"sbtl"]) {
+                RefPtr<InbandTextTrackPrivateQTKit> textTrack = InbandTextTrackPrivateQTKit::create(track);
+                m_textTracks.append(textTrack);
+                m_player->addTextTrack(*textTrack);
+            }
+        }
+#endif
+
         // Disable chapter tracks. These are most likely to lead to trouble, as
         // they will be composited under the video tracks, forcing QT to do extra
         // work.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundeclared-selector"
-        QTTrack *chapterTrack = [track performSelector:@selector(chapterlist)];
-#pragma clang diagnostic pop
+        QTTrack *chapterTrack = [track chapterlist];
         if (!chapterTrack)
             continue;
         
@@ -1567,6 +1640,20 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 }
 #endif
 
+#if ENABLE(VIDEO_TRACK)
+void MediaPlayerPrivateQTKit::clearTracks()
+{
+    while (m_videoTracks.size())
+        m_player->removeVideoTrack(*m_videoTracks.takeLast());
+
+    while (m_audioTracks.size())
+        m_player->removeAudioTrack(*m_audioTracks.takeLast());
+
+    while (m_textTracks.size())
+        m_player->removeTextTrack(*m_textTracks.takeLast());
+}
+#endif
+
 } // namespace WebCore
 
 @implementation WebCoreMovieObserver
@@ -1593,6 +1680,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)loadStateChanged:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1602,6 +1693,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)loadedRangesChanged:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1611,6 +1706,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)rateChanged:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1620,6 +1719,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)sizeChanged:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1629,6 +1732,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)timeChanged:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1638,6 +1745,10 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)didEnd:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     if (m_delayCallbacks)
         [self performSelector:_cmd withObject:nil afterDelay:0];
@@ -1647,12 +1758,20 @@ bool MediaPlayerPrivateQTKit::isCurrentPlaybackTargetWireless() const
 
 - (void)newImageAvailable:(NSNotification *)unusedNotification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:nil waitUntilDone:NO];
+        return;
+    }
     UNUSED_PARAM(unusedNotification);
     [self repaint];
 }
 
 - (void)layerHostChanged:(NSNotification *)notification
 {
+    if (![NSThread isMainThread]) {
+        [self performSelectorOnMainThread:_cmd withObject:notification waitUntilDone:NO];
+        return;
+    }
     CALayer* rootLayer = static_cast<CALayer*>([notification object]);
     m_callback->layerHostChanged(rootLayer);
 }

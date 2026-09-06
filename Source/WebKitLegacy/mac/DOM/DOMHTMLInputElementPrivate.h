@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElementPrivate.h>
-#import <WebKitLegacy/DOMHTMLInputElement.h>
+#import <WebKit/DOMHTMLElementPrivate.h>
+#import <WebKit/DOMHTMLInputElement.h>
 
 @class DOMHTMLElement;
 @class DOMNodeList;
@@ -39,7 +39,7 @@
 @property BOOL formNoValidate;
 @property (copy) NSString *formTarget;
 @property unsigned height;
-@property (readonly, strong) DOMHTMLElement *list;
+@property (readonly, retain) DOMHTMLElement *list;
 @property (copy) NSString *max;
 @property (copy) NSString *min;
 @property (copy) NSString *pattern;
@@ -49,7 +49,7 @@
 @property NSTimeInterval valueAsDate;
 @property double valueAsNumber;
 @property unsigned width;
-@property (readonly, strong) DOMNodeList *labels;
+@property (readonly, retain) DOMNodeList *labels;
 @property (copy) NSString *selectionDirection;
 @property BOOL incremental;
 @property BOOL capture;

@@ -28,7 +28,7 @@
 
 namespace WebCore {
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 
 FileMonitor::FileMonitor(const String&, Ref<WorkQueue>&&, WTF::Function<void(FileChangeType)>&&)
 {

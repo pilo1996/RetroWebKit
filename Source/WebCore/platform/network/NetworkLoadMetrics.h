@@ -184,11 +184,11 @@ public:
     std::optional<uint64_t> responseBodyDecodedSize;
 };
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
 WEBCORE_EXPORT void copyTimingData(NSDictionary *timingData, NetworkLoadMetrics&);
 #endif
 
-#if PLATFORM(COCOA) && !HAVE(TIMINGDATAOPTIONS)
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000) && !HAVE(TIMINGDATAOPTIONS)
 WEBCORE_EXPORT void setCollectsTimingData();
 #endif
 

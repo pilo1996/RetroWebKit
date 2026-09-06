@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMNode.h>
+#import <WebKit/DOMNode.h>
 
 @class DOMAbstractView;
 @class DOMAttr;
@@ -55,35 +55,35 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMDocument : DOMNode
-@property (readonly, strong) DOMDocumentType *doctype;
-@property (readonly, strong) DOMImplementation *implementation;
-@property (readonly, strong) DOMElement *documentElement;
+@property (readonly, retain) DOMDocumentType *doctype;
+@property (readonly, retain) DOMImplementation *implementation;
+@property (readonly, retain) DOMElement *documentElement;
 @property (readonly, copy) NSString *inputEncoding WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *xmlEncoding WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *xmlVersion WEBKIT_AVAILABLE_MAC(10_5);
 @property BOOL xmlStandalone WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *documentURI WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMAbstractView *defaultView;
-@property (readonly, strong) DOMStyleSheetList *styleSheets;
+@property (readonly, retain) DOMAbstractView *defaultView;
+@property (readonly, retain) DOMStyleSheetList *styleSheets;
 @property (copy) NSString *title;
 @property (readonly, copy) NSString *referrer;
 @property (readonly, copy) NSString *domain;
 @property (readonly, copy) NSString *URL;
 @property (copy) NSString *cookie;
-@property (strong) DOMHTMLElement *body;
-@property (readonly, strong) DOMHTMLCollection *images;
-@property (readonly, strong) DOMHTMLCollection *applets;
-@property (readonly, strong) DOMHTMLCollection *links;
-@property (readonly, strong) DOMHTMLCollection *forms;
-@property (readonly, strong) DOMHTMLCollection *anchors;
-@property (readonly, copy) NSString *lastModified WEBKIT_AVAILABLE_MAC(10_6);
+@property (retain) DOMHTMLElement *body;
+@property (readonly, retain) DOMHTMLCollection *images;
+@property (readonly, retain) DOMHTMLCollection *applets;
+@property (readonly, retain) DOMHTMLCollection *links;
+@property (readonly, retain) DOMHTMLCollection *forms;
+@property (readonly, retain) DOMHTMLCollection *anchors;
+@property (readonly, copy) NSString *lastModified WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *charset WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *defaultCharset WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *readyState WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *characterSet WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly, copy) NSString *preferredStylesheetSet WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *selectedStylesheetSet WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMElement *activeElement WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, retain) DOMElement *activeElement WEBKIT_AVAILABLE_MAC(10_5);
 
 - (DOMElement *)createElement:(NSString *)tagName;
 - (DOMDocumentFragment *)createDocumentFragment;
@@ -121,14 +121,14 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (DOMCSSStyleDeclaration *)getComputedStyle:(DOMElement *)element pseudoElement:(NSString *)pseudoElement WEBKIT_AVAILABLE_MAC(10_5);
 - (DOMCSSRuleList *)getMatchedCSSRules:(DOMElement *)element pseudoElement:(NSString *)pseudoElement WEBKIT_AVAILABLE_MAC(10_5);
 - (DOMCSSRuleList *)getMatchedCSSRules:(DOMElement *)element pseudoElement:(NSString *)pseudoElement authorOnly:(BOOL)authorOnly WEBKIT_AVAILABLE_MAC(10_5);
-- (DOMNodeList *)getElementsByClassName:(NSString *)classNames WEBKIT_AVAILABLE_MAC(10_6);
-- (BOOL)hasFocus WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMNodeList *)getElementsByClassName:(NSString *)classNames WEBKIT_AVAILABLE_MAC(10_5);
+- (BOOL)hasFocus WEBKIT_AVAILABLE_MAC(10_5);
 #if !TARGET_OS_IPHONE
-- (void)webkitCancelFullScreen WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webkitCancelFullScreen WEBKIT_AVAILABLE_MAC(10_5);
 #endif
 - (DOMElement *)getElementById:(NSString *)elementId;
-- (DOMElement *)querySelector:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
-- (DOMNodeList *)querySelectorAll:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMElement *)querySelector:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_5);
+- (DOMNodeList *)querySelectorAll:(NSString *)selectors WEBKIT_AVAILABLE_MAC(10_5);
 @end
 
 @interface DOMDocument (DOMDocumentDeprecated)
@@ -140,7 +140,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (DOMNodeIterator *)createNodeIterator:(DOMNode *)root :(unsigned)whatToShow :(id <DOMNodeFilter>)filter :(BOOL)expandEntityReferences WEBKIT_DEPRECATED_MAC(10_4, 10_5);
 - (DOMTreeWalker *)createTreeWalker:(DOMNode *)root :(unsigned)whatToShow :(id <DOMNodeFilter>)filter :(BOOL)expandEntityReferences WEBKIT_DEPRECATED_MAC(10_4, 10_5);
 - (DOMCSSStyleDeclaration *)getOverrideStyle:(DOMElement *)element :(NSString *)pseudoElement WEBKIT_DEPRECATED_MAC(10_4, 10_5);
-- (DOMXPathExpression *)createExpression:(NSString *)expression :(id <DOMXPathNSResolver>)resolver WEBKIT_DEPRECATED_MAC(10_5, 10_5);
-- (DOMXPathResult *)evaluate:(NSString *)expression :(DOMNode *)contextNode :(id <DOMXPathNSResolver>)resolver :(unsigned short)type :(DOMXPathResult *)inResult WEBKIT_DEPRECATED_MAC(10_5, 10_5);
+- (DOMXPathExpression *)createExpression:(NSString *)expression :(id <DOMXPathNSResolver>)resolver WEBKIT_DEPRECATED_MAC(10_5, 10_6);
+- (DOMXPathResult *)evaluate:(NSString *)expression :(DOMNode *)contextNode :(id <DOMXPathNSResolver>)resolver :(unsigned short)type :(DOMXPathResult *)inResult WEBKIT_DEPRECATED_MAC(10_5, 10_6);
 - (DOMCSSStyleDeclaration *)getComputedStyle:(DOMElement *)element :(NSString *)pseudoElement WEBKIT_DEPRECATED_MAC(10_4, 10_5);
 @end

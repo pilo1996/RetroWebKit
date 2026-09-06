@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMNode.h>
+#import <WebKit/DOMNode.h>
 
 @class DOMCSSStyleDeclaration;
 @class DOMElement;
@@ -34,6 +34,6 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (readonly, copy) NSString *name;
 @property (readonly) BOOL specified;
 @property (copy) NSString *value;
-@property (readonly, strong) DOMElement *ownerElement;
-@property (readonly, strong) DOMCSSStyleDeclaration *style WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMElement *ownerElement;
+@property (readonly, retain) DOMCSSStyleDeclaration *style WEBKIT_AVAILABLE_MAC(10_5);
 @end

@@ -68,7 +68,7 @@ auto CryptoKey::usages() const -> Vector<CryptoKeyUsage>
     return result;
 }
 
-#if !OS(DARWIN) || PLATFORM(GTK)
+#if !OS(DARWIN) || PLATFORM(GTK) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 Vector<uint8_t> CryptoKey::randomData(size_t size)
 {
     Vector<uint8_t> result(size);

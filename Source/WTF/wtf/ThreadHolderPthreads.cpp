@@ -32,12 +32,29 @@
 #include "config.h"
 #include "ThreadHolder.h"
 
+#include <mutex>
+#include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Threading.h>
 
 namespace WTF {
 
+static std::mutex& threadMapMutex()
+{
+    static NeverDestroyed<std::mutex> mutex;
+    return mutex.get();
+}
+
+static HashMap<ThreadIdentifier, ThreadHolder*>& threadMap()
+{
+    static NeverDestroyed<HashMap<ThreadIdentifier, ThreadHolder*>> map;
+    return map.get();
+}
+
 void ThreadHolder::initializeOnce()
 {
+    threadMapMutex();
+    threadMap();
     threadSpecificKeyCreate(&m_key, destruct);
 }
 
@@ -47,6 +64,16 @@ ThreadHolder* ThreadHolder::current()
     return static_cast<ThreadHolder*>(threadSpecificGet(m_key));
 }
 
+// FIXME: Remove this workaround code once <rdar://problem/31793213> is fixed.
+RefPtr<Thread> ThreadHolder::get(ThreadIdentifier id)
+{
+    std::unique_lock<std::mutex> locker(threadMapMutex());
+    ThreadHolder* holder = threadMap().get(id);
+    if (holder)
+        return &holder->thread();
+    return nullptr;
+}
+
 void ThreadHolder::initialize(Thread& thread)
 {
     if (!current()) {
@@ -54,7 +81,14 @@ void ThreadHolder::initialize(Thread& thread)
         // Having this release assert here means that we will catch "didn't call
         // WTF::initializeThreading() soon enough" bugs in release mode.
         ASSERT(m_key != InvalidThreadSpecificKey);
-        threadSpecificSet(m_key, new ThreadHolder(thread));
+        // FIXME: Remove this workaround code once <rdar://problem/31793213> is fixed.
+        auto* holder = new ThreadHolder(thread);
+        threadSpecificSet(m_key, holder);
+
+        {
+            std::unique_lock<std::mutex> locker(threadMapMutex());
+            threadMap().add(thread.id(), holder);
+        }
     }
 }
 
@@ -64,6 +98,11 @@ void ThreadHolder::destruct(void* data)
     ASSERT(threadIdentifierData);
 
     if (threadIdentifierData->m_isDestroyedOnce) {
+        {
+            std::unique_lock<std::mutex> locker(threadMapMutex());
+            ASSERT(threadMap().contains(threadIdentifierData->m_thread->id()));
+            threadMap().remove(threadIdentifierData->m_thread->id());
+        }
         delete threadIdentifierData;
         return;
     }

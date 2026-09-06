@@ -207,7 +207,7 @@ void Path::transform(const AffineTransform& transform)
         return;
 
     CGAffineTransform transformCG = transform;
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     CGMutablePathRef path = CGPathCreateMutable();
     CGPathAddPath(path, &transformCG, m_path);
 #else
@@ -224,7 +224,7 @@ FloatRect Path::boundingRect() const
 
     // CGPathGetBoundingBox includes the path's control points, CGPathGetPathBoundingBox does not.
 
-    CGRect bound = CGPathGetPathBoundingBox(m_path);
+    CGRect bound = CGPathGetGeometricBoundingBox(m_path);
     return CGRectIsNull(bound) ? CGRectZero : bound;
 }
 
@@ -286,7 +286,7 @@ void Path::addArcTo(const FloatPoint& p1, const FloatPoint& p2, float radius)
 
 void Path::platformAddPathForRoundedRect(const FloatRect& rect, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius)
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
     bool equalWidths = (topLeftRadius.width() == topRightRadius.width() && topRightRadius.width() == bottomLeftRadius.width() && bottomLeftRadius.width() == bottomRightRadius.width());
     bool equalHeights = (topLeftRadius.height() == bottomLeftRadius.height() && bottomLeftRadius.height() == topRightRadius.height() && topRightRadius.height() == bottomRightRadius.height());
 
@@ -424,7 +424,7 @@ void Path::apply(const PathApplierFunction& function) const
     if (isNull())
         return;
 
-    CGPathApply(m_path, (void*)&function, CGPathApplierToPathApplier);
+    CGPathApply(m_path, const_cast<void*>((const void *)&function), CGPathApplierToPathApplier);
 }
 
 }

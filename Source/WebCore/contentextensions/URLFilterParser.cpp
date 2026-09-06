@@ -388,6 +388,9 @@ String URLFilterParser::statusString(ParseStatus status)
         return "Internal error in YARR.";
     case InvalidQuantifier:
         return "Arbitrary atom repetitions are not supported.";
+    default:
+        ASSERT_NOT_REACHED();
+        return "";
     }
 }
     

@@ -538,7 +538,7 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo, const LayoutPo
     adjustedOffset.moveBy(location());
     path.translate(toFloatSize(adjustedOffset));
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     bool needsRepaint;
     paintInfo.context().drawFocusRing(path, page().focusController().timeSinceFocusWasSet(), needsRepaint);
     if (needsRepaint)

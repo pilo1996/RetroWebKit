@@ -398,6 +398,8 @@
         return @"visible";
     case WebCore::Document::VisibilityState::Prerender:
         return @"prerender";
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
 }
 
@@ -587,7 +589,7 @@ static RefPtr<WebCore::XPathNSResolver> wrap(id <DOMXPathNSResolver> resolver)
     if (!resolver)
         return nullptr;
     if ([resolver isMemberOfClass:[DOMNativeXPathNSResolver class]])
-        return core(static_cast<DOMNativeXPathNSResolver *>(resolver));
+        return core(reinterpret_cast<DOMNativeXPathNSResolver *>(resolver));
     return DOMCustomXPathNSResolver::create(resolver);
 }
 

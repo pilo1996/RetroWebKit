@@ -34,7 +34,7 @@ namespace WTF {
 class RandomDevice {
     WTF_MAKE_NONCOPYABLE(RandomDevice);
 public:
-#if OS(DARWIN) || OS(WINDOWS)
+#if (OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) || OS(WINDOWS)
     RandomDevice() = default;
 #else
     RandomDevice();
@@ -47,7 +47,7 @@ public:
     void cryptographicallyRandomValues(unsigned char* buffer, size_t length);
 
 private:
-#if OS(DARWIN) || OS(WINDOWS)
+#if (OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) || OS(WINDOWS)
 #elif OS(UNIX)
     int m_fd { -1 };
 #else

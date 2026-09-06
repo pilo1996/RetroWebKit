@@ -35,18 +35,24 @@ namespace Bindings {
 class ObjcClass : public Class
 {
 protected:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ObjcClass (ClassStructPtr aClass); // Use classForIsA to create an ObjcClass.
     
 public:
     // Return the cached ObjC of the specified name.
     static ObjcClass *classForIsA(ClassStructPtr);
+#pragma GCC diagnostic pop
     
     virtual Method* methodNamed(PropertyName, Instance*) const;
     virtual Field *fieldNamed(PropertyName, Instance*) const;
 
     virtual JSValue fallbackObject(ExecState*, Instance*, PropertyName);
     
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ClassStructPtr isa() { return _isa; }
+#pragma GCC diagnostic pop
     
 private:
     ClassStructPtr _isa;

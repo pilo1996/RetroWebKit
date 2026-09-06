@@ -32,7 +32,7 @@
 #import <WebCore/DataDetectorsCoreSPI.h>
 #import <wtf/SoftLinking.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -43,7 +43,13 @@
 
 #else // !USE(APPLE_INTERNAL_SDK)
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 @interface DDActionContext : NSObject <NSCopying, NSSecureCoding>
+#else
+@interface DDActionContext : NSObject <NSCopying>
+#endif
 
 @property NSRect highlightFrame;
 @property (retain) NSArray *allResults;
@@ -57,9 +63,12 @@
 
 @end
 
+#endif
+
 @interface DDActionsManager : NSObject
 
 + (DDActionsManager *)sharedManager;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 - (NSArray *)menuItemsForResult:(DDResultRef)result actionContext:(DDActionContext *)context;
 - (NSArray *)menuItemsForTargetURL:(NSString *)targetURL actionContext:(DDActionContext *)context;
 - (void)requestBubbleClosureUnanchorOnFailure:(BOOL)unanchorOnFailure;
@@ -70,6 +79,7 @@
 - (BOOL)hasActionsForResult:(DDResultRef)result actionContext:(DDActionContext *)actionContext;
 
 - (NSArray *)menuItemsForValue:(NSString *)value type:(CFStringRef)type service:(NSString *)service context:(DDActionContext *)context;
+#endif
 
 @end
 
@@ -89,8 +99,10 @@ enum {
 
 #endif // !USE(APPLE_INTERNAL_SDK)
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 typedef struct __DDHighlight *DDHighlightRef;
 typedef NSUInteger DDHighlightStyle;
+#endif
 
 @interface DDAction : NSObject
 
@@ -107,10 +119,12 @@ SOFT_LINK_CLASS_OPTIONAL(DataDetectors, DDActionsManager)
 
 SOFT_LINK_CONSTANT(DataDetectorsCore, DDBinderPhoneNumberKey, CFStringRef)
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 SOFT_LINK(DataDetectors, DDHighlightCreateWithRectsInVisibleRectWithStyleAndDirection, DDHighlightRef, (CFAllocatorRef allocator, CGRect* rects, CFIndex count, CGRect globalVisibleRect, DDHighlightStyle style, Boolean withArrow, NSWritingDirection writingDirection, Boolean endsWithEOL, Boolean flipped), (allocator, rects, count, globalVisibleRect, style, withArrow, writingDirection, endsWithEOL, flipped))
 SOFT_LINK(DataDetectors, DDHighlightGetLayerWithContext, CGLayerRef, (DDHighlightRef highlight, CGContextRef context), (highlight, context))
 SOFT_LINK(DataDetectors, DDHighlightGetBoundingRect, CGRect, (DDHighlightRef highlight), (highlight))
 SOFT_LINK(DataDetectors, DDHighlightPointIsOnHighlight, Boolean, (DDHighlightRef highlight, CGPoint point, Boolean* onButton), (highlight, point, onButton))
+#endif
 
 #endif
 

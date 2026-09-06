@@ -52,20 +52,18 @@ bool usesTestModeFocusRingColor()
 
 static RGBA32 makeRGBAFromNSColor(NSColor *c)
 {
-    CGFloat redComponent;
-    CGFloat greenComponent;
-    CGFloat blueComponent;
-    CGFloat alpha;
+    CGFloat comps[4];
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     NSColor *rgbColor = [c colorUsingColorSpace:[NSColorSpace sRGBColorSpace]];
     if (!rgbColor)
         return makeRGBA(0, 0, 0, 0);
 
-    [rgbColor getRed:&redComponent green:&greenComponent blue:&blueComponent alpha:&alpha];
+    ASSERT([rgbColor numberOfComponents] == 4);
+    [rgbColor getComponents:comps];
     END_BLOCK_OBJC_EXCEPTIONS;
 
-    return makeRGBA(255 * redComponent, 255 * greenComponent, 255 * blueComponent, 255 * alpha);
+    return makeRGBA(255 * comps[0], 255 * comps[1], 255 * comps[2], 255 * comps[3]);
 }
 
 Color colorFromNSColor(NSColor *c)
@@ -77,17 +75,20 @@ NSColor *nsColor(const Color& color)
 {
     if (!color.isValid()) {
         // Need this to avoid returning nil because cachedRGBAValues will default to 0.
-        static NeverDestroyed<NSColor *> clearColor = [[NSColor colorWithSRGBRed:0 green:0 blue:0 alpha:0] retain];
+        CGFloat comps[4] = {0, 0, 0, 0};
+        static NeverDestroyed<NSColor *> clearColor = [[NSColor colorWithColorSpace:[NSColorSpace sRGBColorSpace] components:comps count:4] retain];
         return clearColor;
     }
 
     if (Color::isBlackColor(color)) {
-        static NeverDestroyed<NSColor *> blackColor = [[NSColor colorWithSRGBRed:0 green:0 blue:0 alpha:1] retain];
+        CGFloat comps[4] = {0, 0, 0, 1};
+        static NeverDestroyed<NSColor *> blackColor = [[NSColor colorWithColorSpace:[NSColorSpace sRGBColorSpace] components:comps count:4] retain];
         return blackColor;
     }
 
     if (Color::isWhiteColor(color)) {
-        static NeverDestroyed<NSColor *> whiteColor = [[NSColor colorWithSRGBRed:1 green:1 blue:1 alpha:1] retain];
+        CGFloat comps[4] = {1, 1, 1, 1};
+        static NeverDestroyed<NSColor *> whiteColor = [[NSColor colorWithColorSpace:[NSColorSpace sRGBColorSpace] components:comps count:4] retain];
         return whiteColor;
     }
 
@@ -101,7 +102,11 @@ NSColor *nsColor(const Color& color)
             return cachedColors[i].get();
     }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     NSColor *result = [NSColor colorWithCGColor:cachedCGColor(color)];
+#else
+    NSColor *result = [NSColor colorWithCIColor:[CIColor colorWithCGColor:cachedCGColor(color)]];
+#endif
 
     static int cursor;
     cachedRGBAValues[cursor] = hash;

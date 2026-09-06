@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMDocumentFragment.h>
+#import <WebKit/DOMDocumentFragment.h>
 
 namespace WebCore {
 class DocumentFragment;

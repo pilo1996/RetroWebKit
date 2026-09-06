@@ -284,6 +284,9 @@ RetainPtr<CTFontRef> preparePlatformFont(CTFontRef, const FontDescription&, cons
 SynthesisPair computeNecessarySynthesis(CTFontRef, const FontDescription&, bool isPlatformFont = false);
 RetainPtr<CTFontRef> platformFontWithFamilySpecialCase(const AtomicString& family, FontSelectionRequest, float size);
 RetainPtr<CTFontRef> platformFontWithFamily(const AtomicString& family, FontSelectionRequest, TextRenderingMode, float size);
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090
+RetainPtr<CTFontRef> platformLookupFallbackFont(CTFontRef, const AtomicString& locale, const UChar* characters, unsigned length);
+#endif
 bool requiresCustomFallbackFont(UChar32 character);
 FontSelectionCapabilities capabilitiesForFontDescriptor(CTFontDescriptorRef);
 

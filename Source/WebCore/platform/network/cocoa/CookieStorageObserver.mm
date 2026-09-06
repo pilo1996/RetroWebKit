@@ -26,8 +26,13 @@
 #import "config.h"
 #import "CookieStorageObserver.h"
 
+#if !((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000))
+#import "CFNetworkSPI.h"
+#endif
 #import "NSURLConnectionSPI.h"
 #import <wtf/MainThread.h>
+
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
 
 @interface WebNSHTTPCookieStorageInternal : NSObject {
 @public
@@ -41,14 +46,14 @@
 @interface WebCookieObserverAdapter : NSObject {
     WebCore::CookieStorageObserver* observer;
 }
-- (instancetype)initWithObserver:(WebCore::CookieStorageObserver&)theObserver;
+- (id)initWithObserver:(WebCore::CookieStorageObserver&)theObserver;
 - (void)cookiesChangedNotificationHandler:(NSNotification *)notification;
 
 @end
 
 @implementation WebCookieObserverAdapter
 
-- (instancetype)initWithObserver:(WebCore::CookieStorageObserver&)theObserver
+- (id)initWithObserver:(WebCore::CookieStorageObserver&)theObserver
 {
     self = [super init];
     if (!self)
@@ -67,7 +72,19 @@
 
 @end
 
+#endif
+
 namespace WebCore {
+
+#if !((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000))
+
+static void cookiesChanged(CFHTTPCookieStorageRef, void* context)
+{
+    ASSERT(!isMainThread());
+    static_cast<CookieStorageObserver*>(context)->cookiesDidChange();
+}
+
+#endif
 
 RefPtr<CookieStorageObserver> CookieStorageObserver::create(NSHTTPCookieStorage *cookieStorage)
 {
@@ -86,7 +103,9 @@ CookieStorageObserver::~CookieStorageObserver()
     ASSERT(isMainThread());
 
     if (m_cookieChangeCallback) {
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
         ASSERT(m_observerAdapter);
+#endif
         stopObserving();
     }
 }
@@ -95,9 +114,12 @@ void CookieStorageObserver::startObserving(WTF::Function<void()>&& callback)
 {
     ASSERT(isMainThread());
     ASSERT(!m_cookieChangeCallback);
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
     ASSERT(!m_observerAdapter);
+#endif
 
     m_cookieChangeCallback = WTFMove(callback);
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
     m_observerAdapter = adoptNS([[WebCookieObserverAdapter alloc] initWithObserver:*this]);
 
     if (!m_hasRegisteredInternalsForNotifications) {
@@ -112,25 +134,34 @@ void CookieStorageObserver::startObserving(WTF::Function<void()>&& callback)
     }
 
     [[NSNotificationCenter defaultCenter] addObserver:m_observerAdapter.get() selector:@selector(cookiesChangedNotificationHandler:) name:NSHTTPCookieManagerCookiesChangedNotification object:m_cookieStorage.get()];
+#else
+    CFHTTPCookieStorageAddObserver([m_cookieStorage.get() _cookieStorage], [NSURLConnection resourceLoaderRunLoop], kCFRunLoopCommonModes, cookiesChanged, this);
+    CFHTTPCookieStorageScheduleWithRunLoop([m_cookieStorage.get() _cookieStorage], [NSURLConnection resourceLoaderRunLoop], kCFRunLoopCommonModes);
+#endif
 }
 
 void CookieStorageObserver::stopObserving()
 {
     ASSERT(isMainThread());
     ASSERT(m_cookieChangeCallback);
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
     ASSERT(m_observerAdapter);
 
     [[NSNotificationCenter defaultCenter] removeObserver:m_observerAdapter.get() name:NSHTTPCookieManagerCookiesChangedNotification object:nil];
 
-    m_cookieChangeCallback = nullptr;
     m_observerAdapter = nil;
+#else
+    CFHTTPCookieStorageRemoveObserver([m_cookieStorage.get() _cookieStorage], [NSURLConnection resourceLoaderRunLoop], kCFRunLoopCommonModes, cookiesChanged, this);
+#endif
+    m_cookieChangeCallback = nullptr;
 }
 
 void CookieStorageObserver::cookiesDidChange()
 {
-    callOnMainThread([protectedThis = makeRef(*this), this] {
-        if (m_cookieChangeCallback)
-            m_cookieChangeCallback();
+    RefPtr<CookieStorageObserver> protectedThis = this;
+    callOnMainThread([protectedThis] {
+        if (protectedThis->m_cookieChangeCallback)
+            protectedThis->m_cookieChangeCallback();
     });
 }
 

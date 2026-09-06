@@ -50,7 +50,7 @@
     @constant WebNavigationTypeOther Navigation is taking place for some other reason.
 */
 
-typedef NS_ENUM(NSInteger, WebNavigationType) {
+enum {
     WebNavigationTypeLinkClicked,
     WebNavigationTypeFormSubmitted,
     WebNavigationTypeBackForward,
@@ -58,6 +58,7 @@ typedef NS_ENUM(NSInteger, WebNavigationType) {
     WebNavigationTypeFormResubmitted,
     WebNavigationTypeOther
 };
+typedef NSInteger WebNavigationType;
 
 extern NSString *WebActionNavigationTypeKey; // NSNumber (WebNavigationType)
 extern NSString *WebActionElementKey; // NSDictionary of element info

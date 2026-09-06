@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMCSSPrimitiveValue;
 #if !TARGET_OS_IPHONE
@@ -34,10 +34,10 @@ typedef struct CGColor* CGColorRef;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMRGBColor : DOMObject
-@property (readonly, strong) DOMCSSPrimitiveValue *red;
-@property (readonly, strong) DOMCSSPrimitiveValue *green;
-@property (readonly, strong) DOMCSSPrimitiveValue *blue;
-@property (readonly, strong) DOMCSSPrimitiveValue *alpha;
+@property (readonly, retain) DOMCSSPrimitiveValue *red;
+@property (readonly, retain) DOMCSSPrimitiveValue *green;
+@property (readonly, retain) DOMCSSPrimitiveValue *blue;
+@property (readonly, retain) DOMCSSPrimitiveValue *alpha;
 #if !TARGET_OS_IPHONE
 @property (readonly, copy) NSColor *color WEBKIT_AVAILABLE_MAC(10_5);
 #else

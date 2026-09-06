@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebBasePluginPackage.h>
-#import <WebKitLegacy/WebPluginContainerCheck.h>
+#import <WebKit/WebBasePluginPackage.h>
+#import <WebKit/WebPluginContainerCheck.h>
 
 @class WebFrame;
 @class WebHTMLView;

@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMMediaError.h>
+#import <WebKit/DOMMediaError.h>
 
 namespace WebCore {
 class MediaError;

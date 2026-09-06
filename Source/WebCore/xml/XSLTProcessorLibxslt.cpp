@@ -53,6 +53,8 @@
 #if OS(DARWIN) && !PLATFORM(GTK)
 #include <wtf/SoftLinking.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 SOFT_LINK_LIBRARY(libxslt);
 SOFT_LINK(libxslt, xsltFreeStylesheet, void, (xsltStylesheetPtr sheet), (sheet))
 SOFT_LINK(libxslt, xsltFreeTransformContext, void, (xsltTransformContextPtr ctxt), (ctxt))
@@ -68,6 +70,7 @@ SOFT_LINK(libxslt, xsltFreeSecurityPrefs, void, (xsltSecurityPrefsPtr sec), (sec
 SOFT_LINK(libxslt, xsltSetSecurityPrefs, int, (xsltSecurityPrefsPtr sec, xsltSecurityOption option, xsltSecurityCheck func), (sec, option, func))
 SOFT_LINK(libxslt, xsltSetCtxtSecurityPrefs, int, (xsltSecurityPrefsPtr sec, xsltTransformContextPtr ctxt), (sec, ctxt))
 SOFT_LINK(libxslt, xsltSecurityForbid, int, (xsltSecurityPrefsPtr sec, xsltTransformContextPtr ctxt, const char* value), (sec, ctxt, value))
+#pragma GCC diagnostic pop
 
 #endif
 
@@ -243,8 +246,8 @@ static void freeXsltParamArray(const char** params)
         return;
 
     while (*temp) {
-        fastFree((void*)*(temp++));
-        fastFree((void*)*(temp++));
+        fastFree(const_cast<char*>(*(temp++)));
+        fastFree(const_cast<char*>(*(temp++)));
     }
     fastFree(params);
 }
@@ -317,7 +320,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
     xmlChar* origMethod = sheet->method;
     if (!origMethod && mimeType == "text/html")
-        sheet->method = (xmlChar*)"html";
+        sheet->method = const_cast<xmlChar*>((const xmlChar*)"html");
 
     bool success = false;
     bool shouldFreeSourceDoc = false;
@@ -361,7 +364,7 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
 
         if ((success = saveResultToString(resultDoc, sheet, resultString))) {
             mimeType = resultMIMEType(resultDoc, sheet);
-            resultEncoding = (char*)resultDoc->encoding;
+            resultEncoding = (const char*)resultDoc->encoding;
         }
         xmlFreeDoc(resultDoc);
     }

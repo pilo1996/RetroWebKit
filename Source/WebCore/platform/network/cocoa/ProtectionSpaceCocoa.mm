@@ -26,11 +26,24 @@
 #import "config.h"
 #import "ProtectionSpaceCocoa.h"
 
-#if USE(CFURLCONNECTION)
+#if USE(CFURLCONNECTION) || (!PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+#import "CFNetworkSPI.h"
+#import <wtf/SoftLinking.h>
+
 @interface NSURLProtectionSpace (WebDetails)
 - (CFURLProtectionSpaceRef) _CFURLProtectionSpace;
 - (id)_initWithCFURLProtectionSpace:(CFURLProtectionSpaceRef)cfProtSpace;
 @end
+
+SOFT_LINK_FRAMEWORK_IN_UMBRELLA(CoreServices, CFNetwork)
+SOFT_LINK(CFNetwork, CFURLProtectionSpaceGetDistinguishedNames, CFArrayRef, (CFURLProtectionSpaceRef protectionSapce), (protectionSapce))
+SOFT_LINK(CFNetwork, CFURLProtectionSpaceGetServerTrust, SecTrustRef, (CFURLProtectionSpaceRef protectionSapce), (protectionSapce))
+#endif
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+// There is no constant in headers, but NTLM and Negotiate are supported.
+NSString * const NSURLAuthenticationMethodNTLM = @"NSURLAuthenticationMethodNTLM";
+NSString * const NSURLAuthenticationMethodNegotiate = @"NSURLAuthenticationMethodNegotiate";
 #endif
 
 namespace WebCore {
@@ -202,7 +215,11 @@ bool ProtectionSpace::receivesCredentialSecurely() const
 
 bool ProtectionSpace::encodingRequiresPlatformData(NSURLProtectionSpace *space)
 {
-    return space.distinguishedNames || space.serverTrust;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    return [space distinguishedNames] || [space serverTrust];
+#else
+    return CFURLProtectionSpaceGetDistinguishedNames([space _CFURLProtectionSpace]) || CFURLProtectionSpaceGetServerTrust([space _CFURLProtectionSpace]);
+#endif
 }
 
 } // namespace WebCore

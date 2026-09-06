@@ -2146,7 +2146,7 @@ macro loadWithStructureCheck(operand, slowPath)
 end
 
 macro getProperty()
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     loadPropertyAtVariableOffset(t1, t0, t2)
     valueProfile(t2, 7, t0)
     loadisFromInstruction(1, t0)
@@ -2163,7 +2163,7 @@ macro getGlobalVar(tdzCheckIfNecessary)
 end
 
 macro getClosureVar()
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     loadq JSEnvironmentRecord_variables[t0, t1, 8], t0
     valueProfile(t0, 7, t1)
     loadisFromInstruction(1, t1)
@@ -2236,7 +2236,7 @@ _llint_op_get_from_scope:
 macro putProperty()
     loadisFromInstruction(3, t1)
     loadConstantOrVariable(t1, t2)
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     storePropertyAtVariableOffset(t1, t0, t2)
 end
 
@@ -2252,7 +2252,7 @@ end
 macro putClosureVar()
     loadisFromInstruction(3, t1)
     loadConstantOrVariable(t1, t2)
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     storeq t2, JSEnvironmentRecord_variables[t0, t1, 8]
 end
 

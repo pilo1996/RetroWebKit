@@ -28,8 +28,11 @@
 #if !USE(CFURLCONNECTION)
 
 #include "WebCoreResourceHandleAsDelegate.h"
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include <dispatch/dispatch.h>
+#endif
 #include <wtf/RetainPtr.h>
+#include "EmptyProtocolDefinitions.h"
 
 namespace WebCore {
 class ResourceHandle;
@@ -39,7 +42,11 @@ class ResourceHandle;
     WebCore::ResourceHandle* m_handle;
 
     // Synchronous delegates on operation queue wait until main thread sends an asynchronous response.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_t m_semaphore;
+#else
+    // FIXME: not supported yet on 10.5 and 10.6
+#endif
     RetainPtr<NSURLRequest> m_requestResult;
     RetainPtr<NSCachedURLResponse> m_cachedResponseResult;
     BOOL m_boolResult;

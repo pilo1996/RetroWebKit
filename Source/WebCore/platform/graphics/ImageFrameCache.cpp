@@ -290,6 +290,7 @@ void ImageFrameCache::startAsyncDecodingQueue()
                 LOG(Images, "ImageFrameCache::%s - %p - url: %s [frame %ld has been decoded]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
             else {
                 LOG(Images, "ImageFrameCache::%s - %p - url: %s [decoding for frame %ld has failed]", __FUNCTION__, protectedThis.ptr(), sourceURL.utf8().data(), frameRequest.index);
+                protectedThis->m_frameCommitQueue.removeFirst();
                 continue;
             }
 

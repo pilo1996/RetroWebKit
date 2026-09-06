@@ -24,13 +24,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMCore.h>
-#import <WebKitLegacy/DOMCSS.h>
-#import <WebKitLegacy/DOMExtensions.h>
-#import <WebKitLegacy/DOMEvents.h>
-#import <WebKitLegacy/DOMHTML.h>
-#import <WebKitLegacy/DOMRanges.h>
-#import <WebKitLegacy/DOMStylesheets.h>
-#import <WebKitLegacy/DOMTraversal.h>
-#import <WebKitLegacy/DOMViews.h>
-#import <WebKitLegacy/DOMXPath.h>
+#import <WebKit/DOMCore.h>
+#import <WebKit/DOMCSS.h>
+#import <WebKit/DOMExtensions.h>
+#import <WebKit/DOMEvents.h>
+#import <WebKit/DOMHTML.h>
+#import <WebKit/DOMRanges.h>
+#import <WebKit/DOMStylesheets.h>
+#import <WebKit/DOMTraversal.h>
+#import <WebKit/DOMViews.h>
+#import <WebKit/DOMXPath.h>

@@ -548,8 +548,8 @@ RefPtr<XMLParserContext> XMLParserContext::createMemoryParser(xmlSAXHandlerPtr h
     parser->sax2 = 1;
     parser->instate = XML_PARSER_CONTENT; // We are parsing a CONTENT
     parser->depth = 0;
-    parser->str_xml = xmlDictLookup(parser->dict, BAD_CAST "xml", 3);
-    parser->str_xmlns = xmlDictLookup(parser->dict, BAD_CAST "xmlns", 5);
+    parser->str_xml = xmlDictLookup(parser->dict, (const xmlChar *) "xml", 3);
+    parser->str_xmlns = xmlDictLookup(parser->dict, (const xmlChar *) "xmlns", 5);
     parser->str_xml_ns = xmlDictLookup(parser->dict, XML_XML_NAMESPACE, 36);
     parser->_private = userData;
 
@@ -742,12 +742,12 @@ static inline bool handleElementAttributes(Vector<Attribute>& prefixedAttributes
 // expansion for all entities containing elements.
 static inline bool hackAroundLibXMLEntityParsingBug()
 {
-#if LIBXML_VERSION >= 20704
-    // This bug has been fixed in libxml 2.7.4.
-    return false;
-#else
-    return true;
-#endif
+    static int libxmlVersion = atoi(xmlParserVersion);
+    if (libxmlVersion >= 20704)
+        // This bug has been fixed in libxml 2.7.4.
+        return false;
+    else
+        return true;
 }
 
 void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlChar* xmlPrefix, const xmlChar* xmlURI, int numNamespaces, const xmlChar** libxmlNamespaces, int numAttributes, int numDefaulted, const xmlChar** libxmlAttributes)
@@ -1051,13 +1051,12 @@ static inline XMLDocumentParser* getParser(void* closure)
 // Otherwise libxml seems to call all the SAX callbacks twice for any replaced entity.
 static inline bool hackAroundLibXMLEntityBug(void* closure)
 {
-#if LIBXML_VERSION >= 20627
-    // This bug has been fixed in libxml 2.6.27.
-    UNUSED_PARAM(closure);
-    return false;
-#else
-    return static_cast<xmlParserCtxtPtr>(closure)->node;
-#endif
+    static int libxmlVersion = atoi(xmlParserVersion);
+    if (libxmlVersion >= 20627)
+        // This bug has been fixed in libxml 2.6.27.
+        return false;
+    else
+        return static_cast<xmlParserCtxtPtr>(closure)->node;
 }
 
 static void startElementNsHandler(void* closure, const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri, int numNamespaces, const xmlChar** namespaces, int numAttributes, int numDefaulted, const xmlChar** libxmlAttributes)

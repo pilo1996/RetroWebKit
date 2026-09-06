@@ -56,6 +56,11 @@ void MockGamepadProvider::stopMonitoringGamepads(GamepadProviderClient& client)
     m_clients.remove(&client);
 }
 
+const Vector<PlatformGamepad*>& MockGamepadProvider::platformGamepads()
+{
+    return m_connectedGamepadVector;
+}
+
 void MockGamepadProvider::setMockGamepadDetails(unsigned index, const String& gamepadID, unsigned axisCount, unsigned buttonCount)
 {
     if (index >= m_mockGamepadVector.size())

@@ -2233,6 +2233,8 @@ void FrameLoader::checkLoadCompleteForThisFrame()
 {
     ASSERT(m_client.hasWebView());
 
+    const Settings& settings = m_frame.settings();
+
     switch (m_state) {
         case FrameStateProvisional: {
             // FIXME: Prohibiting any provisional load failures from being sent to clients
@@ -2315,12 +2317,14 @@ void FrameLoader::checkLoadCompleteForThisFrame()
             if (m_stateMachine.creatingInitialEmptyDocument() || !m_stateMachine.committedFirstRealDocumentLoad())
                 return;
 
-            m_progressTracker->progressCompleted();
             Page* page = m_frame.page();
-            if (page) {
-                if (m_frame.isMainFrame()) {
-                    TracePoint(MainResourceLoadDidEnd);
-                    page->didFinishLoad();
+            if (!settings.needsDidFinishLoadOrderQuirk()) {
+                m_progressTracker->progressCompleted();
+                if (page) {
+                    if (m_frame.isMainFrame()) {
+                        TracePoint(MainResourceLoadDidEnd);
+                        page->didFinishLoad();
+                    }
                 }
             }
 
@@ -2346,6 +2350,16 @@ void FrameLoader::checkLoadCompleteForThisFrame()
 #endif
                 m_client.dispatchDidFinishLoad();
                 loadingEvent = AXObjectCache::AXLoadingFinished;
+            }
+
+            if (settings.needsDidFinishLoadOrderQuirk()) {
+                m_progressTracker->progressCompleted();
+                if (page) {
+                    if (m_frame.isMainFrame()) {
+                        TracePoint(MainResourceLoadDidEnd);
+                        page->didFinishLoad();
+                    }
+                }
             }
 
             // Notify accessibility.

@@ -90,17 +90,33 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText, Ma
 {
     RefPtr<Range> range = selectedRange();
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     // FIXME: How can this hard-coded pasteboard name be right, given that the passed-in pasteboard has a name?
     client()->setInsertionPasteboard(NSGeneralPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 
     bool chosePlainText;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RefPtr<DocumentFragment> fragment = webContentFromPasteboard(*pasteboard, *range, allowPlainText, chosePlainText);
 
     if (fragment && shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
         pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
+#else
+    // Mail is ignoring the frament passed to the delegate and creates a new one.
+    // We want to avoid creating the fragment twice.
+    if (MacApplication::isAppleMail()) {
+        if (client() && client()->shouldInsertNode(nullptr, range.get(), EditorInsertAction::Pasted)) {
+            RefPtr<DocumentFragment> fragment = webContentFromPasteboard(*pasteboard, *range, allowPlainText, chosePlainText);
+            if (fragment)
+                pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
+        }
+    } else {
+        RefPtr<DocumentFragment> fragment = webContentFromPasteboard(*pasteboard, *range, allowPlainText, chosePlainText);
+        if (fragment && shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
+            pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
+    }
+#endif
 
     client()->setInsertionPasteboard(String());
 }
@@ -120,11 +136,11 @@ void Editor::takeFindStringFromSelection()
 
     Vector<String> types;
     types.append(String(NSStringPboardType));
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     platformStrategies()->pasteboardStrategy()->setTypes(types, NSFindPboard);
     platformStrategies()->pasteboardStrategy()->setStringForType(m_frame.displayStringModifiedByEncoding(selectedTextForDataTransfer()), NSStringPboardType, NSFindPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 }
 
 void Editor::readSelectionFromPasteboard(const String& pasteboardName, MailBlockquoteHandling mailBlockquoteHandling)
@@ -178,11 +194,11 @@ void Editor::replaceNodeFromPasteboard(Node* node, const String& pasteboardName)
         return;
     }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     // FIXME: How can this hard-coded pasteboard name be right, given that the passed-in pasteboard has a name?
     client()->setInsertionPasteboard(NSGeneralPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 
     bool chosePlainText;
     if (RefPtr<DocumentFragment> fragment = webContentFromPasteboard(pasteboard, *range, true, chosePlainText)) {
@@ -420,7 +436,7 @@ bool Editor::WebContentReader::readRTFD(SharedBuffer& buffer)
     if (frame.settings().preferMIMETypeForImages())
         return false;
 
-    fragment = frame.editor().createFragmentAndAddResources(adoptNS([[NSAttributedString alloc] initWithRTFD:buffer.createNSData().get() documentAttributes:nullptr]).get());
+    fragment = frame.editor().createFragmentAndAddResources((NSAttributedString *)adoptNS([[NSAttributedString alloc] initWithRTFD:buffer.createNSData().get() documentAttributes:nullptr]).get());
     return fragment;
 }
 
@@ -429,7 +445,7 @@ bool Editor::WebContentReader::readRTF(SharedBuffer& buffer)
     if (frame.settings().preferMIMETypeForImages())
         return false;
 
-    fragment = frame.editor().createFragmentAndAddResources(adoptNS([[NSAttributedString alloc] initWithRTF:buffer.createNSData().get() documentAttributes:nullptr]).get());
+    fragment = frame.editor().createFragmentAndAddResources((NSAttributedString *)adoptNS([[NSAttributedString alloc] initWithRTF:buffer.createNSData().get() documentAttributes:nullptr]).get());
     return fragment;
 }
 
@@ -456,7 +472,7 @@ bool Editor::WebContentReader::readURL(const URL& url, const String& title)
 
     auto anchor = HTMLAnchorElement::create(*frame.document());
     anchor->setAttributeWithoutSynchronization(HTMLNames::hrefAttr, url.string());
-    anchor->appendChild(frame.document()->createTextNode([title precomposedStringWithCanonicalMapping]));
+    anchor->appendChild(frame.document()->createTextNode([(NSString*)title precomposedStringWithCanonicalMapping]));
 
     fragment = frame.document()->createDocumentFragment();
     fragment->appendChild(anchor);
@@ -468,7 +484,7 @@ bool Editor::WebContentReader::readPlainText(const String& text)
     if (!allowPlainText)
         return false;
 
-    fragment = createFragmentFromText(context, [text precomposedStringWithCanonicalMapping]);
+    fragment = createFragmentFromText(context, [(NSString*)text precomposedStringWithCanonicalMapping]);
     if (!fragment)
         return false;
 

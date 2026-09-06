@@ -24,7 +24,7 @@
  */
 
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLCollection;
 @class DOMHTMLElement;
@@ -34,11 +34,11 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLTableElement : DOMHTMLElement
-@property (strong) DOMHTMLTableCaptionElement *caption;
-@property (strong) DOMHTMLTableSectionElement *tHead;
-@property (strong) DOMHTMLTableSectionElement *tFoot;
-@property (readonly, strong) DOMHTMLCollection *rows;
-@property (readonly, strong) DOMHTMLCollection *tBodies;
+@property (retain) DOMHTMLTableCaptionElement *caption;
+@property (retain) DOMHTMLTableSectionElement *tHead;
+@property (retain) DOMHTMLTableSectionElement *tFoot;
+@property (readonly, retain) DOMHTMLCollection *rows;
+@property (readonly, retain) DOMHTMLCollection *tBodies;
 @property (copy) NSString *align;
 @property (copy) NSString *bgColor;
 @property (copy) NSString *border;

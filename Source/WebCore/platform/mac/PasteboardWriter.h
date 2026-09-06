@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
 #import <wtf/RetainPtr.h>
 

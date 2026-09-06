@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLCollection;
 @class DOMHTMLElement;
@@ -33,7 +33,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLTableRowElement : DOMHTMLElement
 @property (readonly) int rowIndex;
 @property (readonly) int sectionRowIndex;
-@property (readonly, strong) DOMHTMLCollection *cells;
+@property (readonly, retain) DOMHTMLCollection *cells;
 @property (copy) NSString *align;
 @property (copy) NSString *bgColor;
 @property (copy) NSString *ch;

@@ -183,11 +183,15 @@ public:
 
     template<typename... Arguments>
     void postCrossThreadTask(Arguments&&... arguments)
+#if (COMPILER(GCC) && !COMPILER(CLANG) && defined(__OBJC__)) || defined(DONT_COMPILE_postCrossThreadTask)
+    ;
+#else
     {
         postTask([crossThreadTask = createCrossThreadTask(arguments...)](ScriptExecutionContext&) mutable {
             crossThreadTask.performTask();
         });
     }
+#endif
 
     // Gets the next id in a circular sequence from 1 to 2^31-1.
     int circularSequentialID();
@@ -230,6 +234,10 @@ public:
 protected:
     class AddConsoleMessageTask : public Task {
     public:
+#if (COMPILER(GCC) && !COMPILER(CLANG) && defined(__OBJC__)) || defined(DONT_COMPILE_AddConsoleMessageTask)
+        AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message);
+        AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage);
+#else
         AddConsoleMessageTask(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage)
             : Task([&consoleMessage](ScriptExecutionContext& context) {
                 context.addConsoleMessage(WTFMove(consoleMessage));
@@ -243,6 +251,7 @@ protected:
             })
         {
         }
+#endif
     };
 
     ActiveDOMObject::ReasonForSuspension reasonForSuspendingActiveDOMObjects() const { return m_reasonForSuspendingActiveDOMObjects; }

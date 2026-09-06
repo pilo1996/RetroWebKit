@@ -71,8 +71,9 @@ void WebStorageTrackerClient::dispatchDidModifyOrigin(const String& originIdenti
         return;
     }
 
-    callOnMainThread([origin = origin->securityOrigin()->isolatedCopy()]() mutable {
-        WebStorageTrackerClient::sharedWebStorageTrackerClient()->dispatchDidModifyOrigin(origin.ptr());
+    RefPtr<SecurityOrigin> origin_;
+    callOnMainThread([origin_ = origin->securityOrigin()->isolatedCopy()]() mutable {
+        WebStorageTrackerClient::sharedWebStorageTrackerClient()->dispatchDidModifyOrigin(origin_.ptr());
     });
 }
 

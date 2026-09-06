@@ -331,6 +331,16 @@ namespace WebCore {
     String formatLocalizedString(String format, ...);
 
 #ifdef __OBJC__
+
+// Marks APIs which are often used to process (take and return) format strings, so they can be used in place of a constant format string parameter in APIs
+#if !defined(NS_FORMAT_ARGUMENT)
+    #if (__GNUC__*10+__GNUC_MINOR__ >= 42) && (TARGET_OS_MAC || TARGET_OS_EMBEDDED)
+	#define NS_FORMAT_ARGUMENT(A) __attribute__ ((format_arg(A)))
+    #else
+	#define NS_FORMAT_ARGUMENT(A)
+    #endif
+#endif
+
 #define WEB_UI_NSSTRING(string, description) WebCore::localizedNSString(string)
     WEBCORE_EXPORT NSString *localizedNSString(NSString *key) NS_FORMAT_ARGUMENT(1);
 #endif

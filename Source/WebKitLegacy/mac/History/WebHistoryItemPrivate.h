@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebHistoryItem.h>
+#import <WebKit/WebHistoryItem.h>
 
 #if TARGET_OS_IPHONE
 extern NSString *WebViewportInitialScaleKey;
@@ -59,6 +59,7 @@ extern NSString *WebViewportFitCoverValue;
 
 - (NSArray *)_redirectURLs;
 
+- (WebHistoryItem *)targetItem;
 - (NSString *)target;
 - (BOOL)isTargetItem;
 - (NSArray *)children;

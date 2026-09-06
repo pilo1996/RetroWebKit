@@ -35,6 +35,7 @@
 #include "SQLiteFileSystem.h"
 #include "SQLiteIDBBackingStore.h"
 #include "SecurityOrigin.h"
+#include <wtf/AutodrainedPool.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/Locker.h>
 #include <wtf/MainThread.h>
@@ -512,8 +513,10 @@ void IDBServer::databaseRunLoop()
         Locker<Lock> locker(m_databaseThreadCreationLock);
     }
 
-    while (!m_databaseQueue.isKilled())
+    while (!m_databaseQueue.isKilled()) {
+        AutodrainedPool pool;
         m_databaseQueue.waitForMessage().performTask();
+    }
 }
 
 void IDBServer::handleTaskRepliesOnMainThread()

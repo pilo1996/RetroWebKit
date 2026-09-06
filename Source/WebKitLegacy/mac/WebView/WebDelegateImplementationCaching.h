@@ -32,7 +32,7 @@
 #import <JavaScriptCore/JSBase.h>
 
 #if PLATFORM(IOS)
-#import <WebKitLegacy/WAKAppKitStubs.h>
+#import <WebKit/WAKAppKitStubs.h>
 #endif
 
 @class WebView;

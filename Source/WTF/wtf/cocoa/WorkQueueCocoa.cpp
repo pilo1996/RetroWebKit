@@ -28,6 +28,7 @@
 #include "BlockPtr.h"
 #include "Ref.h"
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 namespace WTF {
 
 void WorkQueue::dispatch(Function<void()>&& function)
@@ -108,3 +109,4 @@ void WorkQueue::concurrentApply(size_t iterations, WTF::Function<void(size_t ind
 }
 
 }
+#endif

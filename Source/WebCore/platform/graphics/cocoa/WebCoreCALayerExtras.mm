@@ -32,27 +32,26 @@
 - (void)web_disableAllActions
 {
     NSNull *nullValue = [NSNull null];
-    self.style = @{
-        @"actions" : @{
-            @"anchorPoint" : nullValue,
-            @"anchorPointZ" : nullValue,
-            @"backgroundColor" : nullValue,
-            @"borderColor" : nullValue,
-            @"borderWidth" : nullValue,
-            @"bounds" : nullValue,
-            @"contents" : nullValue,
-            @"contentsRect" : nullValue,
-            @"contentsScale" : nullValue,
-            @"cornerRadius" : nullValue,
-            @"opacity" : nullValue,
-            @"position" : nullValue,
-            @"shadowColor" : nullValue,
-            @"sublayerTransform" : nullValue,
-            @"sublayers" : nullValue,
-            @"transform" : nullValue,
-            @"zPosition" : nullValue
-        }
-    };
+    NSDictionary *actions = [NSDictionary dictionaryWithObjectsAndKeys: 
+        nullValue, @"anchorPoint", 
+        nullValue, @"anchorPointZ", 
+        nullValue, @"backgroundColor", 
+        nullValue, @"borderColor", 
+        nullValue, @"borderWidth", 
+        nullValue, @"bounds", 
+        nullValue, @"contents", 
+        nullValue, @"contentsRect", 
+        nullValue, @"contentsScale", 
+        nullValue, @"cornerRadius", 
+        nullValue, @"opacity", 
+        nullValue, @"position", 
+        nullValue, @"shadowColor", 
+        nullValue, @"sublayerTransform", 
+        nullValue, @"sublayers", 
+        nullValue, @"transform", 
+        nullValue, @"zPosition", 
+        nil]; 
+    [self setStyle:[NSDictionary dictionaryWithObject:actions forKey:@"actions"]];
 }
 
 @end

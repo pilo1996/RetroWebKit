@@ -27,7 +27,7 @@
 #import <objc/runtime.h>
 #import <wtf/SoftLinking.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 SOFT_LINK_PRIVATE_FRAMEWORK_OPTIONAL(Lookup)
 SOFT_LINK_CLASS_OPTIONAL(Lookup, LULookupDefinitionModule)

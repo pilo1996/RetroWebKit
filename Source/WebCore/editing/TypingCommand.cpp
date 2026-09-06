@@ -438,7 +438,7 @@ void TypingCommand::markMisspellingsAfterTyping(ETypingCommand commandType)
 {
     Frame& frame = this->frame();
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     if (!frame.editor().isContinuousSpellCheckingEnabled()
         && !frame.editor().isAutomaticQuoteSubstitutionEnabled()
         && !frame.editor().isAutomaticLinkDetectionEnabled()
@@ -509,7 +509,7 @@ void TypingCommand::typingAddedToOpenCommand(ETypingCommand commandTypeForAddedT
 
     updatePreservesTypingStyle(commandTypeForAddedTyping);
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     frame.editor().appliedEditing(*this);
     // Since the spellchecking code may also perform corrections and other replacements, it should happen after the typing changes.
     if (!m_shouldPreventSpellChecking)

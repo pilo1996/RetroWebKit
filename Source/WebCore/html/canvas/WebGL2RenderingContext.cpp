@@ -103,6 +103,8 @@ inline static std::optional<unsigned> arrayBufferViewElementSize(const ArrayBuff
     case JSC::TypeFloat32:
     case JSC::TypeFloat64:
         return elementSize(data.getType());
+    default:
+        return std::nullopt;
     }
 }
 
@@ -203,7 +205,7 @@ void WebGL2RenderingContext::copyBufferSubData(GC3Denum readTarget, GC3Denum wri
     }
 
     m_context->moveErrorsToSyntheticErrorList();
-#if PLATFORM(COCOA)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     m_context->copyBufferSubData(readTarget, writeTarget, checkedReadOffset.unsafeGet(), checkedWriteOffset.unsafeGet(), checkedSize.unsafeGet());
 #endif
     if (m_context->moveErrorsToSyntheticErrorList()) {
@@ -272,7 +274,7 @@ void WebGL2RenderingContext::getBufferSubData(GC3Denum target, long long srcByte
     }
 
     m_context->moveErrorsToSyntheticErrorList();
-#if PLATFORM(COCOA)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     // FIXME: Coalesce multiple getBufferSubData() calls to use a single map() call
     void* ptr = m_context->mapBufferRange(target, checkedSrcByteOffset.unsafeGet(), static_cast<GC3Dsizeiptr>(checkedCopyLengthPtr.unsafeGet() * checkedElementSize.unsafeGet()), GraphicsContext3D::MAP_READ_BIT);
     memcpy(static_cast<char*>(dstData->baseAddress()) + dstData->byteOffset() + dstOffset * elementSize, ptr, copyLength * elementSize);
@@ -423,7 +425,9 @@ void WebGL2RenderingContext::texStorage2D(GC3Denum target, GC3Dsizei levels, GC3
     }
     texture->setImmutable();
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     m_context->texStorage2D(target, levels, internalFormat, width, height);
+#endif
 
     {
         GC3Denum format;

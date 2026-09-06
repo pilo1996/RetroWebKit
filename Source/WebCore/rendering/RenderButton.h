@@ -66,12 +66,19 @@ private:
     const char* renderName() const override { return "RenderButton"; }
     bool isRenderButton() const override { return true; }
 
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+
     bool hasLineIfEmpty() const override;
+
+    void timerFired();
 
     bool isFlexibleBoxImpl() const override { return true; }
 
     RenderTextFragment* m_buttonText;
     RenderBlock* m_inner;
+
+    std::unique_ptr<Timer> m_timer;
+    bool m_default;
 };
 
 } // namespace WebCore

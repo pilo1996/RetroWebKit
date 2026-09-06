@@ -34,10 +34,13 @@
 #include "CryptoKeyDataRSAComponents.h"
 #include "CryptoKeyPair.h"
 #include "ExceptionCode.h"
+#include "NotImplemented.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
+
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 // OID rsaEncryption: 1.2.840.113549.1.1.1. Per https://tools.ietf.org/html/rfc3279#section-2.3.1
 static const unsigned char RSAOIDHeader[] = {0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00};
@@ -404,6 +407,111 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
 
     return WTFMove(result);
 }
+
+#else
+
+CryptoKeyRSA::CryptoKeyRSA(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, CryptoKeyType type, PlatformRSAKey platformKey, bool extractable, CryptoKeyUsageBitmap usage)
+    : CryptoKey(identifier, type, extractable, usage)
+    , m_platformKey(platformKey)
+    , m_restrictedToSpecificHash(hasHash)
+    , m_hash(hash)
+{
+    notImplemented();
+}
+
+RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, const CryptoKeyDataRSAComponents& keyData, bool extractable, CryptoKeyUsageBitmap usage)
+{
+    notImplemented();
+    UNUSED_PARAM(identifier);
+    UNUSED_PARAM(hash);
+    UNUSED_PARAM(hasHash);
+    UNUSED_PARAM(keyData);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usage);
+
+    return nullptr;
+}
+
+CryptoKeyRSA::~CryptoKeyRSA()
+{
+    notImplemented();
+}
+
+bool CryptoKeyRSA::isRestrictedToHash(CryptoAlgorithmIdentifier& identifier) const
+{
+    if (!m_restrictedToSpecificHash)
+        return false;
+
+    identifier = m_hash;
+    return true;
+}
+
+size_t CryptoKeyRSA::keySizeInBits() const
+{
+    notImplemented();
+    return 0;
+}
+
+std::unique_ptr<KeyAlgorithm> CryptoKeyRSA::buildAlgorithm() const
+{
+    notImplemented();
+    Vector<uint8_t> publicExponent;
+    return std::make_unique<RsaKeyAlgorithm>(emptyString(), 0, WTFMove(publicExponent));
+}
+
+std::unique_ptr<CryptoKeyData> CryptoKeyRSA::exportData() const
+{
+    ASSERT(extractable());
+
+    notImplemented();
+    return nullptr;
+}
+
+void CryptoKeyRSA::generatePair(CryptoAlgorithmIdentifier algorithm, CryptoAlgorithmIdentifier hash, bool hasHash, unsigned modulusLength, const Vector<uint8_t>& publicExponent, bool extractable, CryptoKeyUsageBitmap usage, KeyPairCallback&& callback, VoidCallback&& failureCallback, ScriptExecutionContext* context)
+{
+    notImplemented();
+    failureCallback();
+
+    UNUSED_PARAM(algorithm);
+    UNUSED_PARAM(hash);
+    UNUSED_PARAM(hasHash);
+    UNUSED_PARAM(modulusLength);
+    UNUSED_PARAM(publicExponent);
+    UNUSED_PARAM(extractable);
+    UNUSED_PARAM(usage);
+    UNUSED_PARAM(callback);
+    UNUSED_PARAM(context);
+}
+
+RefPtr<CryptoKeyRSA> CryptoKeyRSA::importSpki(CryptoAlgorithmIdentifier, std::optional<CryptoAlgorithmIdentifier>, Vector<uint8_t>&&, bool, CryptoKeyUsageBitmap)
+{
+    notImplemented();
+
+    return nullptr;
+}
+
+ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportSpki() const
+{
+    notImplemented();
+
+    return Exception { NOT_SUPPORTED_ERR };
+}
+
+RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier, std::optional<CryptoAlgorithmIdentifier>, Vector<uint8_t>&&, bool, CryptoKeyUsageBitmap)
+{
+    notImplemented();
+
+    return nullptr;
+}
+
+ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
+{
+    notImplemented();
+
+    return Exception { NOT_SUPPORTED_ERR };
+}
+
+#endif
 
 } // namespace WebCore
 

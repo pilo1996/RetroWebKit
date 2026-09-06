@@ -37,7 +37,11 @@ namespace WebCore {
 
 static uint64_t nextClientResourceNumber()
 {
+#if CPU(PPC)
+    static std::atomic<uint32_t> currentNumber(1);
+#else
     static std::atomic<uint64_t> currentNumber(1);
+#endif
     return currentNumber += 2;
 }
 

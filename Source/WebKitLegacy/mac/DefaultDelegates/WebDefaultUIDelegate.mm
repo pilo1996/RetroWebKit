@@ -220,10 +220,14 @@ static WebDefaultUIDelegate *sharedDelegate = nil;
 #if !PLATFORM(IOS)
 - (NSUInteger)webView:(WebView *)webView dragDestinationActionMaskForDraggingInfo:(id <NSDraggingInfo>)draggingInfo
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
     if (!linkedOnOrAfter(SDKVersion::FirstWithDropToNavigateDisallowedByDefault))
         return WebDragDestinationActionAny;
 
     return WebDragDestinationActionAny & ~WebDragDestinationActionLoad;
+#else
+    return WebDragDestinationActionAny;
+#endif
 }
 
 - (void)webView:(WebView *)webView willPerformDragDestinationAction:(WebDragDestinationAction)action forDraggingInfo:(id <NSDraggingInfo>)draggingInfo

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMNamedNodeMap.h>
+#import <WebKit/DOMNamedNodeMap.h>
 
 namespace WebCore {
 class NamedNodeMap;

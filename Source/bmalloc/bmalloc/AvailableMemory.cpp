@@ -31,11 +31,13 @@
 #if BPLATFORM(IOS)
 #import <algorithm>
 #endif
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
 #import <dispatch/dispatch.h>
-#import <mach/host_info.h>
-#import <mach/mach.h>
-#import <mach/mach_error.h>
-#import <math.h>
+#endif
+#include <mach/host_info.h>
+#include <mach/mach.h>
+#include <mach/mach_error.h>
+#include <math.h>
 #elif BOS(UNIX)
 #include <unistd.h>
 #endif

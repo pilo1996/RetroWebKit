@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 RetainPtr<CFArrayRef> CertificateInfo::certificateChainFromSecTrust(SecTrustRef trust)
 {
     auto count = SecTrustGetCertificateCount(trust);
@@ -81,6 +81,7 @@ bool CertificateInfo::containsNonRootSHA1SignedCertificate() const
     }
 #endif
 
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100) || PLATFORM(IOS)
     if (m_certificateChain) {
         // Allow only the root certificate (the last in the chain) to be SHA1.
         for (CFIndex i = 0, size = CFArrayGetCount(m_certificateChain.get()) - 1; i < size; ++i) {
@@ -90,11 +91,14 @@ bool CertificateInfo::containsNonRootSHA1SignedCertificate() const
         }
         return false;
     }
+#else
+    notImplemented();
+#endif
 
     return false;
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
 void CertificateInfo::dump() const
 {
 #if HAVE(SEC_TRUST_SERIALIZATION)

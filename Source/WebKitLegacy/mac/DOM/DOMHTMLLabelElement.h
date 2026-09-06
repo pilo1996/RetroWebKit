@@ -23,14 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLFormElement;
 @class NSString;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLLabelElement : DOMHTMLElement
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @property (copy) NSString *htmlFor;
-@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_8);
+@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_6);
 @end

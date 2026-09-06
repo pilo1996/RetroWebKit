@@ -28,7 +28,7 @@
 
 // This header contains the WebFrame SPI.
 
-#import <WebKitLegacy/WebFrame.h>
+#import <WebKit/WebFrame.h>
 #import <JavaScriptCore/JSBase.h>
 
 #if !TARGET_OS_IPHONE
@@ -39,7 +39,7 @@
 
 #if TARGET_OS_IPHONE
 #include <CoreText/CoreText.h>
-#include <WebKitLegacy/WAKAppKitStubs.h>
+#include <WebKit/WAKAppKitStubs.h>
 #endif
 
 @class DOMDocumentFragment;
@@ -212,6 +212,9 @@ typedef enum {
 - (BOOL)_isDisplayingStandaloneImage;
 
 - (unsigned)_pendingFrameUnloadEventCount;
+
+- (void)_setIsDisconnected:(bool)isDisconnected;
+- (void)_setExcludeFromTextSearch:(bool)exclude;
 
 #if !TARGET_OS_IPHONE
 #if ENABLE_NETSCAPE_PLUGIN_API

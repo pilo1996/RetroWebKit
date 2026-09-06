@@ -150,7 +150,7 @@ void JSLock::didAcquireLock()
     Wasm::startTrackingCurrentThread();
 #endif
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
     registerThreadForMachExceptionHandling(&Thread::current());
 #endif
 

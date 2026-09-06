@@ -32,7 +32,11 @@ namespace WTF {
 
 GlobalVersion newGlobalVersion()
 {
+#if CPU(PPC)
+    static Atomic<uint32_t> counter;
+#else
     static Atomic<uint64_t> counter;
+#endif
     return counter.exchangeAdd(1);
 }
 

@@ -29,6 +29,7 @@
 
 #import "WebDelegateImplementationCaching.h"
 #import "WebNotificationInternal.h"
+#import "WebNotificationProviderGrowl.h"
 #import "WebPreferencesPrivate.h"
 #import "WebSecurityOriginInternal.h"
 #import "WebUIDelegatePrivate.h"
@@ -38,13 +39,6 @@
 #import <wtf/BlockObjCExceptions.h>
 
 using namespace WebCore;
-
-@interface WebNotificationPolicyListener : NSObject <WebAllowDenyPolicyListener>
-{
-    RefPtr<NotificationPermissionCallback> _callback;
-}
-- (id)initWithCallback:(RefPtr<NotificationPermissionCallback>&&)callback;
-@end
 
 static uint64_t generateNotificationID()
 {
@@ -127,16 +121,49 @@ void WebNotificationClient::notificationControllerDestroyed()
 void WebNotificationClient::requestPermission(ScriptExecutionContext* context, WebNotificationPolicyListener *listener)
 {
     SEL selector = @selector(webView:decidePolicyForNotificationRequestFromOrigin:listener:);
-    if (![[m_webView UIDelegate] respondsToSelector:selector])
-        return;
+    if (![[m_webView UIDelegate] respondsToSelector:selector]) {
+        id<WebNotificationProvider> notificationProvider = [m_webView _notificationProvider];
+        if ([(NSObject *)notificationProvider isKindOfClass:[WebNotificationProviderGrowl class]]
+            && [listener isKindOfClass:[WebNotificationPolicyListenerGrowl class]])
+        {
+            WebSecurityOrigin *origin = [(WebNotificationPolicyListenerGrowl *)listener origin];
+            if ([(WebNotificationProviderGrowl *)notificationProvider isOriginSuppressed:origin]) {
+                switch ([(WebNotificationProviderGrowl *)notificationProvider policyForOrigin:origin]) {
+                    case WebNotificationPermissionAllowed:
+                        [listener allow];
+                        break;
+                    case WebNotificationPermissionDenied:
+                        [listener deny];
+                        break;
+                    default:
+                        break;
+                }
+                return;
+            }
 
-    m_everRequestedPermission = true;
+            NSAlert *alert = [[NSAlert alloc] init];
+            [alert addButtonWithTitle:@"Allow"];
+            [alert addButtonWithTitle:@"Deny"];
+            [alert setMessageText:[NSString stringWithFormat:@"The website %@ is requesting permission for displaying desktop notifications", [origin stringValue]]];
+            if (![GrowlApplicationBridge isGrowlRunning])
+                [alert setInformativeText:@"Growl must be installed and running in order to display desktop notifications.\nSee the Growl website (http://growl.info) for more information\n\nFor downloading Growl 1.2.2 try:\nhttp://growl.cachefly.net/Growl-1.2.2.dmg"];
+            [alert setAlertStyle:NSInformationalAlertStyle];
+            [alert setShowsSuppressionButton:YES];
 
-    WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:context->securityOrigin()];
-    
-    CallUIDelegate(m_webView, selector, webOrigin, listener);
-    
-    [webOrigin release];
+            m_everRequestedPermission = true;
+
+            [listener retain];
+            [alert beginSheetModalForWindow:[m_webView window] modalDelegate:(WebNotificationPolicyListenerGrowl *)listener didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:) contextInfo:nil];
+        }
+    } else {
+        m_everRequestedPermission = true;
+
+        WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:context->securityOrigin()];
+
+        CallUIDelegate(m_webView, selector, webOrigin, listener);
+
+        [webOrigin release];
+    }
 }
 
 bool WebNotificationClient::hasPendingPermissionRequests(ScriptExecutionContext*) const
@@ -149,7 +176,13 @@ bool WebNotificationClient::hasPendingPermissionRequests(ScriptExecutionContext*
 void WebNotificationClient::requestPermission(ScriptExecutionContext* context, RefPtr<NotificationPermissionCallback>&& callback)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    WebNotificationPolicyListener *listener = [[WebNotificationPolicyListener alloc] initWithCallback:WTFMove(callback)];
+    WebNotificationPolicyListener *listener;
+    if ([(NSObject *)[m_webView _notificationProvider] isKindOfClass:[WebNotificationProviderGrowl class]]) {
+        WebSecurityOrigin *webOrigin = [[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:context->securityOrigin()];
+        listener = [[WebNotificationPolicyListenerGrowl alloc] initWithCallback:WTFMove(callback) origin:webOrigin];
+        [webOrigin release];
+    } else
+        listener = [[WebNotificationPolicyListener alloc] initWithCallback:WTFMove(callback)];
     requestPermission(context, listener);
     [listener release];
     END_BLOCK_OBJC_EXCEPTIONS;

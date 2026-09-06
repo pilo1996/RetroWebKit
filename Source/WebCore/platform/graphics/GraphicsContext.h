@@ -442,7 +442,7 @@ public:
 
     void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&);
     void drawFocusRing(const Path&, float width, float offset, const Color&);
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw);
     void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw);
 #endif

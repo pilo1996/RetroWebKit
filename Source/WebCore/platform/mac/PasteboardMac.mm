@@ -106,7 +106,7 @@ static Vector<String> writableTypesForImage()
 
 NSArray *Pasteboard::supportedFileUploadPasteboardTypes()
 {
-    return @[ (NSString *)NSFilesPromisePboardType, (NSString *)NSFilenamesPboardType ];
+    return [NSArray arrayWithObjects:(NSString *)NSFilesPromisePboardType, (NSString *)NSFilenamesPboardType, nil];
 }
 
 Pasteboard::Pasteboard()
@@ -124,10 +124,10 @@ Pasteboard::Pasteboard(const String& pasteboardName)
 
 std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     return std::make_unique<Pasteboard>(NSGeneralPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 }
 
 std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
@@ -138,10 +138,10 @@ std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
 #if ENABLE(DRAG_SUPPORT)
 std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop()
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     return std::make_unique<Pasteboard>(NSDragPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
 }
 
 std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
@@ -263,7 +263,7 @@ static void writeFileWrapperAsRTFDAttachment(NSFileWrapper *wrapper, const Strin
     NSAttributedString *string = [NSAttributedString attributedStringWithAttachment:attachment];
     [attachment release];
 
-    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:@{ }];
+    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:[NSDictionary dictionary]];
     if (!RTFDData)
         return;
 
@@ -313,11 +313,13 @@ void Pasteboard::read(PasteboardPlainText& text)
     Vector<String> types;
     strategy.getTypes(types, m_pasteboardName);
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     if (types.contains(String(NSPasteboardTypeString))) {
         text.text = strategy.stringForType(NSPasteboardTypeString, m_pasteboardName);
         text.isURL = false;
         return;
     }
+#endif
 
     if (types.contains(String(NSStringPboardType))) {
         text.text = strategy.stringForType(NSStringPboardType, m_pasteboardName);
@@ -328,7 +330,7 @@ void Pasteboard::read(PasteboardPlainText& text)
     if (types.contains(String(NSRTFDPboardType))) {
         if (RefPtr<SharedBuffer> data = strategy.bufferForType(NSRTFDPboardType, m_pasteboardName)) {
             if (auto attributedString = adoptNS([[NSAttributedString alloc] initWithRTFD:data->createNSData().get() documentAttributes:NULL])) {
-                text.text = [attributedString string];
+                text.text = [attributedString.get() string];
                 text.isURL = false;
                 return;
             }
@@ -338,7 +340,7 @@ void Pasteboard::read(PasteboardPlainText& text)
     if (types.contains(String(NSRTFPboardType))) {
         if (RefPtr<SharedBuffer> data = strategy.bufferForType(NSRTFPboardType, m_pasteboardName)) {
             if (auto attributedString = adoptNS([[NSAttributedString alloc] initWithRTF:data->createNSData().get() documentAttributes:NULL])) {
-                text.text = [attributedString string];
+                text.text = [attributedString.get() string];
                 text.isURL = false;
                 return;
             }
@@ -554,7 +556,7 @@ String Pasteboard::readString(const String& type)
         for (size_t i = 0; i < absoluteURLs.size(); i++)
             cocoaValue = i ? "\n" + absoluteURLs[i]: absoluteURLs[i];
     } else if (cocoaType == String(NSStringPboardType))
-        cocoaValue = [platformStrategies()->pasteboardStrategy()->stringForType(cocoaType, m_pasteboardName) precomposedStringWithCanonicalMapping];
+        cocoaValue = [(NSString*)platformStrategies()->pasteboardStrategy()->stringForType(cocoaType, m_pasteboardName) precomposedStringWithCanonicalMapping];
     else if (!cocoaType.isEmpty())
         cocoaValue = platformStrategies()->pasteboardStrategy()->stringForType(cocoaType, m_pasteboardName);
 
@@ -578,7 +580,11 @@ static String utiTypeFromCocoaType(const String& type)
 static void addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTypes, const String& cocoaType, const String& pasteboardName)
 {
     // UTI may not do these right, so make sure we get the right, predictable result
-    if (cocoaType == String(NSStringPboardType) || cocoaType == String(NSPasteboardTypeString)) {
+    if (cocoaType == String(NSStringPboardType)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+        || cocoaType == String(NSPasteboardTypeString)
+#endif
+     ) {
         resultTypes.add(ASCIILiteral("text/plain"));
         return;
     }

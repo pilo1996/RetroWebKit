@@ -38,7 +38,7 @@ namespace WebCore {
     class KeyboardEvent;
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 @interface WebHTMLView () <NSDraggingSource>
 @end
 #endif
@@ -78,6 +78,10 @@ namespace WebCore {
 - (void)_layoutIfNeeded;
 #endif
 #if PLATFORM(MAC)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)_updateLayerHostingViewPosition;
+#endif
+
 - (void)_changeSpellingToWord:(NSString *)newWord;
 #endif
 @end

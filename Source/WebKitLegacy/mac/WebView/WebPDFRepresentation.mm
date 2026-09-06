@@ -32,6 +32,7 @@
 
 #import "WebDataSourcePrivate.h"
 #import "WebFrame.h"
+#import "WebFrameView.h"
 #import "WebJSPDFDoc.h"
 #import "WebPDFDocumentExtras.h"
 #import "WebPDFView.h"

@@ -47,7 +47,7 @@
 #import <WebCore/MainFrame.h>
 #import <WebCore/Page.h>
 #import <WebCore/ScriptController.h>
-#import <WebKitLegacy/DOMExtensions.h>
+#import <WebKit/DOMExtensions.h>
 #import <WebKitSystemInterface.h>
 #import <algorithm>
 #import <bindings/ScriptValue.h>
@@ -191,8 +191,10 @@ void WebInspectorFrontendClient::attachAvailabilityChanged(bool available)
 
 bool WebInspectorFrontendClient::canAttach()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if ([[m_frontendWindowController window] styleMask] & NSWindowStyleMaskFullScreen)
         return false;
+#endif
 
     return canAttachWindow();
 }
@@ -218,7 +220,9 @@ void WebInspectorFrontendClient::frontendLoaded()
 
 void WebInspectorFrontendClient::startWindowDrag()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     [[m_frontendWindowController window] performWindowDragWithEvent:[NSApp currentEvent]];
+#endif
 }
 
 String WebInspectorFrontendClient::localizedStringsURL()
@@ -303,7 +307,7 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
     String suggestedURLCopy = suggestedURL;
     String contentCopy = content;
 
-    auto saveToURL = ^(NSURL *actualURL) {
+    auto saveToURL = [=](NSURL *actualURL) {
         ASSERT(actualURL);
 
         m_suggestedToActualURLMap.set(suggestedURLCopy, actualURL);
@@ -313,11 +317,11 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
             if (!base64Decode(contentCopy, out, Base64ValidatePadding))
                 return;
             RetainPtr<NSData> dataContent = adoptNS([[NSData alloc] initWithBytes:out.data() length:out.size()]);
-            [dataContent writeToURL:actualURL atomically:YES];
+            [dataContent.get() writeToURL:actualURL atomically:YES];
         } else
-            [contentCopy writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
+            [(NSString *)contentCopy writeToURL:actualURL atomically:YES encoding:NSUTF8StringEncoding error:NULL];
 
-        core([m_frontendWindowController frontendWebView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.savedURL(\"%@\")", actualURL.absoluteString]);
+        core([m_frontendWindowController.get() frontendWebView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.savedURL(\"%@\")", actualURL.absoluteString]);
     };
 
     if (!forceSaveDialog) {
@@ -326,26 +330,41 @@ void WebInspectorFrontendClient::save(const String& suggestedURL, const String& 
     }
 
     NSSavePanel *panel = [NSSavePanel savePanel];
-    panel.nameFieldStringValue = platformURL.lastPathComponent;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    [panel setNameFieldStringValue:[platformURL lastPathComponent]];
 
     // If we have a file URL we've already saved this file to a path and
     // can provide a good directory to show. Otherwise, use the system's
     // default behavior for the initial directory to show in the dialog.
-    if (platformURL.isFileURL)
-        panel.directoryURL = [platformURL URLByDeletingLastPathComponent];
+    if ([platformURL isFileURL])
+        [panel setDirectoryURL:[platformURL URLByDeletingLastPathComponent]];
+#endif
 
-    auto completionHandler = ^(NSInteger result) {
-        if (result == NSModalResponseCancel)
+    auto completionHandler = [=](NSInteger result) {
+        if (result == NSFileHandlingPanelCancelButton)
             return;
-        ASSERT(result == NSModalResponseOK);
-        saveToURL(panel.URL);
+        ASSERT(result == NSFileHandlingPanelOKButton);
+        saveToURL([panel URL]);
     };
 
-    NSWindow *frontendWindow = [[m_frontendWindowController frontendWebView] window];
+    NSWindow *frontendWindow = [[m_frontendWindowController.get() frontendWebView] window];
     if (frontendWindow)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [panel beginSheetModalForWindow:frontendWindow completionHandler:completionHandler];
+#else
+        [panel beginSheetForDirectory:[[platformURL path] stringByDeletingLastPathComponent]
+            file:[[platformURL path] lastPathComponent]
+            modalForWindow:frontendWindow
+            modalDelegate:m_frontendWindowController.get()
+            didEndSelector:@selector(fileHandlingPanelDidEnd:returnCode:contextInfo:)
+            contextInfo:new std::function<void (NSInteger)>(completionHandler)];
+#endif
     else
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         completionHandler([panel runModal]);
+#else
+        completionHandler([panel runModalForDirectory:[[platformURL path] stringByDeletingLastPathComponent] file:[[platformURL path] lastPathComponent]]);
+#endif
 }
 
 void WebInspectorFrontendClient::append(const String& suggestedURL, const String& content)
@@ -357,12 +376,16 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     if (!actualURL)
         return;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     NSFileHandle *handle = [NSFileHandle fileHandleForWritingToURL:actualURL.get() error:NULL];
+#else
+    NSFileHandle *handle = [NSFileHandle fileHandleForWritingAtPath:[actualURL.get() path]];
+#endif
     [handle seekToEndOfFile];
-    [handle writeData:[content dataUsingEncoding:NSUTF8StringEncoding]];
+    [handle writeData:[(NSString *)content dataUsingEncoding:NSUTF8StringEncoding]];
     [handle closeFile];
 
-    core([m_frontendWindowController frontendWebView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.appendedToURL(\"%@\")", [actualURL absoluteString]]);
+    core([m_frontendWindowController.get() frontendWebView])->mainFrame().script().executeScript([NSString stringWithFormat:@"InspectorFrontendAPI.appendedToURL(\"%@\")", [actualURL.get() absoluteString]]);
 }
 
 // MARK: -
@@ -398,6 +421,10 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     [_frontendWebView setProhibitsMainFrameScrolling:YES];
     [_frontendWebView setUIDelegate:self];
     [_frontendWebView setPolicyDelegate:self];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090
+    [_frontendWebView setDrawsBackground:NO];
+#endif
 
     [preferences release];
 
@@ -465,18 +492,31 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     if (window)
         return window;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
+#else
+    NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSTexturedBackgroundWindowMask;
+#endif
     window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, initialWindowWidth, initialWindowHeight) styleMask:styleMask backing:NSBackingStoreBuffered defer:NO];
     [window setDelegate:self];
     [window setMinSize:NSMakeSize(minimumWindowWidth, minimumWindowHeight)];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [window setCollectionBehavior:([window collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary)];
+#endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     CGFloat approximatelyHalfScreenSize = (window.screen.frame.size.width / 2) - 4;
     CGFloat minimumFullScreenWidth = std::max<CGFloat>(636, approximatelyHalfScreenSize);
     [window setMinFullScreenContentSize:NSMakeSize(minimumFullScreenWidth, minimumWindowHeight)];
     [window setCollectionBehavior:([window collectionBehavior] | NSWindowCollectionBehaviorFullScreenAllowsTiling)];
+#endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     window.titlebarAppearsTransparent = YES;
+#else
+    [window setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
+    [window setContentBorderThickness:55. forEdge:NSMaxYEdge];
+#endif
 
     [self setWindow:window];
     [window release];
@@ -684,38 +724,62 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     panel.canChooseFiles = YES;
     panel.allowsMultipleSelection = allowMultipleFiles;
 
-    auto completionHandler = ^(NSInteger result) {
-        if (result == NSModalResponseCancel) {
+    auto completionHandler = [&](NSInteger result) {
+        if (result == NSFileHandlingPanelCancelButton) {
             [resultListener cancel];
             return;
         }
-        ASSERT(result == NSModalResponseOK);
+        ASSERT(result == NSFileHandlingPanelOKButton);
 
         NSArray *URLs = panel.URLs;
         NSMutableArray *filenames = [NSMutableArray arrayWithCapacity:URLs.count];
-        for (NSURL *URL in URLs)
+        NSEnumerator *enumerator = [URLs objectEnumerator];
+        NSURL *URL;
+        while ((URL = [enumerator nextObject]) != nil)
             [filenames addObject:URL.path];
 
         [resultListener chooseFilenames:filenames];
     };
 
     if (_frontendWebView.window)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         [panel beginSheetModalForWindow:_frontendWebView.window completionHandler:completionHandler];
+#else
+        [panel beginSheetForDirectory:NULL
+            file:NULL
+            types:NULL
+            modalForWindow:_frontendWebView.window
+            modalDelegate:self
+            didEndSelector:@selector(fileHandlingPanelDidEnd:returnCode:contextInfo:)
+            contextInfo:new std::function<void (NSInteger)>(completionHandler)];
+#endif
     else
         completionHandler([panel runModal]);
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+- (void)fileHandlingPanelDidEnd:(NSOpenPanel *)panel returnCode:(NSInteger)returnCode contextInfo:(std::function<void (NSInteger)> *)completionHandler
+{
+    if (completionHandler) {
+        (*completionHandler)(returnCode);
+        delete completionHandler;
+    }
+}
+#endif
+
 - (void)webView:(WebView *)sender frame:(WebFrame *)frame exceededDatabaseQuotaForSecurityOrigin:(WebSecurityOrigin *)origin database:(NSString *)databaseIdentifier
 {
-    id <WebQuotaManager> databaseQuotaManager = origin.databaseQuotaManager;
-    databaseQuotaManager.quota = std::max<unsigned long long>(5 * 1024 * 1024, databaseQuotaManager.usage * 1.25);
+    id <WebQuotaManager> databaseQuotaManager = [origin databaseQuotaManager];
+    [databaseQuotaManager setQuota:std::max<unsigned long long>(5 * 1024 * 1024, [databaseQuotaManager usage] * 1.25)];
 }
 
 - (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems
 {
     NSMutableArray *menuItems = [[NSMutableArray alloc] init];
 
-    for (NSMenuItem *item in defaultMenuItems) {
+    NSEnumerator *enumerator = [defaultMenuItems objectEnumerator];
+    NSMenuItem *item;
+    while ((item = [enumerator nextObject]) != nil) {
         switch (item.tag) {
         case WebMenuItemTagOpenLinkInNewWindow:
         case WebMenuItemTagOpenImageInNewWindow:

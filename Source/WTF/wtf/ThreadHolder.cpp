@@ -42,7 +42,7 @@ ThreadSpecificKey ThreadHolder::m_key = InvalidThreadSpecificKey;
 
 ThreadHolder::~ThreadHolder()
 {
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
     unregisterThreadForMachExceptionHandling(&m_thread.get());
 #endif
     m_thread->didExit();

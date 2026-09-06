@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebKit.h>
+#import <WebKit/WebKit.h>
 #include <HIToolbox/HIView.h>
 
 @interface HIViewAdapter : NSObject

@@ -25,11 +25,11 @@
 
 // This all-in-one cpp file cuts down on template bloat to allow us to build our Windows release build.
 
+#ifdef DOMALLINONE_FIRST
 #include "ActiveDOMCallbackMicrotask.cpp"
 #include "ActiveDOMObject.cpp"
 #include "AnimationEvent.cpp"
 #include "Attr.cpp"
-#include "StyleScope.cpp"
 #include "BeforeTextInsertedEvent.cpp"
 #include "BeforeUnloadEvent.cpp"
 #include "CDATASection.cpp"
@@ -69,6 +69,8 @@
 #include "DocumentParser.cpp"
 #include "DocumentSharedObjectPool.cpp"
 #include "DocumentType.cpp"
+#endif
+#ifdef DOMALLINONE_SECOND
 #include "Element.cpp"
 #include "ElementData.cpp"
 #include "ElementRareData.cpp"
@@ -111,6 +113,8 @@
 #include "NodeRareData.cpp"
 #include "NodeTraversal.cpp"
 #include "OverflowEvent.cpp"
+#endif
+#ifdef DOMALLINONE_THIRD
 #include "PageTransitionEvent.cpp"
 #include "PendingScript.cpp"
 #include "PopStateEvent.cpp"
@@ -164,6 +168,8 @@
 #include "WebKitNamedFlow.cpp"
 #include "WebKitTransitionEvent.cpp"
 #include "WheelEvent.cpp"
+#if PLATFORM(WIN)
 #include "XMLDocumentParser.cpp"
 #include "XMLDocumentParserScope.cpp"
-
+#endif
+#endif

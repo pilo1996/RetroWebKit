@@ -43,6 +43,12 @@
 #include <wtf/win/Win32Handle.h>
 #endif
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+#include <wtf/RetainPtr.h>
+
+OBJC_CLASS MemoryPressureHandlerObjCAdapter;
+#endif
+
 namespace WTF {
 
 enum class MemoryUsagePolicy {
@@ -221,6 +227,8 @@ private:
     void holdOffTimerFired();
     void logErrorAndCloseFDs(const char* error);
     bool tryEnsureEventFD();
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+    RetainPtr<MemoryPressureHandlerObjCAdapter> m_memoryPressureHandlerAdapter;
 #endif
 };
 

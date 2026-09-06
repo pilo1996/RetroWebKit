@@ -47,8 +47,18 @@ RefPtr<AudioBus> AudioBus::loadPlatformResource(const char* name, float sampleRa
     AutodrainedPool pool;
     
     NSBundle *bundle = [NSBundle bundleForClass:[WebCoreAudioBundleClass class]];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSURL *audioFileURL = [bundle URLForResource:[NSString stringWithUTF8String:name] withExtension:@"wav" subdirectory:@"audio"];
+#else
+    NSURL *audioFileURL = [NSURL fileURLWithPath:[bundle pathForResource:[NSString stringWithUTF8String:name] ofType:@"wav" inDirectory:@"audio"]];
+#endif
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+    NSUInteger options = NSMappedRead;
+#elif !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+    NSDataReadingOptions options = NSDataReadingMapped;
+#else
     NSDataReadingOptions options = NSDataReadingMappedIfSafe;
+#endif
     NSData *audioData = [NSData dataWithContentsOfURL:audioFileURL options:options error:nil];
 
     if (audioData)

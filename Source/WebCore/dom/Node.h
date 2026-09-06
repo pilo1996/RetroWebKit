@@ -549,7 +549,7 @@ public:
     void updateAncestorConnectedSubframeCountForRemoval() const;
     void updateAncestorConnectedSubframeCountForInsertion() const;
 
-#if ENABLE(JIT)
+#if ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
     static ptrdiff_t nodeFlagsMemoryOffset() { return OBJECT_OFFSETOF(Node, m_nodeFlags); }
     static ptrdiff_t rareDataMemoryOffset() { return OBJECT_OFFSETOF(Node, m_data.m_rareData); }
     static int32_t flagIsText() { return IsTextFlag; }
@@ -565,7 +565,7 @@ public:
 
     static int32_t flagAffectsNextSiblingElementStyle() { return AffectsNextSiblingElementStyle; }
     static int32_t flagStyleIsAffectedByPreviousSibling() { return StyleIsAffectedByPreviousSibling; }
-#endif // ENABLE(JIT)
+#endif // ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
 
 protected:
     enum NodeFlags {

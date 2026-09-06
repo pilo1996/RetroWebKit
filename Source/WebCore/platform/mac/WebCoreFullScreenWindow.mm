@@ -36,6 +36,12 @@
 - (void)performClose:(id)sender;
 @end
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+@interface NSWindow (Private)
+- (void)setStyleMask:(NSUInteger)styleMask;
+@end
+#endif
+
 @implementation WebCoreFullScreenWindow
 
 - (id)initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)aStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)flag

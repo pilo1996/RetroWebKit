@@ -280,6 +280,9 @@ public:
     static bool resourceLoadStatisticsEnabled() { return gResourceLoadStatisticsEnabledEnabled; }
     WEBCORE_EXPORT static void setResourceLoadStatisticsEnabled(bool);
 
+    static bool largeAnimatedImageFrameCachingEnabled() { return gLargeAnimatedImageFrameCachingEnabled; }
+    WEBCORE_EXPORT static void setLargeAnimatedImageFrameCachingEnabled(bool);
+
 #if PLATFORM(IOS)
     WEBCORE_EXPORT static void setAudioSessionCategoryOverride(unsigned);
     static unsigned audioSessionCategoryOverride();
@@ -438,6 +441,7 @@ private:
     static bool gLowPowerVideoAudioBufferSizeEnabled;
     static bool gResourceLoadStatisticsEnabledEnabled;
     static bool gAllowsAnySSLCertificate;
+    static bool gLargeAnimatedImageFrameCachingEnabled;
 
     Vector<ContentType> m_mediaContentTypesRequiringHardwareSupport;
 };

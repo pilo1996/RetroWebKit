@@ -32,6 +32,7 @@
 #import "CookieStorage.h"
 #import "CredentialStorage.h"
 #import "CachedResourceLoader.h"
+#import "EmptyProtocolDefinitions.h"
 #import "FormDataStreamMac.h"
 #import "Frame.h"
 #import "FrameLoader.h"
@@ -76,6 +77,7 @@ using namespace WebCore;
 
 @interface NSURLConnection ()
 -(id)_initWithRequest:(NSURLRequest *)request delegate:(id)delegate usesCache:(BOOL)usesCacheFlag maxContentLength:(long long)maxContentLength startImmediately:(BOOL)startImmediately connectionProperties:(NSDictionary *)connectionProperties;
+-(id)_initWithRequest:(NSURLRequest *)request delegate:(id)delegate usesCache:(BOOL)usesCacheFlag maxContentLength:(long long)maxContentLength startImmediately:(BOOL)startImmediately;
 @end
 
 namespace WebCore {
@@ -89,6 +91,7 @@ static void applyBasicAuthorizationHeader(ResourceRequest& request, const Creden
     request.setHTTPHeaderField(HTTPHeaderName::Authorization, authenticationHeader);
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static NSOperationQueue *operationQueueForAsyncClients()
 {
     static NSOperationQueue *queue;
@@ -99,6 +102,7 @@ static NSOperationQueue *operationQueueForAsyncClients()
     }
     return queue;
 }
+#endif
 
 ResourceHandleInternal::~ResourceHandleInternal()
 {
@@ -110,6 +114,21 @@ ResourceHandle::~ResourceHandle()
     d->m_currentWebChallenge.setAuthenticationClient(0);
 
     LOG(Network, "Handle %p destroyed", this);
+}
+
+static bool shouldRelaxThirdPartyCookiePolicy(NetworkingContext* context, const URL& url)
+{
+    // If a URL already has cookies, then we'll relax the 3rd party cookie policy and accept new cookies.
+
+    RetainPtr<CFHTTPCookieStorageRef> cfCookieStorage = context->storageSession().cookieStorage();
+    NSHTTPCookieAcceptPolicy cookieAcceptPolicy = static_cast<NSHTTPCookieAcceptPolicy>(wkGetHTTPCookieAcceptPolicy(cfCookieStorage.get()));
+
+    if (cookieAcceptPolicy != NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain)
+        return false;
+
+    NSArray *cookies = wkHTTPCookiesForURL(cfCookieStorage.get(), url);
+
+    return [cookies count];
 }
 
 #if PLATFORM(IOS)
@@ -126,12 +145,12 @@ static bool synchronousWillSendRequestEnabled()
 #endif
 
 #if !PLATFORM(IOS)
-void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior schedulingBehavior)
+void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff, SchedulingBehavior schedulingBehavior)
 #else
-void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, NSDictionary *connectionProperties)
+void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, NSDictionary *connectionProperties)
 #endif
 {
-#if ENABLE(WEB_TIMING) && !HAVE(TIMINGDATAOPTIONS)
+#if ENABLE(WEB_TIMING)  && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000) && !HAVE(TIMINGDATAOPTIONS)
     setCollectsTimingData();
 #endif
 
@@ -142,6 +161,9 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         urlWithCredentials.setPass(d->m_pass);
         firstRequest().setURL(urlWithCredentials);
     }
+
+    if (shouldRelaxThirdPartyCookiePolicy)
+        firstRequest().setFirstPartyForCookies(firstRequest().url());
 
     if (shouldUseCredentialStorage && firstRequest().url().protocolIsInHTTPFamily()) {
         if (d->m_user.isEmpty() && d->m_pass.isEmpty()) {
@@ -164,7 +186,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
     NSURLRequest *nsRequest = firstRequest().nsURLRequest(UpdateHTTPBody);
     if (!shouldContentSniff) {
         NSMutableURLRequest *mutableRequest = [[nsRequest mutableCopy] autorelease];
-        [mutableRequest _setProperty:@(NO) forKey:(NSString *)_kCFURLConnectionPropertyShouldSniff];
+        wkSetNSURLRequestShouldContentSniff(mutableRequest, NO);
         nsRequest = mutableRequest;
     }
 
@@ -180,8 +202,14 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
     if (d->m_storageSession)
         nsRequest = [wkCopyRequestWithStorageSession(d->m_storageSession.get(), nsRequest) autorelease];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     ASSERT([NSURLConnection instancesRespondToSelector:@selector(_initWithRequest:delegate:usesCache:maxContentLength:startImmediately:connectionProperties:)]);
+    static bool supportsSettingConnectionProperties = true;
+#else
+    static bool supportsSettingConnectionProperties = [NSURLConnection instancesRespondToSelector:@selector(_initWithRequest:delegate:usesCache:maxContentLength:startImmediately:connectionProperties:)];
+#endif
 
+  if (supportsSettingConnectionProperties) {
 #if PLATFORM(IOS)
     // FIXME: This code is different from iOS code in ResourceHandleCFNet.cpp in that here we respect stream properties that were present in client properties.
     NSDictionary *streamPropertiesFromClient = [connectionProperties objectForKey:@"kCFURLConnectionSocketStreamProperties"];
@@ -201,12 +229,14 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         // requests may get stuck waiting for delegate calls while we are in nested run loop, and the sync
         // request won't start because there are no available connections.
         // Connections are grouped by their socket stream properties, with each group having a separate count.
-        [streamProperties setObject:@TRUE forKey:@"_WebKitSynchronousRequest"];
+        [streamProperties setObject:[NSNumber numberWithBool:TRUE] forKey:@"_WebKitSynchronousRequest"];
     }
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     RetainPtr<CFDataRef> sourceApplicationAuditData = d->m_context->sourceApplicationAuditData();
     if (sourceApplicationAuditData)
         [streamProperties setObject:(NSData *)sourceApplicationAuditData.get() forKey:@"kCFStreamPropertySourceApplication"];
+#endif
 
 #if PLATFORM(IOS)
     NSMutableDictionary *propertyDictionary = [NSMutableDictionary dictionaryWithDictionary:connectionProperties];
@@ -224,9 +254,11 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
 
     // This is used to signal that to CFNetwork that this connection should be considered
     // web content for purposes of App Transport Security.
-    [propertyDictionary setObject:@{@"NSAllowsArbitraryLoadsInWebContent": @YES} forKey:@"_kCFURLConnectionPropertyATSFrameworkOverrides"];
+    [propertyDictionary setObject:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:TRUE] forKey:@"NSAllowsArbitraryLoadsInWebContent"] forKey:@"_kCFURLConnectionPropertyATSFrameworkOverrides"];
 
     d->m_connection = adoptNS([[NSURLConnection alloc] _initWithRequest:nsRequest delegate:delegate usesCache:usesCache maxContentLength:0 startImmediately:NO connectionProperties:propertyDictionary]);
+  } else
+    d->m_connection = adoptNS([[NSURLConnection alloc] _initWithRequest:nsRequest delegate:delegate usesCache:YES maxContentLength:0 startImmediately:NO]);
 }
 
 bool ResourceHandle::start()
@@ -252,12 +284,14 @@ bool ResourceHandle::start()
     createNSURLConnection(
         ResourceHandle::makeDelegate(shouldUseCredentialStorage),
         shouldUseCredentialStorage,
+        shouldRelaxThirdPartyCookiePolicy(d->m_context.get(), firstRequest().url()),
         d->m_shouldContentSniff || d->m_context->localFileContentSniffingEnabled(),
         schedulingBehavior);
 #else
     createNSURLConnection(
         ResourceHandle::makeDelegate(shouldUseCredentialStorage),
         shouldUseCredentialStorage,
+        shouldRelaxThirdPartyCookiePolicy(d->m_context.get(), firstRequest().url()),
         d->m_shouldContentSniff || d->m_context->localFileContentSniffingEnabled(),
         schedulingBehavior,
         (NSDictionary *)client()->connectionProperties(this).get());
@@ -268,7 +302,7 @@ bool ResourceHandle::start()
         SchedulePairHashSet::iterator end = scheduledPairs->end();
         for (SchedulePairHashSet::iterator it = scheduledPairs->begin(); it != end; ++it) {
             if (NSRunLoop *runLoop = (*it)->nsRunLoop()) {
-                [connection() scheduleInRunLoop:runLoop forMode:(NSString *)(*it)->mode()];
+                [connection() scheduleInRunLoop:runLoop forMode:(const NSString *)(*it)->mode()];
                 scheduled = true;
             }
         }
@@ -276,8 +310,12 @@ bool ResourceHandle::start()
 
     if (d->m_usesAsyncCallbacks) {
         ASSERT(!scheduled);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         [connection() setDelegateQueue:operationQueueForAsyncClients()];
         scheduled = true;
+#else
+        ASSERT_NOT_REACHED();
+#endif
     }
 #if PLATFORM(IOS)
     else {
@@ -297,7 +335,7 @@ bool ResourceHandle::start()
     
     if (d->m_connection) {
         if (d->m_defersLoading)
-            connection().defersCallbacks = YES;
+            wkSetNSURLConnectionDefersCallbacks(connection(), YES);
 
         return true;
     }
@@ -321,7 +359,7 @@ void ResourceHandle::cancel()
 void ResourceHandle::platformSetDefersLoading(bool defers)
 {
     if (d->m_connection)
-        [d->m_connection setDefersCallbacks:defers];
+        wkSetNSURLConnectionDefersCallbacks(d->m_connection.get(), defers);
 }
 
 #if !USE(CFURLCONNECTION)
@@ -331,7 +369,7 @@ void ResourceHandle::schedule(SchedulePair& pair)
     NSRunLoop *runLoop = pair.nsRunLoop();
     if (!runLoop)
         return;
-    [d->m_connection.get() scheduleInRunLoop:runLoop forMode:(NSString *)pair.mode()];
+    [d->m_connection.get() scheduleInRunLoop:runLoop forMode:(const NSString *)pair.mode()];
     if (d->m_startWhenScheduled) {
         [d->m_connection.get() start];
         d->m_startWhenScheduled = false;
@@ -341,9 +379,15 @@ void ResourceHandle::schedule(SchedulePair& pair)
 void ResourceHandle::unschedule(SchedulePair& pair)
 {
     if (NSRunLoop *runLoop = pair.nsRunLoop())
-        [d->m_connection.get() unscheduleFromRunLoop:runLoop forMode:(NSString *)pair.mode()];
+        [d->m_connection.get() unscheduleFromRunLoop:runLoop forMode:(const NSString *)pair.mode()];
 }
 
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
+const ResourceRequest& ResourceHandle::currentRequest() const
+{
+    return d->m_currentRequest;
+}
+#endif
 #endif
 
 id ResourceHandle::makeDelegate(bool shouldUseCredentialStorage)
@@ -413,6 +457,7 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
     handle->createNSURLConnection(
         handle->makeDelegate(shouldUseCredentialStorage),
         shouldUseCredentialStorage,
+        shouldRelaxThirdPartyCookiePolicy(context, request.url()),
         handle->shouldContentSniff() || context->localFileContentSniffingEnabled(),
         SchedulingBehavior::Synchronous);
 #else
@@ -424,11 +469,11 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
         (NSDictionary *)handle->client()->connectionProperties(handle.get()).get());
 #endif
 
-    [handle->connection() scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:(NSString *)synchronousLoadRunLoopMode()];
+    [handle->connection() scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:(const NSString *)synchronousLoadRunLoopMode()];
     [handle->connection() start];
     
     while (!client.isDone())
-        [[NSRunLoop currentRunLoop] runMode:(NSString *)synchronousLoadRunLoopMode() beforeDate:[NSDate distantFuture]];
+        [[NSRunLoop currentRunLoop] runMode:(const NSString *)synchronousLoadRunLoopMode() beforeDate:[NSDate distantFuture]];
 
     error = client.error();
     
@@ -497,8 +542,12 @@ ResourceRequest ResourceHandle::willSendRequest(ResourceRequest&& request, Resou
     auto newRequest = client()->willSendRequest(this, WTFMove(request), WTFMove(redirectResponse));
 
     // Client call may not preserve the session, especially if the request is sent over IPC.
-    if (!newRequest.isNull())
+    if (!newRequest.isNull()) {
         newRequest.setStorageSession(d->m_storageSession.get());
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
+        d->m_currentRequest = request;
+#endif
+    }
     return newRequest;
 }
 
@@ -568,7 +617,9 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
         client()->didReceiveAuthenticationChallenge(this, d->m_currentWebChallenge);
     else {
         clearAuthentication();
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         [challenge.sender() performDefaultHandlingForAuthenticationChallenge:challenge.nsURLAuthenticationChallenge()];
+#endif
     }
 }
 
@@ -695,6 +746,7 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
 
 void ResourceHandle::receivedRequestToPerformDefaultHandling(const AuthenticationChallenge& challenge)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     LOG(Network, "Handle %p receivedRequestToPerformDefaultHandling", this);
 
     ASSERT(!challenge.isNull());
@@ -704,10 +756,15 @@ void ResourceHandle::receivedRequestToPerformDefaultHandling(const Authenticatio
     [[d->m_currentMacChallenge sender] performDefaultHandlingForAuthenticationChallenge:d->m_currentMacChallenge];
 
     clearAuthentication();
+#else
+    UNUSED_PARAM(challenge);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge& challenge)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     LOG(Network, "Handle %p receivedChallengeRejection", this);
 
     ASSERT(!challenge.isNull());
@@ -717,6 +774,10 @@ void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge& c
     [[d->m_currentMacChallenge sender] rejectProtectionSpaceAndContinueWithChallenge:d->m_currentMacChallenge];
 
     clearAuthentication();
+#else
+    UNUSED_PARAM(challenge);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 void ResourceHandle::continueWillCacheResponse(NSCachedURLResponse *response)
@@ -728,7 +789,7 @@ void ResourceHandle::continueWillCacheResponse(NSCachedURLResponse *response)
     
 #endif // !USE(CFURLCONNECTION)
     
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
 
 #if USE(CFURLCONNECTION)
     

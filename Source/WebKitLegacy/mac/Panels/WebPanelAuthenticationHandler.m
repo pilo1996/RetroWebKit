@@ -28,10 +28,10 @@
 
 #if !PLATFORM(IOS)
 
-#import <WebKitLegacy/WebPanelAuthenticationHandler.h>
+#import <WebKit/WebPanelAuthenticationHandler.h>
 
 #import <Foundation/NSURLAuthenticationChallenge.h>
-#import <WebKitLegacy/WebAuthenticationPanel.h>
+#import <WebKit/WebAuthenticationPanel.h>
 #import <wtf/Assertions.h>
 
 static NSString *WebModalDialogPretendWindow = @"WebModalDialogPretendWindow";

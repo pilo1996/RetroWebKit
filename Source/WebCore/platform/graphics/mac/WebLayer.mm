@@ -29,6 +29,7 @@
 #import "GraphicsContext.h"
 #import "GraphicsLayerCA.h"
 #import "PlatformCALayer.h"
+#import "QuartzCoreSPI.h"
 #import <QuartzCore/QuartzCore.h>
 #import "QuartzCoreSPI.h"
 #import <wtf/SetForScope.h>
@@ -74,7 +75,11 @@ using namespace WebCore;
 {
     // Fix for <rdar://problem/9015675>: Force the layer content to be updated when the tree is reparented.
     if ([key isEqualToString:@"onOrderIn"])
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [self reloadValueForKeyPath:@"contents"];
+#else
+        [self setContentsChanged];
+#endif
 
     return nil;
 }
@@ -96,11 +101,17 @@ using namespace WebCore;
 
     if (PlatformCALayerClient* layerOwner = platformLayer->owner()) {
         if (layerOwner->platformCALayerDrawsContent()) {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+            dirtyRect = CGRectApplyAffineTransform(dirtyRect, [self contentsTransform]);
+#endif
             [super setNeedsDisplayInRect:dirtyRect];
 
             if (layerOwner->platformCALayerShowRepaintCounter(platformLayer)) {
                 CGRect bounds = [self bounds];
                 CGRect indicatorRect = CGRectMake(bounds.origin.x, bounds.origin.y, 52, 27);
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+                indicatorRect = CGRectApplyAffineTransform(indicatorRect, [self contentsTransform]);
+#endif
                 [super setNeedsDisplayInRect:indicatorRect];
             }
         }

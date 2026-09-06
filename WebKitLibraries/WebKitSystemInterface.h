@@ -6,7 +6,9 @@
 */
 
 #import <Foundation/Foundation.h>
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #import <dispatch/dispatch.h>
+#endif
 
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
@@ -14,11 +16,15 @@
 #else
 #import <CoreImage/CoreImage.h>
 #import <CoreText/CoreText.h>
+#if !TARGET_IPHONE_SIMULATOR
+#import <IOSurface/IOSurface.h>
+#endif
+#import <WebKitSystemInterfaceIOS.h>
 #endif
 
 @class AVAsset;
 @class AVPlayer;
-@class CALayer;
+@class DDActionContext;
 @class QTMovie;
 @class QTMovieView;
 
@@ -26,14 +32,12 @@
 extern "C" {
 #endif
 
-#pragma mark Shared
-
 typedef struct _CFURLResponse* CFURLResponseRef;
 typedef const struct _CFURLRequest* CFURLRequestRef;
 typedef struct _CFURLRequest* CFMutableURLRequestRef;
 
 typedef struct _CFURLCredential* WKCFURLCredentialRef;
-typedef struct _CFURLProtectionSpace* CFURLProtectionSpaceRef;
+typedef struct _CFURLProtectionSpace* WKCFURLProtectionSpaceRef;
 
 typedef enum {
     WKCertificateParseResultSucceeded  = 0,
@@ -41,128 +45,57 @@ typedef enum {
     WKCertificateParseResultPKCS7      = 2,
 } WKCertificateParseResult;
 
+CFStringRef WKCopyCFLocalizationPreferredName(CFStringRef localization);
+
 CFStringRef WKSignedPublicKeyAndChallengeString(unsigned keySize, CFStringRef challenge, CFStringRef keyDescription);
 WKCertificateParseResult WKAddCertificatesToKeychainFromData(const void *bytes, unsigned length);
+
+NSString *WKGetPreferredExtensionForMIMEType(NSString *type);
+NSArray *WKGetExtensionsForMIMEType(NSString *type);
+NSString *WKGetMIMETypeForExtension(NSString *extension);
+
+NSDate *WKGetNSURLResponseLastModifiedDate(NSURLResponse *response);
+#if !TARGET_OS_IPHONE && MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+NSTimeInterval WKGetNSURLResponseFreshnessLifetime(NSURLResponse *response);
+#endif
+NSString *WKCopyNSURLResponseStatusLine(NSURLResponse *response);
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+CFArrayRef WKCopyNSURLResponseCertificateChain(NSURLResponse *response);
+#endif
 
 CFStringEncoding WKGetWebDefaultCFStringEncoding(void);
 
 void WKSetMetadataURL(NSString *URLString, NSString *referrer, NSString *path);
-    
-typedef enum {
-    WKPlugInModuleLoadPolicyLoadNormally = 0,
-    WKPlugInModuleLoadPolicyLoadUnsandboxed,
-    WKPlugInModuleLoadPolicyBlockedForSecurity,
-    WKPlugInModuleLoadPolicyBlockedForCompatibility,
-} WKPlugInModuleLoadPolicy;
-
-WKPlugInModuleLoadPolicy WKLoadPolicyForPluginVersion(NSString *bundleIdentifier, NSString *bundleVersionString);
-BOOL WKShouldBlockPlugin(NSString *bundleIdentifier, NSString *bundleVersionString);
-BOOL WKIsPluginUpdateAvailable(NSString *bundleIdentifier);
-
-BOOL WKShouldBlockWebGL();
-BOOL WKShouldSuggestBlockingWebGL();
-
-enum {
-    WKCTFontTransformApplyShaping = (1 << 0),
-    WKCTFontTransformApplyPositioning = (1 << 1)
-};
-typedef int WKCTFontTransformOptions;
-
-typedef enum {
-    WKPatternTilingNoDistortion,
-    WKPatternTilingConstantSpacingMinimalDistortion,
-    WKPatternTilingConstantSpacing
-} WKPatternTiling;
-
-CGPatternRef WKCGPatternCreateWithImageAndTransform(CGImageRef image, CGAffineTransform transform, int tiling);
-
-BOOL WKCGContextIsBitmapContext(CGContextRef context);
-bool WKCGContextIsPDFContext(CGContextRef context);
-
-CFStringRef WKCopyFoundationCacheDirectory(void);
-
-typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
-CFURLStorageSessionRef WKCreatePrivateStorageSession(CFStringRef);
-NSURLRequest *WKCopyRequestWithStorageSession(CFURLStorageSessionRef, NSURLRequest *);
-NSCachedURLResponse *WKCachedResponseForRequest(CFURLStorageSessionRef, NSURLRequest *);
-
-typedef struct OpaqueCFHTTPCookieStorage* CFHTTPCookieStorageRef;
-unsigned WKGetHTTPCookieAcceptPolicy(CFHTTPCookieStorageRef);
-NSArray *WKHTTPCookies(CFHTTPCookieStorageRef);
-NSArray *WKHTTPCookiesForURL(CFHTTPCookieStorageRef, NSURL *, NSURL *);
-void WKSetHTTPCookiesForURL(CFHTTPCookieStorageRef, NSArray *, NSURL *, NSURL *);
-void WKDeleteAllHTTPCookies(CFHTTPCookieStorageRef);
-void WKDeleteHTTPCookie(CFHTTPCookieStorageRef, NSHTTPCookie *);
-
-CFURLRef WKCopyBundleURLForExecutableURL(CFURLRef);
-
-
-CALayer *WKMakeRenderLayer(uint32_t contextID);
-
-typedef struct __WKCAContextRef *WKCAContextRef;
-WKCAContextRef WKCAContextMakeRemoteWithServerPort(mach_port_t port);
-void WKDestroyRenderingResources(void);
-
-void WKCALayerEnumerateRectsBeingDrawnWithBlock(CALayer *layer, CGContextRef context, void (^block)(CGRect rect));
-
-void WKSetCONNECTProxyForStream(CFReadStreamRef, CFStringRef proxyHost, CFNumberRef proxyPort);
-void WKSetCONNECTProxyAuthorizationForStream(CFReadStreamRef, CFStringRef proxyAuthorizationString);
-CFHTTPMessageRef WKCopyCONNECTProxyResponse(CFReadStreamRef, CFURLRef responseURL, CFStringRef proxyHost, CFNumberRef proxyPort);
-
-CFDictionaryRef WKNSURLRequestCreateSerializableRepresentation(NSURLRequest *request, CFTypeRef tokenNull);
-NSURLRequest *WKNSURLRequestFromSerializableRepresentation(CFDictionaryRef representation, CFTypeRef tokenNull);
-CFDictionaryRef WKCFURLRequestCreateSerializableRepresentation(CFURLRequestRef cfRequest, CFTypeRef tokenNull);
-CFURLRequestRef WKCreateCFURLRequestFromSerializableRepresentation(CFDictionaryRef representation, CFTypeRef tokenNull);
-
-CFArrayRef WKCFURLCacheCopyAllHostNamesInPersistentStore(void);
-void WKCFURLCacheDeleteHostNamesInPersistentStore(CFArrayRef hostArray);    
-
-typedef enum {
-    WKSandboxExtensionTypeReadOnly,
-    WKSandboxExtensionTypeReadWrite,
-    WKSandboxExtensionTypeGeneric,
-} WKSandboxExtensionType;
-typedef struct __WKSandboxExtension *WKSandboxExtensionRef;
-
-WKSandboxExtensionRef WKSandboxExtensionCreate(const char* path, WKSandboxExtensionType type);
-void WKSandboxExtensionDestroy(WKSandboxExtensionRef sandboxExtension);
-
-bool WKSandboxExtensionConsume(WKSandboxExtensionRef sandboxExtension);
-bool WKSandboxExtensionInvalidate(WKSandboxExtensionRef sandboxExtension);
-
-const char* WKSandboxExtensionGetSerializedFormat(WKSandboxExtensionRef sandboxExtension, size_t* length);
-WKSandboxExtensionRef WKSandboxExtensionCreateFromSerializedFormat(const char* serializationFormat, size_t length);
-
-void WKSetCrashReportApplicationSpecificInformation(CFStringRef);
-
-bool WKIsPublicSuffix(NSString *domain);
-
-CFArrayRef WKCFURLCacheCopyAllHostNamesInPersistentStoreForPartition(CFStringRef partition);
-typedef void (^CFURLCacheCopyAllPartitionNamesResultsNotification)(CFArrayRef partitionNames);
-
-void WKCFURLCacheDeleteHostNamesInPersistentStoreForPartition(CFArrayRef hostArray, CFStringRef partition);
-CFStringRef WKCachePartitionKey(void);
-void WKCFURLCacheCopyAllPartitionNames(CFURLCacheCopyAllPartitionNamesResultsNotification resultsBlock);
-
-typedef enum {
-    WKExternalPlaybackTypeNone,
-    WKExternalPlaybackTypeAirPlay,
-    WKExternalPlaybackTypeTVOut,
-} WKExternalPlaybackType;
-
-int WKExernalDeviceTypeForPlayer(AVPlayer *);
-NSString *WKExernalDeviceDisplayNameForPlayer(AVPlayer *);
-
-bool WKQueryDecoderAvailability(void);
-
-#pragma mark Mac Only
+void WKSetNSURLConnectionDefersCallbacks(NSURLConnection *connection, BOOL defers);
 
 #if !TARGET_OS_IPHONE
-
 void WKShowKeyAndMain(void);
+#ifndef __LP64__
+OSStatus WKSyncWindowWithCGAfterMove(WindowRef);
+unsigned WKCarbonWindowMask(void);
+void *WKGetNativeWindowFromWindowRef(WindowRef);
+OSType WKCarbonWindowPropertyCreator(void);
+OSType WKCarbonWindowPropertyTag(void);
+#endif
+
+void WKDisableCGDeferredUpdates(void);
+#endif
+
+void WKSetNSURLRequestShouldContentSniff(NSMutableURLRequest *request, BOOL shouldContentSniff);
+
+#if !TARGET_OS_IPHONE && MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+void WKSetCookieStoragePrivateBrowsingEnabled(BOOL enabled);
+#endif
+
+#if !TARGET_OS_IPHONE
+#ifndef __LP64__
+unsigned WKGetNSAutoreleasePoolCount(void);
+#endif
 
 void WKAdvanceDefaultButtonPulseAnimation(NSButtonCell *button);
 
+NSString *WKMouseMovedNotification(void);
 NSString *WKWindowWillOrderOnScreenNotification(void);
 NSString *WKWindowWillOrderOffScreenNotification(void);
 void WKSetNSWindowShouldPostEventNotifications(NSWindow *window, BOOL post);
@@ -178,16 +111,51 @@ void WKAccessibilityHandleFocusChanged(void);
 AXUIElementRef WKCreateAXUIElementRef(id element);
 void WKUnregisterUniqueIdForElement(id element);
     
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 NSArray *WKSpeechSynthesisGetVoiceIdentifiers(void);
 NSString *WKSpeechSynthesisGetDefaultVoiceIdentifierForLocale(NSLocale*);
+#endif
+#endif
+    
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+BOOL WKShouldBlockPlugin(NSString *bundleIdentifier, NSString *bundleVersionString);
+BOOL WKIsPluginUpdateAvailable(NSString *bundleIdentifier);
+#endif
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+BOOL WKShouldBlockWebGL();
+BOOL WKShouldSuggestBlockingWebGL();
+#endif
 
 // Remote Accessibility API.
+#if !TARGET_OS_IPHONE && MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+void WKAXRegisterRemoteApp(void);
 void WKAXInitializeElementWithPresenterPid(id, pid_t);
 NSData *WKAXRemoteTokenForElement(id);
 id WKAXRemoteElementForToken(NSData *);
 void WKAXSetWindowForRemoteElement(id remoteWindow, id remoteElement);
 void WKAXRegisterRemoteProcess(bool registerProcess, pid_t);
 pid_t WKAXRemoteProcessIdentifier(id remoteElement);
+#endif
+
+void WKSetUpFontCache(void);
+
+void WKSignalCFReadStreamEnd(CFReadStreamRef stream);
+void WKSignalCFReadStreamHasBytes(CFReadStreamRef stream);
+void WKSignalCFReadStreamError(CFReadStreamRef stream, CFStreamError *error);
+
+CFReadStreamRef WKCreateCustomCFReadStream(void *(*formCreate)(CFReadStreamRef, void *), 
+    void (*formFinalize)(CFReadStreamRef, void *), 
+    Boolean (*formOpen)(CFReadStreamRef, CFStreamError *, Boolean *, void *), 
+    CFIndex (*formRead)(CFReadStreamRef, UInt8 *, CFIndex, CFStreamError *, Boolean *, void *), 
+    Boolean (*formCanRead)(CFReadStreamRef, void *), 
+    void (*formClose)(CFReadStreamRef, void *), 
+    void (*formSchedule)(CFReadStreamRef, CFRunLoopRef, CFStringRef, void *), 
+    void (*formUnschedule)(CFReadStreamRef, CFRunLoopRef, CFStringRef, void *),
+    void *context);
+
+#if !TARGET_OS_IPHONE
+void WKDrawCapsLockIndicator(CGContextRef, CGRect);
 
 // The CG context's current path is the focus ring's path.
 // Color and radius are ignored. Older versions of WebKit expected to
@@ -198,17 +166,111 @@ bool WKDrawCellFocusRingWithFrameAtTime(NSCell *cell, NSRect cellFrame, NSView *
 
 void WKSetDragImage(NSImage *image, NSPoint offset);
 
+void WKDrawBezeledTextFieldCell(NSRect, BOOL enabled);
+void WKDrawTextFieldCellFocusRing(NSTextFieldCell*, NSRect);
 void WKDrawBezeledTextArea(NSRect, BOOL enabled);
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 void WKPopupMenu(NSMenu*, NSPoint location, float width, NSView*, int selectedItem, NSFont*, NSControlSize controlSize, bool usesCustomAppearance);
+void WKPopupMenuWithSize(NSMenu*, NSPoint location, float width, NSView*, int selectedItem, NSFont*, NSControlSize controlSize);
+#else
+void WKPopupMenu(NSMenu*, NSPoint location, float width, NSView*, int selectedItem, NSFont*);
+#endif
 void WKPopupContextMenu(NSMenu *menu, NSPoint screenLocation);
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
+void WKSetDDActionContextIsForActionMenu(DDActionContext *actionContext);
+#endif
 void WKSendUserChangeNotifications(void);
+#ifndef __LP64__
+BOOL WKConvertNSEventToCarbonEvent(EventRecord *carbonEvent, NSEvent *cocoaEvent);
+void WKSendKeyEventToTSM(NSEvent *theEvent);
+void WKCallDrawingNotification(CGrafPtr port, Rect *bounds);
+#endif
 
+BOOL WKGetGlyphTransformedAdvances(CGFontRef, NSFont*, CGAffineTransform *m, ATSGlyphRef *glyph, CGSize *advance);
+NSFont *WKGetFontInLanguageForRange(NSFont *font, NSString *string, NSRange range);
+NSFont *WKGetFontInLanguageForCharacter(NSFont *font, UniChar ch);
+void WKSetCGFontRenderingMode(CGContextRef cgContext, NSFont *font, BOOL shouldSubpixelQuantize);
+#endif
+
+BOOL WKCGContextGetShouldSmoothFonts(CGContextRef cgContext);
+
+
+void WKSetBaseCTM(CGContextRef, CGAffineTransform);
+void WKSetPatternPhaseInUserSpace(CGContextRef, CGPoint);
+CGAffineTransform WKGetUserToBaseCTM(CGContextRef);
+
+void WKGetGlyphsForCharacters(CGFontRef, const UniChar[], CGGlyph[], size_t);
+bool WKGetVerticalGlyphsForCharacters(CTFontRef, const UniChar[], CGGlyph[], size_t);
+
+CTLineRef WKCreateCTLineWithUniCharProvider(const UniChar* (*provide)(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void*), void (*dispose)(const UniChar* chars, void*), void*);
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+enum {
+    WKCTFontTransformApplyShaping = (1 << 0),
+    WKCTFontTransformApplyPositioning = (1 << 1)
+};
+
+typedef int WKCTFontTransformOptions;
+
+bool WKCTFontTransformGlyphs(CTFontRef font, CGGlyph glyphs[], CGSize advances[], CFIndex count, WKCTFontTransformOptions options);
+#endif // TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+CTTypesetterRef WKCreateCTTypesetterWithUniCharProviderAndOptions(const UniChar* (*provide)(CFIndex stringIndex, CFIndex* charCount, CFDictionaryRef* attributes, void*), void (*dispose)(const UniChar* chars, void*), void*, CFDictionaryRef options);
+
+CGSize WKCTRunGetInitialAdvance(CTRunRef);
+
+#if (TARGET_OS_IPHONE && TARGET_OS_EMBEDDED) || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+CGContextRef WKIOSurfaceContextCreate(IOSurfaceRef, unsigned width, unsigned height, CGColorSpaceRef);
+CGImageRef WKIOSurfaceContextCreateImage(CGContextRef context);
+#endif
+#endif
+
+typedef enum {
+    WKPatternTilingNoDistortion,
+    WKPatternTilingConstantSpacingMinimalDistortion,
+    WKPatternTilingConstantSpacing
+} WKPatternTiling;
+
+CGPatternRef WKCGPatternCreateWithImageAndTransform(CGImageRef image, CGAffineTransform transform, int tiling);
+void WKCGContextResetClip(CGContextRef);
+
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 bool WKCGContextDrawsWithCorrectShadowOffsets(CGContextRef);
+#endif
+
+#if !TARGET_OS_IPHONE
+#ifndef __LP64__
+NSEvent *WKCreateNSEventWithCarbonEvent(EventRef eventRef);
+NSEvent *WKCreateNSEventWithCarbonMouseMoveEvent(EventRef inEvent, NSWindow *window);
+NSEvent *WKCreateNSEventWithCarbonClickEvent(EventRef inEvent, WindowRef windowRef);
+#endif
 
 CGContextRef WKNSWindowOverrideCGContext(NSWindow *, CGContextRef);
 void WKNSWindowRestoreCGContext(NSWindow *, CGContextRef);
 
+void WKNSWindowMakeBottomCornersSquare(NSWindow *);
+
+// These constants match the ones used by ThemeScrollbarArrowStyle (some of the values are private, so we can't just
+// use that enum directly).
+typedef enum {
+    WKThemeScrollBarArrowsSingle     = 0,
+    WKThemeScrollBarArrowsLowerRight = 1,
+    WKThemeScrollBarArrowsDouble     = 2,
+    WKThemeScrollBarArrowsUpperLeft  = 3,
+} WKThemeScrollBarArrowStyle;
+
+OSStatus WKThemeDrawTrack(const HIThemeTrackDrawInfo* inDrawInfo, CGContextRef inContext, int inArrowStyle);
+#endif
+
+
+BOOL WKCGContextIsBitmapContext(CGContextRef context);
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+bool WKCGContextIsPDFContext(CGContextRef context);
+#endif
+
+#if !TARGET_OS_IPHONE
 void WKGetWheelEventDeltas(NSEvent *, float *deltaX, float *deltaY, BOOL *continuous);
 
 BOOL WKAppVersionCheckLessThan(NSString *, int, double);
@@ -225,16 +287,56 @@ int WKQTMovieGetType(QTMovie* movie);
 BOOL WKQTMovieHasClosedCaptions(QTMovie* movie);
 void WKQTMovieSetShowClosedCaptions(QTMovie* movie, BOOL showClosedCaptions);
 void WKQTMovieSelectPreferredAlternates(QTMovie* movie);
+void WKQTMovieSelectPreferredAlternateTrackForMediaType(QTMovie* movie, NSString* mediaType);
 
 unsigned WKQTIncludeOnlyModernMediaFileTypes(void);
+int WKQTMovieDataRate(QTMovie* movie);
 float WKQTMovieMaxTimeLoaded(QTMovie* movie);
+float WKQTMovieMaxTimeSeekable(QTMovie* movie);
 NSString *WKQTMovieMaxTimeLoadedChangeNotification(void);
+void WKQTMovieViewSetDrawSynchronously(QTMovieView* view, BOOL sync);
 void WKQTMovieDisableComponent(uint32_t[5]);
 NSURL *WKQTMovieResolvedURL(QTMovie* movie);
+#endif
 
+CFStringRef WKCopyFoundationCacheDirectory(void);
+
+typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
+CFURLStorageSessionRef WKCreatePrivateStorageSession(CFStringRef);
+NSURLRequest *WKCopyRequestWithStorageSession(CFURLStorageSessionRef, NSURLRequest *);
+NSCachedURLResponse *WKCachedResponseForRequest(CFURLStorageSessionRef, NSURLRequest *);
+void WKSetRequestStorageSession(CFURLStorageSessionRef, CFMutableURLRequestRef);
+
+typedef struct OpaqueCFHTTPCookieStorage* CFHTTPCookieStorageRef;
+CFHTTPCookieStorageRef WKCopyHTTPCookieStorage(CFURLStorageSessionRef);
+unsigned WKGetHTTPCookieAcceptPolicy(CFHTTPCookieStorageRef);
+void WKSetHTTPCookieAcceptPolicy(CFHTTPCookieStorageRef, unsigned policy);
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+NSArray *WKHTTPCookies(CFHTTPCookieStorageRef);
+NSArray *WKHTTPCookiesForURL(CFHTTPCookieStorageRef, NSURL *, NSURL *);
+#else
+NSArray *WKHTTPCookiesForURL(CFHTTPCookieStorageRef, NSURL *);
+#endif
+void WKSetHTTPCookiesForURL(CFHTTPCookieStorageRef, NSArray *, NSURL *, NSURL *);
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+void WKDeleteAllHTTPCookies(CFHTTPCookieStorageRef);
+#endif
+void WKDeleteHTTPCookie(CFHTTPCookieStorageRef, NSHTTPCookie *);
+
+CFHTTPCookieStorageRef WKGetDefaultHTTPCookieStorage(void);
+WKCFURLCredentialRef WKCopyCredentialFromCFPersistentStorage(WKCFURLProtectionSpaceRef);
+void WKSetCFURLRequestShouldContentSniff(CFMutableURLRequestRef, bool flag);
+
+#if !TARGET_OS_IPHONE
 void WKSetVisibleApplicationName(CFStringRef);
 void WKSetApplicationInformationItem(CFStringRef key, CFTypeRef value);
+#endif
 
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+CFURLRef WKCopyBundleURLForExecutableURL(CFURLRef);
+#endif
+
+#if !TARGET_OS_IPHONE
 typedef enum {
     WKMediaUIPartFullscreenButton   = 0,
     WKMediaUIPartMuteButton,
@@ -265,6 +367,13 @@ typedef enum {
     WKMediaUIPartExitFullscreenButton,
 } WKMediaUIPart;
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+typedef enum {
+    WKMediaControllerThemeClassic   = 1,
+    WKMediaControllerThemeQuickTime = 2
+} WKMediaControllerThemeStyle;
+#endif
+
 typedef enum {
     WKMediaControllerFlagDisabled = 1 << 0,
     WKMediaControllerFlagPressed = 1 << 1,
@@ -272,10 +381,18 @@ typedef enum {
     WKMediaControllerFlagFocused = 1 << 4
 } WKMediaControllerThemeState;
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 BOOL WKHitTestMediaUIPart(int part, CGRect bounds, CGPoint point);
 void WKMeasureMediaUIPart(int part, CGRect *bounds, CGSize *naturalSize);
 void WKDrawMediaUIPart(int part, CGContextRef context, CGRect rect, unsigned state);
 void WKDrawMediaSliderTrack(CGContextRef context, CGRect rect, float timeLoaded, float currentTime, float duration, unsigned state);
+#else
+BOOL WKMediaControllerThemeAvailable(int themeStyle);
+BOOL WKHitTestMediaUIPart(int part, int themeStyle, CGRect bounds, CGPoint point);
+void WKMeasureMediaUIPart(int part, int themeStyle, CGRect *bounds, CGSize *naturalSize);
+void WKDrawMediaUIPart(int part, int themeStyle, CGContextRef context, CGRect rect, unsigned state);
+void WKDrawMediaSliderTrack(int themeStyle, CGContextRef context, CGRect rect, float timeLoaded, float currentTime, float duration, unsigned state);
+#endif
 NSView *WKCreateMediaUIBackgroundView(void);
 
 typedef enum {
@@ -295,41 +412,201 @@ NSArray *WKQTGetSitesInMediaDownloadCache();
 void WKQTClearMediaDownloadCacheForSite(NSString *site);
 void WKQTClearMediaDownloadCache();
     
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 mach_port_t WKInitializeRenderServer(void);
+#endif
+#endif
 
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+@class CALayer;
+
+CALayer *WKMakeRenderLayer(uint32_t contextID);
+    
+#if !TARGET_OS_IPHONE
 typedef struct __WKSoftwareCARendererRef *WKSoftwareCARendererRef;
 
 WKSoftwareCARendererRef WKSoftwareCARendererCreate(uint32_t contextID);
 void WKSoftwareCARendererDestroy(WKSoftwareCARendererRef);
 void WKSoftwareCARendererRender(WKSoftwareCARendererRef, CGContextRef, CGRect);
+#endif
+
+typedef struct __WKCAContextRef *WKCAContextRef;
+
+WKCAContextRef WKCAContextMakeRemoteWithServerPort(mach_port_t port);
+#if !TARGET_OS_IPHONE
 WKCAContextRef WKCAContextMakeRemoteForWindowServer(void);
+#endif
+void WKCAContextInvalidate(WKCAContextRef);
+uint32_t WKCAContextGetContextId(WKCAContextRef);
+void WKCAContextSetLayer(WKCAContextRef, CALayer *);
+CALayer *WKCAContextGetLayer(WKCAContextRef);
+void WKCAContextSetColorSpace(WKCAContextRef, CGColorSpaceRef);
+CGColorSpaceRef WKCAContextGetColorSpace(WKCAContextRef);
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+void WKDestroyRenderingResources(void);
+
+void WKCALayerEnumerateRectsBeingDrawnWithBlock(CALayer *layer, CGContextRef context, void (^block)(CGRect rect));
+#endif
+
+@class CARenderer;
+
+void WKCARendererAddChangeNotificationObserver(CARenderer *, void (*callback)(void*), void* context);
+void WKCARendererRemoveChangeNotificationObserver(CARenderer *, void (*callback)(void*), void* context);
+
+#if !TARGET_OS_IPHONE
+typedef struct __WKWindowBounceAnimationContext *WKWindowBounceAnimationContextRef;
+
+WKWindowBounceAnimationContextRef WKWindowBounceAnimationContextCreate(NSWindow *window);
+void WKWindowBounceAnimationContextDestroy(WKWindowBounceAnimationContextRef context);
+void WKWindowBounceAnimationSetAnimationProgress(WKWindowBounceAnimationContextRef context, double animationProgress);
 
 void WKWindowSetClipRect(NSWindow*, NSRect);
 
+#if defined(__x86_64__)
+#import <mach/mig.h>
+CFRunLoopSourceRef WKCreateMIGServerSource(mig_subsystem_t subsystem, mach_port_t serverPort);
+#endif
+
 NSUInteger WKGetInputPanelWindowStyle(void);
 UInt8 WKGetNSEventKeyChar(NSEvent *);
+#endif
+#endif // MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+
+@class CAPropertyAnimation;
+void WKSetCAAnimationValueFunction(CAPropertyAnimation*, NSString* function);
+
+unsigned WKInitializeMaximumHTTPConnectionCountPerHost(unsigned preferredConnectionCount);
+#if !TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+int WKGetHTTPRequestPriority(CFURLRequestRef);
+void WKSetHTTPRequestMaximumPriority(int maximumPriority);
+void WKSetHTTPRequestPriority(CFURLRequestRef, int priority);
+void WKSetHTTPRequestMinimumFastLanePriority(int priority);
+void WKHTTPRequestEnablePipelining(CFURLRequestRef);
+#endif
+
+void WKSetCONNECTProxyForStream(CFReadStreamRef, CFStringRef proxyHost, CFNumberRef proxyPort);
+void WKSetCONNECTProxyAuthorizationForStream(CFReadStreamRef, CFStringRef proxyAuthorizationString);
+CFHTTPMessageRef WKCopyCONNECTProxyResponse(CFReadStreamRef, CFURLRef responseURL, CFStringRef proxyHost, CFNumberRef proxyPort);
+
+#if !TARGET_OS_IPHONE
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+typedef enum {
+    WKEventPhaseNone = 0,
+    WKEventPhaseBegan = 1,
+    WKEventPhaseChanged = 2,
+    WKEventPhaseEnded = 3,
+} WKEventPhase;
+
+int WKGetNSEventMomentumPhase(NSEvent *);
+#endif
 
 void WKWindowSetAlpha(NSWindow *window, float alphaValue);
 void WKWindowSetScaledFrame(NSWindow *window, NSRect scaleFrame, NSRect nonScaledFrame);
 
-void WKEnableSettingCursorWhenInBackground(void);
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+void WKSyncSurfaceToView(NSView *view);
 
+void WKEnableSettingCursorWhenInBackground(void);
+#endif
+#endif
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+CFDictionaryRef WKNSURLRequestCreateSerializableRepresentation(NSURLRequest *request, CFTypeRef tokenNull);
+NSURLRequest *WKNSURLRequestFromSerializableRepresentation(CFDictionaryRef representation, CFTypeRef tokenNull);
+CFDictionaryRef WKCFURLRequestCreateSerializableRepresentation(CFURLRequestRef cfRequest, CFTypeRef tokenNull);
+CFURLRequestRef WKCreateCFURLRequestFromSerializableRepresentation(CFDictionaryRef representation, CFTypeRef tokenNull);
+
+CFDictionaryRef WKNSURLResponseCreateSerializableRepresentation(NSURLResponse *response, CFTypeRef tokenNull);
+NSURLResponse *WKNSURLResponseFromSerializableRepresentation(CFDictionaryRef representation, CFTypeRef tokenNull);
+
+#if !TARGET_OS_IPHONE && !defined(__LP64__)
+ScriptCode WKGetScriptCodeFromCurrentKeyboardInputSource(void);
+#endif
+#endif
+
+#if !TARGET_OS_IPHONE && MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+CFIndex WKGetHyphenationLocationBeforeIndex(CFStringRef string, CFIndex index);
+#endif
+
+CFArrayRef WKCFURLCacheCopyAllHostNamesInPersistentStore(void);
+void WKCFURLCacheDeleteHostNamesInPersistentStore(CFArrayRef hostArray);    
+
+CFStringRef WKGetCFURLResponseMIMEType(CFURLResponseRef);
+CFURLRef WKGetCFURLResponseURL(CFURLResponseRef);
+CFHTTPMessageRef WKGetCFURLResponseHTTPResponse(CFURLResponseRef);
+CFStringRef WKCopyCFURLResponseSuggestedFilename(CFURLResponseRef);
+void WKSetCFURLResponseMIMEType(CFURLResponseRef, CFStringRef mimeType);
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+typedef enum {
+    WKSandboxExtensionTypeReadOnly,
+    WKSandboxExtensionTypeReadWrite,
+} WKSandboxExtensionType;
+typedef struct __WKSandboxExtension *WKSandboxExtensionRef;
+
+WKSandboxExtensionRef WKSandboxExtensionCreate(const char* path, WKSandboxExtensionType type);
+void WKSandboxExtensionDestroy(WKSandboxExtensionRef sandboxExtension);
+
+bool WKSandboxExtensionConsume(WKSandboxExtensionRef sandboxExtension);
+bool WKSandboxExtensionInvalidate(WKSandboxExtensionRef sandboxExtension);
+
+const char* WKSandboxExtensionGetSerializedFormat(WKSandboxExtensionRef sandboxExtension, size_t* length);
+WKSandboxExtensionRef WKSandboxExtensionCreateFromSerializedFormat(const char* serializationFormat, size_t length);
+#endif
+
+#if !TARGET_OS_IPHONE
 OSStatus WKEnableSandboxStyleFileQuarantine(void);
 
 int WKRecommendedScrollerStyle(void);
 
 bool WKExecutableWasLinkedOnOrBeforeSnowLeopard(void);
 
+NSRange WKExtractWordDefinitionTokenRangeFromContextualString(NSString *contextString, NSRange range, NSDictionary **options);
+void WKShowWordDefinitionWindow(NSAttributedString *term, NSPoint screenPoint, NSDictionary *options);
+void WKHideWordDefinitionWindow(void);
+#endif
+
+#if !TARGET_OS_IPHONE
 CFStringRef WKCopyDefaultSearchProviderDisplayName(void);
+#endif
 
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+void WKSetCrashReportApplicationSpecificInformation(CFStringRef);
+
+NSURL* WKAVAssetResolvedURL(AVAsset*);
+
+#if !TARGET_OS_IPHONE
 NSCursor *WKCursor(const char *name);
+#endif
 
+dispatch_source_t WKCreateVMPressureDispatchOnMainQueue(void);
+#endif
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+dispatch_source_t WKCreateMemoryStatusPressureCriticalDispatchOnMainQueue(void);
+#endif
+    
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 bool WKExecutableWasLinkedOnOrBeforeLion(void);
+#endif
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+bool WKExecutableWasLinkedOnOrBeforeMountainLion(void);
+#endif
+
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+void WKCGPathAddRoundedRect(CGMutablePathRef path, const CGAffineTransform* matrix, CGRect rect, CGFloat cornerWidth, CGFloat cornerHeight);
+
+void WKCFURLRequestAllowAllPostCaching(CFURLRequestRef);
+#endif
+
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 CGFloat WKNSElasticDeltaForTimeDelta(CGFloat initialPosition, CGFloat initialVelocity, CGFloat elapsedTime);
 CGFloat WKNSElasticDeltaForReboundDelta(CGFloat delta);
 CGFloat WKNSReboundDeltaForElasticDelta(CGFloat delta);
+#endif
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 typedef enum {
     WKOcclusionNotificationTypeApplicationBecameVisible,
     WKOcclusionNotificationTypeApplicationBecameOccluded,
@@ -344,37 +621,33 @@ typedef uint32_t WKWindowID;
 typedef void (*WKOcclusionNotificationHandler)(uint32_t, void* data, uint32_t dataLength, void*, uint32_t);
 
 bool WKRegisterOcclusionNotificationHandler(WKOcclusionNotificationType, WKOcclusionNotificationHandler);
+bool WKUnregisterOcclusionNotificationHandler(WKOcclusionNotificationType, WKOcclusionNotificationHandler);
 bool WKEnableWindowOcclusionNotifications(NSInteger windowID, bool *outCurrentOcclusionState);
-
-#if defined(__x86_64__)
-#import <mach/mig.h>
-CFRunLoopSourceRef WKCreateMIGServerSource(mig_subsystem_t subsystem, mach_port_t serverPort);
 #endif
 
+void WKCFNetworkSetOverrideSystemProxySettings(CFDictionaryRef);
 
-#ifndef __LP64__
+#if TARGET_OS_IPHONE || MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+bool WKIsPublicSuffix(NSString *domain);
 
-OSStatus WKSyncWindowWithCGAfterMove(WindowRef);
-unsigned WKCarbonWindowMask(void);
-void *WKGetNativeWindowFromWindowRef(WindowRef);
-OSType WKCarbonWindowPropertyCreator(void);
-OSType WKCarbonWindowPropertyTag(void);
+CFArrayRef WKCFURLCacheCopyAllHostNamesInPersistentStoreForPartition(CFStringRef partition);
+typedef void (^CFURLCacheCopyAllPartitionNamesResultsNotification)(CFArrayRef partitionNames);
 
-unsigned WKGetNSAutoreleasePoolCount(void);
+void WKCFURLCacheDeleteHostNamesInPersistentStoreForPartition(CFArrayRef hostArray, CFStringRef partition);
+CFStringRef WKCachePartitionKey(void);
+void WKCFURLCacheCopyAllPartitionNames(CFURLCacheCopyAllPartitionNamesResultsNotification resultsBlock);
 
-BOOL WKConvertNSEventToCarbonEvent(EventRecord *carbonEvent, NSEvent *cocoaEvent);
-void WKSendKeyEventToTSM(NSEvent *theEvent);
-void WKCallDrawingNotification(CGrafPtr port, Rect *bounds);
+typedef enum {
+    WKExternalPlaybackTypeNone,
+    WKExternalPlaybackTypeAirPlay,
+    WKExternalPlaybackTypeTVOut,
+} WKExternalPlaybackType;
 
-NSEvent *WKCreateNSEventWithCarbonEvent(EventRef eventRef);
-NSEvent *WKCreateNSEventWithCarbonMouseMoveEvent(EventRef inEvent, NSWindow *window);
-NSEvent *WKCreateNSEventWithCarbonClickEvent(EventRef inEvent, WindowRef windowRef);
+int WKExernalDeviceTypeForPlayer(AVPlayer *);
+NSString *WKExernalDeviceDisplayNameForPlayer(AVPlayer *);
 
-ScriptCode WKGetScriptCodeFromCurrentKeyboardInputSource(void);
-
-#endif /* __LP64__ */
-
-#endif /* !TARGET_OS_IPHONE */
+bool WKQueryDecoderAvailability(void);
+#endif
 
 #ifdef __cplusplus
 }

@@ -32,6 +32,14 @@
 
 #import <AppKit/AppKit.h>
 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+typedef NSUInteger NSEventMask;
+#endif
+
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 101000
+typedef NSUInteger NSEventModifierFlags;
+#endif
+
 static const NSAlertStyle NSAlertStyleCritical = NSCriticalAlertStyle;
 static const NSAlertStyle NSAlertStyleInformational = NSInformationalAlertStyle;
 static const NSAlertStyle NSAlertStyleWarning = NSWarningAlertStyle;
@@ -44,8 +52,10 @@ static const NSButtonType NSButtonTypeRadio = NSRadioButton;
 static const NSButtonType NSButtonTypeMomentaryChange = NSMomentaryChangeButton;
 static const NSButtonType NSButtonTypeOnOff = NSOnOffButton;
 static const NSButtonType NSButtonTypeMomentaryPushIn = NSMomentaryPushInButton;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101200
 static const NSButtonType NSButtonTypeAccelerator = NSAcceleratorButton;
 static const NSButtonType NSButtonTypeMultiLevelAccelerator = NSMultiLevelAcceleratorButton;
+#endif
 
 static const NSCompositingOperation NSCompositingOperationCopy = NSCompositeCopy;
 static const NSCompositingOperation NSCompositingOperationDestinationIn = NSCompositeDestinationIn;
@@ -107,11 +117,27 @@ static const NSEventType NSEventTypeRightMouseUp = NSRightMouseUp;
 static const NSEventType NSEventTypeScrollWheel = NSScrollWheel;
 static const NSEventType NSEventTypeSystemDefined = NSSystemDefined;
 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+static const NSTextAlignment NSTextAlignmentRight = NSRightTextAlignment;
+static const NSTextAlignment NSTextAlignmentCenter = NSCenterTextAlignment;
+static const NSTextAlignment NSTextAlignmentLeft = NSLeftTextAlignment;
+static const NSTextAlignment NSTextAlignmentNatural = NSNaturalTextAlignment;
+static const NSTextAlignment NSTextAlignmentJustified = NSJustifiedTextAlignment;
+
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
+typedef NSInteger NSWritingDirectionFormatType;
+static const NSWritingDirectionFormatType NSWritingDirectionOverride = NSTextWritingDirectionOverride;
+static const NSWritingDirectionFormatType NSWritingDirectionEmbedding = NSTextWritingDirectionEmbedding;
+#endif
+#endif
+
 typedef NSUInteger NSWindowStyleMask;
 static const NSWindowStyleMask NSWindowStyleMaskBorderless = NSBorderlessWindowMask;
 static const NSWindowStyleMask NSWindowStyleMaskClosable = NSClosableWindowMask;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
 static const NSWindowStyleMask NSWindowStyleMaskFullScreen = NSFullScreenWindowMask;
 static const NSWindowStyleMask NSWindowStyleMaskFullSizeContentView = NSFullSizeContentViewWindowMask;
+#endif
 static const NSWindowStyleMask NSWindowStyleMaskHUDWindow = NSHUDWindowMask;
 static const NSWindowStyleMask NSWindowStyleMaskMiniaturizable = NSMiniaturizableWindowMask;
 static const NSWindowStyleMask NSWindowStyleMaskNonactivatingPanel = NSNonactivatingPanelMask;

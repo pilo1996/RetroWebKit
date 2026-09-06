@@ -31,7 +31,9 @@
 #include <wtf/ThreadSafeRefCounted.h>
 
 OBJC_CLASS NSHTTPCookieStorage;
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
 OBJC_CLASS WebCookieObserverAdapter;
+#endif
 
 namespace WebCore {
 
@@ -48,8 +50,10 @@ public:
 
 private:
     RetainPtr<NSHTTPCookieStorage> m_cookieStorage;
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
     bool m_hasRegisteredInternalsForNotifications { false };
     RetainPtr<WebCookieObserverAdapter> m_observerAdapter;
+#endif
     WTF::Function<void()> m_cookieChangeCallback;
 };
 

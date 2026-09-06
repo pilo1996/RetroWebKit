@@ -23,23 +23,28 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "SerializedCryptoKeyWrap.h"
+#import "config.h"
+#import "SerializedCryptoKeyWrap.h"
 
 #if ENABLE(SUBTLE_CRYPTO)
 
-#include "CommonCryptoUtilities.h"
-#include "LocalizedStrings.h"
-#include <CommonCrypto/CommonSymmetricKeywrap.h>
-#include <crt_externs.h>
-#include <wtf/text/Base64.h>
-#include <wtf/text/CString.h>
-#include <wtf/CryptographicUtilities.h>
-#include <wtf/RetainPtr.h>
+#import "CommonCryptoUtilities.h"
+#import "LocalizedStrings.h"
+#import "NotImplemented.h"
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
+#import <CommonCrypto/CommonSymmetricKeywrap.h>
+#endif
+#import <crt_externs.h>
+#import <wtf/text/Base64.h>
+#import <wtf/text/CString.h>
+#import <wtf/CryptographicUtilities.h>
+#import <wtf/RetainPtr.h>
 
 #define USE_KEYCHAIN_ACCESS_CONTROL_LISTS (!PLATFORM(IOS))
 
 namespace WebCore {
+
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 const NSUInteger currentSerializationVersion = 1;
 
@@ -292,6 +297,38 @@ bool unwrapSerializedCryptoKey(const Vector<uint8_t>& masterKey, const Vector<ui
 
     return true;
 }
+
+#else
+
+bool getDefaultWebCryptoMasterKey(Vector<uint8_t>& masterKey)
+{
+    notImplemented();
+    UNUSED_PARAM(masterKey);
+
+    return false;
+}
+
+bool wrapSerializedCryptoKey(const Vector<uint8_t>& masterKey, const Vector<uint8_t>& key, Vector<uint8_t>& result)
+{
+    notImplemented();
+    UNUSED_PARAM(masterKey);
+    UNUSED_PARAM(key);
+    UNUSED_PARAM(result);
+
+    return false;
+}
+
+bool unwrapSerializedCryptoKey(const Vector<uint8_t>& masterKey, const Vector<uint8_t>& wrappedKey, Vector<uint8_t>& key)
+{
+    notImplemented();
+    UNUSED_PARAM(masterKey);
+    UNUSED_PARAM(wrappedKey);
+    UNUSED_PARAM(key);
+
+    return false;
+}
+
+#endif
 
 }
 

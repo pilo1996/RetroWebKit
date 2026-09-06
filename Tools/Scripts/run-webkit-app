@@ -46,4 +46,8 @@ my $appPath = shift(@ARGV);
 if (isIOSWebKit()) {
     exit exitStatus(runIOSWebKitApp($appPath));
 }
-exit exitStatus(runMacWebKitApp($appPath, USE_OPEN_COMMAND));
+if (isLeopard()) {
+  exit exitStatus(runMacWebKitApp($appPath));
+} else {
+  exit exitStatus(runMacWebKitApp($appPath, USE_OPEN_COMMAND));
+}

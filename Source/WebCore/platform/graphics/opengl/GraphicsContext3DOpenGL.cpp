@@ -55,7 +55,9 @@
 #elif PLATFORM(MAC)
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #include <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include <OpenGL/gl3.h>
+#endif
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #elif PLATFORM(GTK) || PLATFORM(WIN)
 #include "OpenGLShims.h"
@@ -69,7 +71,7 @@ void GraphicsContext3D::releaseShaderCompiler()
     notImplemented();
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
 static void wipeAlphaChannelFromPixels(int width, int height, unsigned char* pixels)
 {
     // We can assume this doesn't overflow because the calling functions
@@ -109,7 +111,7 @@ void GraphicsContext3D::readPixelsAndConvertToBGRAIfNecessary(int x, int y, int 
     } else
         ::glReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
     if (!m_attrs.alpha)
         wipeAlphaChannelFromPixels(width, height, pixels);
 #endif
@@ -185,7 +187,7 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
     ::glBindRenderbuffer(GL_RENDERBUFFER, m_texture);
     ::glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_texture);
     setRenderbufferStorageFromDrawable(m_currentWidth, m_currentHeight);
-#elif PLATFORM(MAC)
+#elif PLATFORM(MAC) && USE(IOSURFACE)
     allocateIOSurfaceBackingStore(IntSize(width, height));
     updateFramebufferTextureBackingStoreFromLayer();
     ::glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_RECTANGLE_ARB, m_texture, 0);
@@ -310,6 +312,7 @@ void GraphicsContext3D::getIntegerv(GC3Denum pname, GC3Dint* value)
         *value /= 4;
         break;
     case MAX_VARYING_VECTORS:
+#if defined(GL_MAX_VARYING_VECTORS) && defined(GL_MAX_VARYING_COMPONENTS)
         if (isGLES2Compliant()) {
             ASSERT(::glGetError() == GL_NO_ERROR);
             ::glGetIntegerv(GL_MAX_VARYING_VECTORS, value);
@@ -317,7 +320,9 @@ void GraphicsContext3D::getIntegerv(GC3Denum pname, GC3Dint* value)
                 ::glGetIntegerv(GL_MAX_VARYING_COMPONENTS, value);
                 *value /= 4;
             }
-        } else {
+        } else
+#endif
+        {
             ::glGetIntegerv(GL_MAX_VARYING_FLOATS, value);
             *value /= 4;
         }
@@ -476,7 +481,7 @@ void GraphicsContext3D::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsi
     if (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
     if (!m_attrs.alpha && (format == GraphicsContext3D::RGBA || format == GraphicsContext3D::BGRA) && (m_state.boundFBO == m_fbo || (m_attrs.antialias && m_state.boundFBO == m_multisampleFBO)))
         wipeAlphaChannelFromPixels(width, height, static_cast<unsigned char*>(data));
 #endif

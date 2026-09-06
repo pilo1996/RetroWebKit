@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMComment.h>
+#import <WebKit/DOMComment.h>
 
 namespace WebCore {
 class Comment;

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLElement;
 @class DOMHTMLFormElement;
@@ -33,21 +33,21 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLSelectElement : DOMHTMLElement
-@property BOOL autofocus WEBKIT_AVAILABLE_MAC(10_6);
+@property BOOL autofocus WEBKIT_AVAILABLE_MAC(10_5);
 @property BOOL disabled;
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @property BOOL multiple;
 @property (copy) NSString *name;
 @property int size;
 @property (readonly, copy) NSString *type;
-@property (readonly, strong) DOMHTMLOptionsCollection *options;
+@property (readonly, retain) DOMHTMLOptionsCollection *options;
 @property (readonly) int length;
 @property int selectedIndex;
 @property (copy) NSString *value;
-@property (readonly) BOOL willValidate WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly) BOOL willValidate WEBKIT_AVAILABLE_MAC(10_5);
 
-- (DOMNode *)item:(unsigned)index WEBKIT_AVAILABLE_MAC(10_6);
-- (DOMNode *)namedItem:(NSString *)name WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMNode *)item:(unsigned)index WEBKIT_AVAILABLE_MAC(10_5);
+- (DOMNode *)namedItem:(NSString *)name WEBKIT_AVAILABLE_MAC(10_5);
 - (void)add:(DOMHTMLElement *)element before:(DOMHTMLElement *)before WEBKIT_AVAILABLE_MAC(10_5);
 - (void)remove:(int)index;
 @end

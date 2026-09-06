@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMNode.h>
+#import <WebKit/DOMNode.h>
 
 @class DOMNamedNodeMap;
 @class NSString;
@@ -31,8 +31,8 @@
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMDocumentType : DOMNode
 @property (readonly, copy) NSString *name;
-@property (readonly, strong) DOMNamedNodeMap *entities;
-@property (readonly, strong) DOMNamedNodeMap *notations;
+@property (readonly, retain) DOMNamedNodeMap *entities;
+@property (readonly, retain) DOMNamedNodeMap *notations;
 @property (readonly, copy) NSString *publicId;
 @property (readonly, copy) NSString *systemId;
 @property (readonly, copy) NSString *internalSubset;

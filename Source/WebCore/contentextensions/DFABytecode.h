@@ -116,6 +116,7 @@ static inline size_t instructionSizeWithArguments(DFABytecodeInstruction instruc
     case DFABytecodeInstruction::CheckValueRangeCaseSensitive:
     case DFABytecodeInstruction::CheckValueRangeCaseInsensitive:
     case DFABytecodeInstruction::Jump:
+    default:
         RELEASE_ASSERT_NOT_REACHED(); // Variable instruction size.
     case DFABytecodeInstruction::AppendAction:
     case DFABytecodeInstruction::AppendActionWithIfCondition:

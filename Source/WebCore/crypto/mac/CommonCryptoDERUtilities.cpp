@@ -42,7 +42,7 @@ size_t extraBytesNeededForEncodedLength(size_t length)
     if (!length)
         return 0;
     size_t result = 1;
-    while (result < sizeof(length) && length >= (1 << (result * 8)))
+    while (result < sizeof(length) && length >= (1U << (result * 8)))
         result += 1;
     return result;
 }

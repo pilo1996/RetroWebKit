@@ -223,6 +223,7 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_suppressScrollbarAnimations(false)
     , m_verticalScrollElasticity(ScrollElasticityAllowed)
     , m_horizontalScrollElasticity(ScrollElasticityAllowed)
+    , m_javaScriptURLsAreAllowed(true)
     , m_didLoadUserStyleSheet(false)
     , m_userStyleSheetModificationTime(0)
     , m_group(nullptr)
@@ -1355,6 +1356,16 @@ void Page::setMemoryCacheClientCallsEnabled(bool enabled)
 
     for (RefPtr<Frame> frame = &mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->loader().tellClientAboutPastMemoryCacheLoads();
+}
+
+void Page::setJavaScriptURLsAreAllowed(bool areAllowed)
+{
+    m_javaScriptURLsAreAllowed = areAllowed;
+}
+
+bool Page::javaScriptURLsAreAllowed() const
+{
+    return m_javaScriptURLsAreAllowed;
 }
 
 void Page::hiddenPageDOMTimerThrottlingStateChanged()

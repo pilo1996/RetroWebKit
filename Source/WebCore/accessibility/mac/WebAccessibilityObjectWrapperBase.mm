@@ -233,6 +233,9 @@ using namespace HTMLNames;
 #define NSAccessibilityImmediateDescendantsOnly @"AXImmediateDescendantsOnly"
 #endif
 
+@interface WebAccessibilityObjectWrapper : WebAccessibilityObjectWrapperBase
+@end
+
 static NSArray *convertMathPairsToNSArray(const AccessibilityObject::AccessibilityMathMultiscriptPairs& pairs, NSString *subscriptKey, NSString *superscriptKey)
 {
     NSMutableArray *array = [NSMutableArray arrayWithCapacity:pairs.size()];
@@ -594,6 +597,8 @@ static bool isValueTypeSupported(id value)
     return [value isKindOfClass:[NSString class]] || [value isKindOfClass:[NSNumber class]] || [value isKindOfClass:[WebAccessibilityObjectWrapperBase class]];
 }
 
+static NSDictionary *dictionaryRemovingNonSupportedTypes(NSDictionary *dictionary);
+
 static NSArray *arrayRemovingNonSupportedTypes(NSArray *array)
 {
     ASSERT([array isKindOfClass:[NSArray class]]);
@@ -619,7 +624,9 @@ static NSDictionary *dictionaryRemovingNonSupportedTypes(NSDictionary *dictionar
         return nil;
     ASSERT([dictionary isKindOfClass:[NSDictionary class]]);
     NSMutableDictionary *mutableDictionary = [dictionary mutableCopy];
-    for (NSString *key in dictionary) {
+    NSEnumerator *enumerator = [dictionary keyEnumerator];
+    NSString *key;
+    while ((key = [enumerator nextObject])) {
         id value = [dictionary objectForKey:key];
         if ([value isKindOfClass:[NSDictionary class]])
             [mutableDictionary setObject:dictionaryRemovingNonSupportedTypes(value) forKey:key];

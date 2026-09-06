@@ -603,10 +603,10 @@ void EventHandler::sendFakeEventsAfterWidgetTracking(NSEvent *initiatingEvent)
         // no up-to-date cache of them anywhere.
         fakeEvent = [NSEvent mouseEventWithType:NSEventTypeMouseMoved
                                        location:[[view->platformWidget() window]
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
                                   convertScreenToBase:[NSEvent mouseLocation]]
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
                                   modifierFlags:[initiatingEvent modifierFlags]
                                       timestamp:[initiatingEvent timestamp]
                                    windowNumber:[initiatingEvent windowNumber]
@@ -724,10 +724,10 @@ Ref<DataTransfer> EventHandler::createDraggingDataTransfer() const
 {
     // Must be done before ondragstart adds types and data to the pboard,
     // also done for security, as it erases data from the last drag.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     auto pasteboard = std::make_unique<Pasteboard>(NSDragPboard);
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
     pasteboard->clear();
     return DataTransfer::createForDrag();
 }
@@ -1102,6 +1102,7 @@ void EventHandler::platformNotifyIfEndGesture(const PlatformWheelEvent& wheelEve
 #endif
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 VisibleSelection EventHandler::selectClosestWordFromHitTestResultBasedOnLookup(const HitTestResult& result)
 {
     if (!m_frame.editor().behavior().shouldSelectBasedOnDictionaryLookup())
@@ -1113,6 +1114,7 @@ VisibleSelection EventHandler::selectClosestWordFromHitTestResultBasedOnLookup(c
 
     return VisibleSelection();
 }
+#endif
 
 static IntSize autoscrollAdjustmentFactorForScreenBoundaries(const IntPoint& screenPoint, const FloatRect& screenRect)
 {

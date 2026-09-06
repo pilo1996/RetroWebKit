@@ -30,6 +30,8 @@
 
 #import "WebCoreNSURLExtras.h"
 #import "WebCoreSystemInterface.h"
+#import <wtf/AutodrainedPool.h>
+#import <wtf/Threading.h>
 #import <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -38,10 +40,10 @@ bool deleteEmptyDirectory(const String& path)
 {
     auto fileManager = adoptNS([[NSFileManager alloc] init]);
 
-    if (NSArray *directoryContents = [fileManager contentsOfDirectoryAtPath:path error:nullptr]) {
+    if (NSArray *directoryContents = [fileManager.get() contentsOfDirectoryAtPath:(NSString*)path error:nullptr]) {
         // Explicitly look for and delete .DS_Store files.
-        if (directoryContents.count == 1 && [directoryContents.firstObject isEqualToString:@".DS_Store"])
-            [fileManager removeItemAtPath:[path stringByAppendingPathComponent:directoryContents.firstObject] error:nullptr];
+        if (directoryContents.count == 1 && [[directoryContents objectAtIndex:0] isEqualToString:@".DS_Store"])
+            [fileManager.get() removeItemAtPath:[(NSString*)path stringByAppendingPathComponent:[directoryContents objectAtIndex:0]] error:nullptr];
     }
 
     // rmdir(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
@@ -56,10 +58,22 @@ void setMetadataURL(const String& path, const String& metadataURLString)
     else
         urlString = metadataURLString;
 
+    NSString *urlStringCopy = urlString;
+    NSString *pathCopy = path;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+    // Spawn a background thread for WKSetMetadataURL because this function will not return until mds has
+    // journaled the data we're're trying to set. Depending on what other I/O is going on, it can take some
+    // time.
+    Thread::create("setMetaData", [=] {
+        AutodrainedPool pool;
+        wkSetMetadataURL(urlStringCopy, nil, [NSString stringWithUTF8String:[pathCopy fileSystemRepresentation]]);
+    })->detach();
+#else
     // Call WKSetMetadataURL on a background queue because it can take some time.
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), [path = path.isolatedCopy(), urlString = urlString.isolatedCopy()] {
         wkSetMetadataURL(urlString, nil, [NSString stringWithUTF8String:[path fileSystemRepresentation]]);
     });
+#endif
 }
 
 bool canExcludeFromBackup()

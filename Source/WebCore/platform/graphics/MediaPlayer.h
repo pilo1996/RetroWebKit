@@ -300,6 +300,7 @@ public:
 
     virtual bool mediaPlayerNeedsSiteSpecificHacks() const { return false; }
     virtual String mediaPlayerDocumentHost() const { return String(); }
+    virtual bool mediaPlayerIsVideo() const { return false; }
 };
 
 class MediaPlayer : public MediaPlayerEnums, public RefCounted<MediaPlayer> {

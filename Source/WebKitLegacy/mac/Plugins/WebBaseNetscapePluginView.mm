@@ -54,7 +54,7 @@
 #import <WebCore/RenderView.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/WebCoreObjCExtras.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOMPrivate.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
@@ -73,6 +73,7 @@ using namespace WebCore;
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
+    WebCoreObjCFinalizeOnMainThread(self);
     WKSendUserChangeNotifications();
 }
 
@@ -96,6 +97,7 @@ using namespace WebCore;
     _baseURL = adoptNS([baseURL copy]);
     _MIMEType = adoptNS([MIME copy]);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     // Enable "kiosk mode" when instantiating the QT plug-in inside of Dashboard. See <rdar://problem/6878105>
     if ([[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.dashboard.client"] &&
         [_pluginPackage.get() bundleIdentifier] == "com.apple.QuickTime Plugin.plugin") {
@@ -106,6 +108,7 @@ using namespace WebCore;
         [mutableValues.get() addObject:@"true"];
         [self setAttributeKeys:mutableKeys.get() andValues:mutableValues.get()];
     } else
+#endif
          [self setAttributeKeys:keys andValues:values];
 
     if (loadManually)
@@ -122,6 +125,13 @@ using namespace WebCore;
     ASSERT(!_isStarted);
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    ASSERT(!_isStarted);
+
+    [super finalize];
 }
 
 - (WebNetscapePluginPackage *)pluginPackage
@@ -438,6 +448,14 @@ using namespace WebCore;
     return !window || [window isMiniaturized] || [NSApp isHidden] || ![self isDescendantOf:[[self window] contentView]] || [self isHiddenOrHasHiddenAncestor];
 }
 
+- (BOOL)inFlatteningPaint
+{
+    auto* renderer = _element->renderer();
+    if (!is<RenderEmbeddedObject>(renderer))
+        return NO;
+    return !!(downcast<RenderEmbeddedObject>(*renderer).view().frameView().paintBehavior() & PaintBehaviorFlattenCompositingLayers);
+}
+
 - (BOOL)supportsSnapshotting
 {
     return [_pluginPackage.get() supportsSnapshotting];
@@ -737,25 +755,25 @@ using namespace WebCore;
     switch (sourceSpace) {
         case NPCoordinateSpacePlugin:
             sourcePointInScreenSpace = [self convertPoint:sourcePoint toView:nil];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePointInScreenSpace];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             break;
             
         case NPCoordinateSpaceWindow:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             break;
             
         case NPCoordinateSpaceFlippedWindow:
             sourcePoint.y = [[self currentWindow] frame].size.height - sourcePoint.y;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             break;
             
         case NPCoordinateSpaceScreen:
@@ -775,25 +793,25 @@ using namespace WebCore;
     // Then convert back to the destination space
     switch (destSpace) {
         case NPCoordinateSpacePlugin:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             destPoint = [self convertPoint:destPoint fromView:nil];
             break;
             
         case NPCoordinateSpaceWindow:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             break;
             
         case NPCoordinateSpaceFlippedWindow:
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             destPoint.y = [[self currentWindow] frame].size.height - destPoint.y;
             break;
             

@@ -30,6 +30,7 @@
 
 #include "SystemSleepListener.h"
 
+#include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -43,8 +44,12 @@ protected:
     friend std::unique_ptr<SystemSleepListener> SystemSleepListener::create(Client&);
 
     WeakPtrFactory<SystemSleepListenerMac> m_weakPtrFactory;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     id m_sleepObserver;
     id m_wakeObserver;
+#else
+    RetainPtr<id> m_sleepWakeObserver;
+#endif
 };
 
 }

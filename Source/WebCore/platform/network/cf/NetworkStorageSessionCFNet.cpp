@@ -44,6 +44,7 @@ static bool cookieStoragePartitioningEnabled;
 
 static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFStringRef identifier)
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     auto storageSession = adoptCF(_CFURLStorageSessionCreate(kCFAllocatorDefault, identifier, nullptr));
 
     if (!storageSession)
@@ -67,6 +68,10 @@ static RetainPtr<CFURLStorageSessionRef> createCFStorageSessionForIdentifier(CFS
     CFHTTPCookieStorageSetCookieAcceptPolicy(cookieStorage.get(), sharedPolicy);
 
     return storageSession;
+#else
+    UNUSED_PARAM(identifier);
+    RELEASE_ASSERT_NOT_REACHED();
+#endif
 }
 
 NetworkStorageSession::NetworkStorageSession(SessionID sessionID, RetainPtr<CFURLStorageSessionRef>&& platformSession, RetainPtr<CFHTTPCookieStorageRef>&& platformCookieStorage)
@@ -97,7 +102,7 @@ void NetworkStorageSession::switchToNewTestingSession()
 
     RetainPtr<CFHTTPCookieStorageRef> cookieStorage;
     if (session)
-        cookieStorage = adoptCF(_CFURLStorageSessionCopyCookieStorage(kCFAllocatorDefault, session.get()));
+        cookieStorage = adoptCF(wkCopyHTTPCookieStorage(session.get()));
 
     defaultNetworkStorageSession() = std::make_unique<NetworkStorageSession>(SessionID::defaultSessionID(), WTFMove(session), WTFMove(cookieStorage));
 }
@@ -134,7 +139,7 @@ void NetworkStorageSession::ensureSession(SessionID sessionID, const String& ide
         storageSession = createCFStorageSessionForIdentifier(cfIdentifier.get());
 
     if (!cookieStorage && storageSession)
-        cookieStorage = adoptCF(_CFURLStorageSessionCopyCookieStorage(kCFAllocatorDefault, storageSession.get()));
+        cookieStorage = adoptCF(wkCopyHTTPCookieStorage(storageSession.get()));
 
     addResult.iterator->value = std::make_unique<NetworkStorageSession>(sessionID, WTFMove(storageSession), WTFMove(cookieStorage));
 }
@@ -150,7 +155,7 @@ RetainPtr<CFHTTPCookieStorageRef> NetworkStorageSession::cookieStorage() const
         return m_platformCookieStorage;
 
     if (m_platformSession)
-        return adoptCF(_CFURLStorageSessionCopyCookieStorage(kCFAllocatorDefault, m_platformSession.get()));
+        return adoptCF(wkCopyHTTPCookieStorage(m_platformSession.get()));
 
 #if USE(CFURLCONNECTION)
     return _CFHTTPCookieStorageGetDefault(kCFAllocatorDefault);

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMNode;
 @class NSString;
@@ -47,7 +47,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_5)
 @property (readonly) double numberValue;
 @property (readonly, copy) NSString *stringValue;
 @property (readonly) BOOL booleanValue;
-@property (readonly, strong) DOMNode *singleNodeValue;
+@property (readonly, retain) DOMNode *singleNodeValue;
 @property (readonly) BOOL invalidIteratorState;
 @property (readonly) unsigned snapshotLength;
 

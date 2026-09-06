@@ -86,6 +86,9 @@ public:
     TransformationMatrix sublayerTransform() const override;
     void setSublayerTransform(const TransformationMatrix&) override;
 
+    TransformationMatrix contentsTransform() const override;
+    void setContentsTransform(const TransformationMatrix&) override;
+
     bool isHidden() const override;
     void setHidden(bool) override;
 
@@ -173,7 +176,7 @@ public:
 
     Ref<PlatformCALayer> createCompatibleLayer(PlatformCALayer::LayerType, PlatformCALayerClient*) const override;
 
-    void enumerateRectsBeingDrawn(CGContextRef, void (^block)(CGRect)) override;
+    void enumerateRectsBeingDrawn(CGContextRef, std::function<void(CGRect)> block) override;
 
     unsigned backingStoreBytesPerPixel() const override;
 
@@ -189,7 +192,9 @@ private:
 
     void updateContentsFormat();
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     AVPlayerLayer *avPlayerLayer() const;
+#endif
 
     RetainPtr<NSObject> m_delegate;
     std::unique_ptr<PlatformCALayerList> m_customSublayers;

@@ -131,6 +131,12 @@ static Class customScrollerClass;
     [super dealloc];
 }
 
+- (void)finalize
+{
+    delete _private;
+    [super finalize];
+}
+
 - (void)setAllowsHorizontalScrolling:(BOOL)flag
 {
     if (_private->hScrollModeLocked)
@@ -436,6 +442,15 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
     // position to 0 (the left) when the view is initially displayed.
     // This call updates the initial position correctly.
     [self adjustForScrollOriginChange];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    NSView *documentView = [self documentView];
+    if ([documentView isKindOfClass:[WebHTMLView class]]) {
+        WebHTMLView *htmlView = (WebHTMLView *)documentView;
+        if ([htmlView _isUsingAcceleratedCompositing])
+            [htmlView _updateLayerHostingViewPosition];
+    }
+#endif
 }
 
 - (BOOL)allowsHorizontalScrolling
@@ -537,8 +552,13 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
     BOOL isContinuous;
     WKGetWheelEventDeltas(event, &deltaX, &deltaY, &isContinuous);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     NSEventPhase momentumPhase = [event momentumPhase];
     BOOL isLatchingEvent = momentumPhase & NSEventPhaseBegan || momentumPhase & NSEventPhaseStationary;
+#else
+    int momentumPhase = WKGetNSEventMomentumPhase(event);
+    BOOL isLatchingEvent = momentumPhase == WKEventPhaseBegan || momentumPhase == WKEventPhaseChanged;
+#endif
 
     if (fabsf(deltaY) > fabsf(deltaX)) {
         if (![self allowsVerticalScrolling]) {
@@ -618,10 +638,12 @@ static const unsigned cMaxUpdateScrollbarsPass = 2;
     return _private->inProgrammaticScroll;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 - (void)setContentInsets:(NSEdgeInsets)edgeInsets
 {
     [super setContentInsets:edgeInsets];
     [self tile];
 }
+#endif
 
 @end

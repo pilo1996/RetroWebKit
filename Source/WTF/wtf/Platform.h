@@ -369,7 +369,12 @@
 #ifdef __APPLE__
 #define WTF_OS_DARWIN 1
 
-#include <Availability.h>
+/* On Mac OS X 10.5 available.h has to be instead of Availability.h because of a bug in the 10.5 SDK that otherwise defines the maximum allowed OS X version to 10.6 */
+/* This is done via stdlib.h which includes the correct header on 10.5 and later SDKs. */
+#if !defined(_DARWIN_USE_64_BIT_INODE)
+#define _DARWIN_USE_64_BIT_INODE
+#endif
+#include <stdlib.h>
 #include <AvailabilityMacros.h>
 #include <TargetConditionals.h>
 #endif
@@ -382,6 +387,9 @@
 #define WTF_OS_IOS 1
 #elif OS(DARWIN) && defined(TARGET_OS_MAC) && TARGET_OS_MAC
 #define WTF_OS_MAC_OS_X 1
+#ifndef TARGET_OS_IPHONE
+#define TARGET_OS_IPHONE 0
+#endif
 #endif
 
 /* OS(FREEBSD) - FreeBSD */
@@ -543,13 +551,15 @@
 
 #define USE_CF 1
 #define USE_FOUNDATION 1
-#define USE_NETWORK_CFDATA_ARRAY_CALLBACK 1
 #define ENABLE_USER_MESSAGE_HANDLERS 1
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
+#define USE_NETWORK_CFDATA_ARRAY_CALLBACK 1
 #define HAVE_OUT_OF_PROCESS_LAYER_HOSTING 1
+#endif
 #define HAVE_DTRACE 0
 #define USE_FILE_LOCK 1
 
-#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV)
+#if !PLATFORM(WATCHOS) && !PLATFORM(APPLETV) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
 #define ENABLE_DATA_DETECTION 1
 #define HAVE_AVKIT 1
 #define HAVE_PARENTAL_CONTROLS 1
@@ -573,6 +583,17 @@
 #if CPU(X86_64)
 #define HAVE_NETWORK_EXTENSION 1
 #define USE_PLUGIN_HOST_PROCESS 1
+#endif
+
+#if CPU(PPC)
+#define ENABLE_ASSEMBLER 1
+#define ENABLE_YARR_JIT 1
+#define ENABLE_JIT 0
+#endif
+#if CPU(PPC64)
+#define ENABLE_ASSEMBLER 0
+#define ENABLE_YARR_JIT 0
+#define ENABLE_JIT 0
 #endif
 
 /* OS X defines a series of platform macros for debugging. */
@@ -650,12 +671,8 @@
 #endif /* OS(UNIX) */
 
 #if OS(DARWIN)
-#define HAVE_DISPATCH_H 1
-#define HAVE_MADV_FREE 1
-#define HAVE_MADV_FREE_REUSE 1
 #define HAVE_MADV_DONTNEED 1
 #define HAVE_MERGESORT 1
-#define HAVE_PTHREAD_SETNAME_NP 1
 #define HAVE_READLINE 1
 #define HAVE_SYS_TIMEB_H 1
 
@@ -666,8 +683,15 @@
 #if !PLATFORM(GTK)
 #define USE_ACCELERATE 1
 #endif
+
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
+#define HAVE_DISPATCH_H 1
+#define HAVE_MADV_FREE 1
+#define HAVE_MADV_FREE_REUSE 1
+#define HAVE_PTHREAD_SETNAME_NP 1
 #if !PLATFORM(IOS)
 #define HAVE_HOSTED_CORE_ANIMATION 1
+#endif
 #endif
 
 #endif /* OS(DARWIN) */
@@ -680,7 +704,7 @@
 #define HAVE_CFNETWORK_IGNORE_HSTS 1
 #endif
 
-#if OS(DARWIN) || ((OS(FREEBSD) || defined(__GLIBC__)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)))
+#if OS(DARWIN) || ((OS(FREEBSD) || defined(__GLIBC__)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS) || CPU(PPC) || CPU(PPC64)))
 #define HAVE_MACHINE_CONTEXT 1
 #endif
 
@@ -974,7 +998,7 @@
 
 /* CSS Selector JIT Compiler */
 #if !defined(ENABLE_CSS_SELECTOR_JIT)
-#if (CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && PLATFORM(IOS))) && ENABLE(JIT) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE))
+#if (CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && PLATFORM(IOS)) || CPU(PPC)) && ENABLE(ASSEMBLER) && (OS(DARWIN) || PLATFORM(GTK) || PLATFORM(WPE))
 #define ENABLE_CSS_SELECTOR_JIT 1
 #else
 #define ENABLE_CSS_SELECTOR_JIT 0
@@ -1005,7 +1029,7 @@
 #define USE_TEXTURE_MAPPER_GL 1
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define USE_PROTECTION_SPACE_AUTH_CALLBACK 1
 #endif
 
@@ -1057,7 +1081,7 @@
 #define ENABLE_BINDING_INTEGRITY 1
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 #define USE_AVFOUNDATION 1
 #endif
 
@@ -1069,25 +1093,25 @@
 #endif
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MAC)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define USE_COREMEDIA 1
 #define HAVE_AVFOUNDATION_VIDEO_OUTPUT 1
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))
+#if PLATFORM(IOS) || ((PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define HAVE_AVFOUNDATION_MEDIA_SELECTION_GROUP 1
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))
+#if PLATFORM(IOS) || ((PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
 #define HAVE_AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT 1
 #define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MAC)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
 #define HAVE_AVFOUNDATION_LOADER_DELEGATE 1
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(IOS) && ENABLE(WEB_RTC))
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080) || (PLATFORM(IOS) && ENABLE(WEB_RTC))
 #define USE_VIDEOTOOLBOX 1
 #endif
 
@@ -1095,8 +1119,13 @@
 #define USE_REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR 1
 #endif
 
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
+#define HAVE_INVERTED_WHEEL_EVENTS 1
+#endif
+
 #if PLATFORM(MAC)
 #define USE_COREAUDIO 1
+#define USE_OPENTYPE_SANITIZER 1
 #endif
 
 #if !defined(USE_ZLIB)
@@ -1104,41 +1133,41 @@
 #endif
 
 #ifndef HAVE_QOS_CLASSES
-#if PLATFORM(COCOA)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000)
 #define HAVE_QOS_CLASSES 1
 #endif
 #endif
 
 #ifndef HAVE_VOUCHERS
-#if PLATFORM(COCOA)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000)
 #define HAVE_VOUCHERS 1
 #endif
 #endif
 
 #define USE_GRAMMAR_CHECKING 1
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if (PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)) || PLATFORM(GTK)
 #define USE_UNIFIED_TEXT_CHECKING 1
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #define USE_AUTOMATIC_TEXT_REPLACEMENT 1
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 /* Some platforms provide UI for suggesting autocorrection. */
 #define USE_AUTOCORRECTION_PANEL 1
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 /* Some platforms use spelling and autocorrection markers to provide visual cue. On such platform, if word with marker is edited, we need to remove the marker. */
 #define USE_MARKER_REMOVAL_UPON_EDITING 1
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 #define USE_INSERTION_UNDO_GROUPING 1
 #endif
 
-#if PLATFORM(COCOA)
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100) || PLATFORM(IOS)
 #define HAVE_TIMINGDATAOPTIONS 1
 #endif
 
@@ -1146,7 +1175,7 @@
 #define USE_AUDIO_SESSION 1
 #endif
 
-#if PLATFORM(COCOA) && !PLATFORM(IOS_SIMULATOR)
+#if PLATFORM(COCOA) && !PLATFORM(IOS_SIMULATOR) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 1070)
 #define USE_IOSURFACE 1
 #endif
 
@@ -1160,7 +1189,7 @@
 #define ENABLE_CSS3_TEXT_DECORATION_SKIP_INK 1
 #endif
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || !((PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200))
 #define USE_WOFF2 1
 #endif
 
@@ -1175,8 +1204,12 @@
 #define __STDC_LIMIT_MACROS
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 #define HAVE_NS_ACTIVITY 1
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+#define USE_ASYNC_NSTEXTINPUTCLIENT 1
 #endif
 
 #if (OS(DARWIN) && USE(CG)) || (USE(FREETYPE) && !PLATFORM(GTK)) || (PLATFORM(WIN) && (USE(CG) || USE(CAIRO)))
@@ -1190,7 +1223,7 @@
 #define TARGET_OS_IPHONE 0
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 #define USE_MEDIATOOLBOX 1
 #endif
 

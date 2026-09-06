@@ -4,6 +4,8 @@
 #define NULL ((void *)0)
 #endif
 
+#include <wtf/Platform.h>
+
 #include <ctype.h>
 #include <float.h>
 #include <locale.h>
@@ -25,12 +27,17 @@
 
 #endif
 
+/* Work around bug with C++ library that screws up Objective-C++ when exception support is disabled. */
+#ifdef __OBJC__
+#ifdef __cplusplus
+#include <ios>
+#endif
+#undef try
+#undef catch
+#endif
+
 #ifdef __cplusplus
 #define new ("if you use new/delete make sure to include config.h at the top of the file"()) 
 #define delete ("if you use new/delete make sure to include config.h at the top of the file"()) 
 #endif
-
-/* Work around bug with C++ library that screws up Objective-C++ when exception support is disabled. */
-#undef try
-#undef catch
 

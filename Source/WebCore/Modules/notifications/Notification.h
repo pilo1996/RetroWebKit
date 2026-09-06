@@ -61,7 +61,7 @@ public:
     };
     static Ref<Notification> create(Document&, const String& title, const Options&);
     
-    virtual ~Notification();
+    WEBCORE_EXPORT virtual ~Notification();
 
     void show();
     void close();

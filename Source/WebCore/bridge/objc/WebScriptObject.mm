@@ -167,7 +167,8 @@ void disconnectWindowWrapper(WebScriptObject *windowWrapper)
 #if !USE(WEB_THREAD)
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
-#endif
+#endif // !USE(WEB_THREAD)
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 + (id)scriptObjectForJSObject:(JSObjectRef)jsObject originRootObject:(RootObject*)originRootObject rootObject:(RootObject*)rootObject
@@ -313,6 +314,20 @@ void disconnectWindowWrapper(WebScriptObject *windowWrapper)
     [_private release];
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    if (_private->rootObject && _private->rootObject->isValid())
+        _private->rootObject->gcUnprotect(_private->imp);
+
+    if (_private->rootObject)
+        _private->rootObject->deref();
+
+    if (_private->originRootObject)
+        _private->originRootObject->deref();
+
+    [super finalize];
 }
 
 + (BOOL)throwException:(NSString *)exceptionMessage
@@ -702,13 +717,13 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
     return self;
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wobjc-missing-super-calls"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wobjc-missing-super-calls")
 - (void)dealloc
 {
     return;
 }
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
 + (WebUndefined *)undefined
 {

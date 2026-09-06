@@ -55,7 +55,7 @@ WorkQueue::~WorkQueue()
     platformInvalidate();
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 void WorkQueue::concurrentApply(size_t iterations, WTF::Function<void (size_t index)>&& function)
 {
     if (!iterations)

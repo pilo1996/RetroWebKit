@@ -32,6 +32,10 @@
 #include "WebCoreFullScreenWarningView.h"
 #include <wtf/text/WTFString.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <QuartzCore/CALayer.h>
+#endif
+
 @interface CAFilter : NSObject
 + (CAFilter *)filterWithType:(NSString *)type;
 @end
@@ -45,6 +49,7 @@ using namespace WebCore;
     if (!self)
         return nil;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     self.wantsLayer = YES;
     self.autoresizesSubviews = YES;
     self.layerContentsPlacement = NSViewLayerContentsPlacementScaleProportionallyToFit;
@@ -75,12 +80,43 @@ using namespace WebCore;
     warningFrame.origin = NSMakePoint((frameRect.size.width - warningFrame.size.width) / 2, frameRect.size.height / 2);
     _exitWarning.get().frame = warningFrame;
     [_effectView addSubview:_exitWarning.get()];
+#else
+    [self setLayer:[CALayer layer]];
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    [self setLayerContentsRedrawPolicy:NSViewLayerContentsRedrawNever];
+#endif
+    [self setWantsLayer:YES];
+
+    _exitWarning = adoptNS([[WebCoreFullScreenWarningView alloc] initWithTitle:clickToExitFullScreenText()]);
+    NSRect warningFrame = [_exitWarning.get() frame];
+    warningFrame.origin = NSMakePoint((frameRect.size.width - warningFrame.size.width) / 2, (frameRect.size.height - warningFrame.size.height) / 2);
+    [_exitWarning.get() setFrame:warningFrame];
+    [_exitWarning.get() setHidden:YES];
+    [self addSubview:_exitWarning.get()];
+#endif
 
     return self;
 }
 
-@synthesize target = _target;
-@synthesize action = _action;
+- (void)setTarget:(NSObject*)target
+{
+    _target = target;
+}
+
+- (NSObject*)target
+{
+    return _target;
+}
+
+- (void)setAction:(SEL)action
+{
+    _action = action;
+}
+
+- (SEL)action
+{
+    return _action;
+}
 
 @dynamic contents;
 - (void)setContents:(id)contents
@@ -95,7 +131,18 @@ using namespace WebCore;
 
 - (void)setExitWarningVisible:(BOOL)visible
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     [_effectView setHidden:!visible];
+#else
+    [_exitWarning.get() setHidden:!visible];
+    if (visible) {
+        CAFilter* filter = [CAFilter filterWithType:@"colorMonochrome"];
+        [filter setValue:[NSNumber numberWithFloat:-0.2] forKey:@"inputBias"];
+        [filter setValue:[NSNumber numberWithFloat:1] forKey:@"inputAmount"];
+        [[self layer] setFilters:[NSArray arrayWithObject:filter]];
+    } else
+        [[self layer] setFilters:nil];
+#endif
 }
 
 - (void)mouseDown:(NSEvent *)theEvent

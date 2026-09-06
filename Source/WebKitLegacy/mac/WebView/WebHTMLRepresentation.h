@@ -28,7 +28,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <WebKitLegacy/WebDocumentPrivate.h>
+#import <WebKit/WebDocumentPrivate.h>
 
 @class WebHTMLRepresentationPrivate;
 @class NSView;

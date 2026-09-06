@@ -78,7 +78,7 @@ void ParentalControlsContentFilter::responseReceived(const ResourceResponse& res
 void ParentalControlsContentFilter::addData(const char* data, int length)
 {
     ASSERT(![m_replacementData.get() length]);
-    m_replacementData = [m_webFilterEvaluator addData:[NSData dataWithBytesNoCopy:(void*)data length:length freeWhenDone:NO]];
+    m_replacementData = [m_webFilterEvaluator.get() addData:[NSData dataWithBytesNoCopy:const_cast<char*>(data) length:length freeWhenDone:NO]];
     updateFilterState();
     ASSERT(needsMoreData() || [m_replacementData.get() length]);
 }
@@ -86,7 +86,7 @@ void ParentalControlsContentFilter::addData(const char* data, int length)
 void ParentalControlsContentFilter::finishedAddingData()
 {
     ASSERT(![m_replacementData.get() length]);
-    m_replacementData = [m_webFilterEvaluator dataComplete];
+    m_replacementData = [m_webFilterEvaluator.get() dataComplete];
     updateFilterState();
 }
 
@@ -109,7 +109,7 @@ ContentFilterUnblockHandler ParentalControlsContentFilter::unblockHandler() cons
 
 void ParentalControlsContentFilter::updateFilterState()
 {
-    switch ([m_webFilterEvaluator filterState]) {
+    switch ([m_webFilterEvaluator.get() filterState]) {
     case kWFEStateAllowed:
     case kWFEStateEvaluating:
         m_state = State::Allowed;
@@ -124,7 +124,7 @@ void ParentalControlsContentFilter::updateFilterState()
 
 #if !LOG_DISABLED
     if (!needsMoreData())
-        LOG(ContentFiltering, "ParentalControlsContentFilter stopped buffering with state %d and replacement data length %zu.\n", m_state, [m_replacementData length]);
+        LOG(ContentFiltering, "ParentalControlsContentFilter stopped buffering with state %d and replacement data length %zu.\n", m_state, [m_replacementData.get() length]);
 #endif
 }
 

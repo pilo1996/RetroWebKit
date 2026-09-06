@@ -25,7 +25,11 @@
 
 @class ExtensionManagerWindowController;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 @interface BrowserAppDelegate : NSObject <NSApplicationDelegate> {
+#else
+@interface BrowserAppDelegate : NSObject {
+#endif
     NSMutableSet *_browserWindowControllers;
 #if WK_API_ENABLED
     ExtensionManagerWindowController *_extensionManagerWindowController;

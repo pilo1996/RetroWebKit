@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CryptoDigest.h"
 
-#include <CommonCrypto/CommonCrypto.h>
+#include <CommonCrypto/CommonDigest.h>
 
 namespace PAL {
 
@@ -124,6 +124,8 @@ std::unique_ptr<CryptoDigest> CryptoDigest::create(CryptoDigest::Algorithm algor
         CC_SHA512_Init(context);
         return digest;
     }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
 }
 

@@ -26,7 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebDownload.h>
+#import <WebKit/WebDownload.h>
 
 #import <Foundation/NSURLAuthenticationChallenge.h>
 #import <WebCore/AuthenticationCF.h>
@@ -35,7 +35,7 @@
 #import <WebCore/CredentialStorage.h>
 #import <WebCore/NSURLDownloadSPI.h>
 #import <WebCore/ProtectionSpace.h>
-#import <WebKitLegacy/WebPanelAuthenticationHandler.h>
+#import <WebKit/WebPanelAuthenticationHandler.h>
 #import <wtf/Assertions.h>
 
 #import "WebTypesInternal.h"
@@ -241,6 +241,15 @@ using namespace WebCore;
 {
     [self _setRealDelegate:delegate];
     return [super _initWithRequest:request delegate:_webInternal directory:directory];
+}
+
+- (void)connection:(NSURLConnection *)connection willStopBufferingData:(NSData *)data
+{
+    // NSURLConnection calls this method even if it is not implemented.
+    // This happens because NSURLConnection caches the results of respondsToSelector.
+    // Those results become invalid when the delegate of NSURLConnectionDelegateProxy is changed.
+    // This is a workaround since this problem needs to be fixed in NSURLConnectionDelegateProxy.
+    // <rdar://problem/3913270> NSURLConnection calls unimplemented delegate method in WebDownload
 }
 
 @end

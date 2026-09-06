@@ -391,6 +391,19 @@ static bool acceptsEditingFocus(Node* node)
     return frame->editor().shouldBeginEditing(rangeOfContents(*root).ptr());
 }
 
+static bool disableRangeMutation(Page* page)
+{
+    // This check is made on super-hot code paths, so we only want this on Leopard.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // Disable Range mutation on document modifications in Leopard Mail.
+    // See <rdar://problem/5865171>
+    return page && page->settings().needsLeopardMailQuirks();
+#else
+    UNUSED_PARAM(page);
+    return false;
+#endif
+}
+
 static bool canAccessAncestor(const SecurityOrigin& activeSecurityOrigin, Frame* targetFrame)
 {
     // targetFrame can be 0 when we're trying to navigate a top-level frame
@@ -4027,8 +4040,10 @@ void Document::moveNodeIteratorsToNewDocument(Node& node, Document& newDocument)
 
 void Document::updateRangesAfterChildrenChanged(ContainerNode& container)
 {
-    for (auto* range : m_ranges)
-        range->nodeChildrenChanged(container);
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
+        for (auto* range : m_ranges)
+            range->nodeChildrenChanged(container);
+    }
 }
 
 void Document::nodeChildrenWillBeRemoved(ContainerNode& container)
@@ -4042,8 +4057,10 @@ void Document::nodeChildrenWillBeRemoved(ContainerNode& container)
     removeFullScreenElementOfSubtree(container, true /* amongChildrenOnly */);
 #endif
 
-    for (auto* range : m_ranges)
-        range->nodeChildrenWillBeRemoved(container);
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
+        for (auto* range : m_ranges)
+            range->nodeChildrenWillBeRemoved(container);
+    }
 
     for (auto* it : m_nodeIterators) {
         for (Node* n = container.firstChild(); n; n = n->nextSibling())
@@ -4078,8 +4095,10 @@ void Document::nodeWillBeRemoved(Node& node)
     for (auto* it : m_nodeIterators)
         it->nodeWillBeRemoved(node);
 
-    for (auto* range : m_ranges)
-        range->nodeWillBeRemoved(node);
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
+        for (auto* range : m_ranges)
+            range->nodeWillBeRemoved(node);
+    }
 
     if (Frame* frame = this->frame()) {
         frame->eventHandler().nodeWillBeRemoved(node);
@@ -4109,7 +4128,7 @@ void Document::removeFocusNavigationNodeOfSubtree(Node& node, bool amongChildren
 
 void Document::textInserted(Node* text, unsigned offset, unsigned length)
 {
-    if (!m_ranges.isEmpty()) {
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
         for (auto* range : m_ranges)
             range->textInserted(text, offset, length);
     }
@@ -4120,7 +4139,7 @@ void Document::textInserted(Node* text, unsigned offset, unsigned length)
 
 void Document::textRemoved(Node* text, unsigned offset, unsigned length)
 {
-    if (!m_ranges.isEmpty()) {
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
         for (auto* range : m_ranges)
             range->textRemoved(text, offset, length);
     }
@@ -4132,7 +4151,7 @@ void Document::textRemoved(Node* text, unsigned offset, unsigned length)
 
 void Document::textNodesMerged(Text* oldNode, unsigned offset)
 {
-    if (!m_ranges.isEmpty()) {
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
         NodeWithIndex oldNodeWithIndex(oldNode);
         for (auto* range : m_ranges)
             range->textNodesMerged(oldNodeWithIndex, offset);
@@ -4143,8 +4162,10 @@ void Document::textNodesMerged(Text* oldNode, unsigned offset)
 
 void Document::textNodeSplit(Text* oldNode)
 {
-    for (auto* range : m_ranges)
-        range->textNodeSplit(oldNode);
+    if (!disableRangeMutation(page()) && !m_ranges.isEmpty()) {
+        for (auto* range : m_ranges)
+            range->textNodeSplit(oldNode);
+    }
 
     // FIXME: This should update markers for spelling and grammar checking.
 }

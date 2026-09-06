@@ -27,10 +27,11 @@
  */
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-#import <WebKitLegacy/npapi.h>
+#import <WebKit/npapi.h>
 
 #import "WebNetscapePluginView.h"
 #import "WebKitLogging.h"
+#import <wtf/MainThread.h>
 
 using namespace WebCore;
 
@@ -174,7 +175,7 @@ void NPN_PluginThreadAsyncCall(NPP instance, void (*func) (void *), void *userDa
 {
     WebNetscapePluginView *pluginView = pluginViewForInstance(instance);
 
-    dispatch_async(dispatch_get_main_queue(), ^{
+    callOnMainThread([&]{
         if (!pluginView || !pluginView->plugin) {
             // The plug-in has already been destroyed.
             return;

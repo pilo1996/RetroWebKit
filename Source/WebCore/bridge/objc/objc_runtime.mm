@@ -57,11 +57,14 @@ ClassStructPtr webUndefinedClass()
 
 // ---------------------- ObjcMethod ----------------------
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 ObjcMethod::ObjcMethod(ClassStructPtr aClass, SEL selector)
     : _objcClass(aClass)
     , _selector(selector)
 {
 }
+#pragma GCC diagnostic pop
 
 int ObjcMethod::numParameters() const
 {
@@ -80,11 +83,14 @@ bool ObjcMethod::isFallbackMethod() const
 
 // ---------------------- ObjcField ----------------------
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 ObjcField::ObjcField(Ivar ivar) 
     : _ivar(ivar)
     , _name(adoptCF(CFStringCreateWithCString(0, ivar_getName(_ivar), kCFStringEncodingASCII)))
 {
 }
+#pragma GCC diagnostic pop
 
 ObjcField::ObjcField(CFStringRef name)
     : _ivar(0)
@@ -94,7 +100,7 @@ ObjcField::ObjcField(CFStringRef name)
 
 JSValue ObjcField::valueFromInstance(ExecState* exec, const Instance* instance) const
 {
-    VM& vm = exec->vm();
+    Ref<JSC::VM> vm(exec->vm());
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue result = jsUndefined();
@@ -104,7 +110,7 @@ JSValue ObjcField::valueFromInstance(ExecState* exec, const Instance* instance) 
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
 
     @try {
-        if (id objcValue = [targetObject valueForKey:(NSString *)_name.get()])
+        if (id objcValue = [targetObject valueForKey:(const NSString *)_name.get()])
             result = convertObjcValueToValue(exec, &objcValue, ObjcObjectType, instance->rootObject());
         {
             JSLockHolder lock(exec);
@@ -130,7 +136,7 @@ static id convertValueToObjcObject(ExecState* exec, JSValue value)
 
 bool ObjcField::setValueToInstance(ExecState* exec, const Instance* instance, JSValue aValue) const
 {
-    JSC::VM& vm = exec->vm();
+    Ref<JSC::VM> vm(exec->vm());
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     id targetObject = (static_cast<const ObjcInstance*>(instance))->getObject();
@@ -139,7 +145,7 @@ bool ObjcField::setValueToInstance(ExecState* exec, const Instance* instance, JS
     JSLock::DropAllLocks dropAllLocks(exec); // Can't put this inside the @try scope because it unwinds incorrectly.
 
     @try {
-        [targetObject setValue:value forKey:(NSString *)_name.get()];
+        [targetObject setValue:value forKey:(const NSString *)_name.get()];
         {
             JSLockHolder lock(exec);
             ObjcInstance::moveGlobalExceptionToExecState(exec);
@@ -150,6 +156,7 @@ bool ObjcField::setValueToInstance(ExecState* exec, const Instance* instance, JS
         throwError(exec, scope, [localException reason]);
         return false;
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 // ---------------------- ObjcArray ----------------------
@@ -162,7 +169,7 @@ ObjcArray::ObjcArray(ObjectStructPtr a, RefPtr<RootObject>&& rootObject)
 
 bool ObjcArray::setValueAt(ExecState* exec, unsigned int index, JSValue aValue) const
 {
-    JSC::VM& vm = exec->vm();
+    Ref<JSC::VM> vm(exec->vm());
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (![_array.get() respondsToSelector:@selector(insertObject:atIndex:)]) {
@@ -186,11 +193,12 @@ bool ObjcArray::setValueAt(ExecState* exec, unsigned int index, JSValue aValue) 
         throwException(exec, scope, createError(exec, "Objective-C exception."));
         return false;
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 JSValue ObjcArray::valueAt(ExecState* exec, unsigned int index) const
 {
-    JSC::VM& vm = exec->vm();
+    Ref<JSC::VM> vm(exec->vm());
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (index > [_array.get() count])

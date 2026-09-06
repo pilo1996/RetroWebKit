@@ -30,8 +30,8 @@
 
 #import "WebURLsWithTitles.h"
 
-#import <WebKitLegacy/WebNSURLExtras.h>
-#import <WebKitLegacy/WebKitNSStringExtras.h>
+#import <WebKit/WebNSURLExtras.h>
+#import <WebKit/WebKitNSStringExtras.h>
 
 @implementation WebURLsWithTitles
 

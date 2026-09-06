@@ -29,7 +29,9 @@
 #include "SerializedPlatformRepresentationMac.h"
 
 #import "JSDOMConvertBufferSource.h"
+#if HAVE(AVFOUNDATION)
 #import <AVFoundation/AVMetadataItem.h>
+#endif
 #import <Foundation/NSString.h>
 #import <JavaScriptCore/APICast.h>
 #import <JavaScriptCore/JSContextRef.h>
@@ -41,10 +43,12 @@
 #import <wtf/SoftLinking.h>
 #import <wtf/text/Base64.h>
 
+#if HAVE(AVFOUNDATION)
 typedef AVMetadataItem AVMetadataItemType;
 SOFT_LINK_FRAMEWORK_OPTIONAL(AVFoundation)
 SOFT_LINK_CLASS(AVFoundation, AVMetadataItem)
 #define AVMetadataItem getAVMetadataItemClass()
+#endif
 
 
 namespace WebCore {
@@ -53,7 +57,9 @@ namespace WebCore {
 static JSValue *jsValueWithDataInContext(NSData *, JSContext *);
 static JSValue *jsValueWithArrayInContext(NSArray *, JSContext *);
 static JSValue *jsValueWithDictionaryInContext(NSDictionary *, JSContext *);
+#if HAVE(AVFOUNDATION)
 static JSValue *jsValueWithAVMetadataItemInContext(AVMetadataItemType *, JSContext *);
+#endif
 static JSValue *jsValueWithValueInContext(id, JSContext *);
 #endif
 
@@ -136,8 +142,10 @@ static JSValue *jsValueWithValueInContext(id value, JSContext *context)
     if ([value isKindOfClass:[NSData class]])
         return jsValueWithDataInContext(value, context);
 
+#if HAVE(AVFOUNDATION)
     if ([value isKindOfClass:[AVMetadataItem class]])
         return jsValueWithAVMetadataItemInContext(value, context);
+#endif
 
     return nil;
 }
@@ -200,6 +208,7 @@ static JSValue *jsValueWithDictionaryInContext(NSDictionary *dictionary, JSConte
     return result;
 }
 
+#if HAVE(AVFOUNDATION)
 static JSValue *jsValueWithAVMetadataItemInContext(AVMetadataItemType *item, JSContext *context)
 {
     NSMutableDictionary *dictionary = [NSMutableDictionary dictionary];
@@ -240,6 +249,7 @@ static JSValue *jsValueWithAVMetadataItemInContext(AVMetadataItemType *item, JSC
 
     return jsValueWithDictionaryInContext(dictionary, context);
 }
+#endif
 #endif
 
 } // namespace WebCore

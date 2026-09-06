@@ -265,10 +265,10 @@ using namespace WebCore;
     ASSERT([_targetView window]);
 
     NSRect highlightWindowFrame = [_targetView convertRect:[_targetView visibleRect] toView:nil];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     highlightWindowFrame.origin = [[_targetView window] convertBaseToScreen:highlightWindowFrame.origin];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
     return highlightWindowFrame;
 }

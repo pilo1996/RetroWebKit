@@ -749,7 +749,11 @@ public:
 
 #if PLATFORM(COCOA)
     PlatformGraphicsContext3D platformGraphicsContext3D() const { return m_contextObj; }
+#if PLATFORM(MAC) && !USE(IOSURFACE)
+    Platform3DObject platformTexture() const { return m_fbo; }
+#else
     Platform3DObject platformTexture() const { return m_texture; }
+#endif
     CALayer* platformLayer() const { return reinterpret_cast<CALayer*>(m_webGLLayer.get()); }
 #else
     PlatformGraphicsContext3D platformGraphicsContext3D();
@@ -1147,7 +1151,7 @@ public:
     RefPtr<ImageData> paintRenderingResultsToImageData();
     bool paintCompositedResultsToCanvas(ImageBuffer*);
 
-#if PLATFORM(COCOA)
+#if PLATFORM(IOS) || USE(IOSURFACE)
     bool texImageIOSurface2D(GC3Denum target, GC3Denum internalFormat, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, IOSurfaceRef, GC3Duint plane);
 #endif
 
@@ -1156,8 +1160,10 @@ public:
 #endif
 
 #if PLATFORM(MAC)
+#if USE(IOSURFACE)
     void allocateIOSurfaceBackingStore(IntSize);
     void updateFramebufferTextureBackingStoreFromLayer();
+#endif
     void updateCGLContext();
 #endif
 

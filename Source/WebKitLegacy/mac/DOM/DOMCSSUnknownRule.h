@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSRule.h>
+#import <WebKit/DOMCSSRule.h>
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSUnknownRule : DOMCSSRule

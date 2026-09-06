@@ -26,7 +26,7 @@
 #ifndef CommonCryptoSPI_h
 #define CommonCryptoSPI_h
 
-#if OS(DARWIN)
+#if OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <CommonCrypto/CommonRandomSPI.h>

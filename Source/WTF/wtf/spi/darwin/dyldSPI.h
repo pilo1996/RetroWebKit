@@ -58,8 +58,10 @@
 
 #endif
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
 WTF_EXTERN_C_BEGIN
 
 uint32_t dyld_get_program_sdk_version();
 
 WTF_EXTERN_C_END
+#endif

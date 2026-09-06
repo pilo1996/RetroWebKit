@@ -23,10 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
+#include "config.h"
 
 #if PLATFORM(MAC)
-#import "PowerObserverMac.h"
+#include "PowerObserverMac.h"
+
+// On Snow Leopard and newer we'll ask IOKit to deliver notifications on a queue.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#define IOKIT_WITHOUT_LIBDISPATCH 1
+#endif
+
+#if !defined(IOKIT_WITHOUT_LIBDISPATCH) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MAX_ALLOWED == 1060
+extern "C" void IONotificationPortSetDispatchQueue(IONotificationPortRef notify, dispatch_queue_t queue);
+#endif
 
 namespace WebCore {
 
@@ -35,7 +44,11 @@ PowerObserver::PowerObserver(WTF::Function<void()>&& powerOnHander)
     , m_powerConnection(0)
     , m_notificationPort(nullptr)
     , m_notifierReference(0)
+#ifdef IOKIT_WITHOUT_LIBDISPATCH
+    , m_runLoopSource(0)    
+#else
     , m_dispatchQueue(dispatch_queue_create("com.apple.WebKit.PowerObserver", 0))
+#endif
 {
     m_powerConnection = IORegisterForSystemPower(this, &m_notificationPort, [](void* context, io_service_t service, uint32_t messageType, void* messageArgument) {
         static_cast<PowerObserver*>(context)->didReceiveSystemPowerNotification(service, messageType, messageArgument);
@@ -43,7 +56,12 @@ PowerObserver::PowerObserver(WTF::Function<void()>&& powerOnHander)
     if (!m_powerConnection)
         return;
 
+#ifdef IOKIT_WITHOUT_LIBDISPATCH
+    m_runLoopSource = IONotificationPortGetRunLoopSource(m_notificationPort);
+    CFRunLoopAddSource(CFRunLoopGetMain(), m_runLoopSource, kCFRunLoopCommonModes);
+#else
     IONotificationPortSetDispatchQueue(m_notificationPort, m_dispatchQueue);
+#endif
 }
 
 PowerObserver::~PowerObserver()
@@ -51,12 +69,25 @@ PowerObserver::~PowerObserver()
     if (!m_powerConnection)
         return;
 
+#ifdef IOKIT_WITHOUT_LIBDISPATCH
+    CFRunLoopRemoveSource(CFRunLoopGetMain(), m_runLoopSource, kCFRunLoopCommonModes);
+#else
     dispatch_release(m_dispatchQueue);
+#endif
 
     IODeregisterForSystemPower(&m_notifierReference);
     IOServiceClose(m_powerConnection);
     IONotificationPortDestroy(m_notificationPort);
 }
+
+#ifdef IOKIT_WITHOUT_LIBDISPATCH
+void PowerObserver::runLoopCallBack(CFRunLoopObserverRef observer, CFRunLoopActivity /*activity*/, void* info)
+{
+    static_cast<PowerObserver*>(info)->m_powerOnHander();
+    CFRunLoopObserverInvalidate(observer);
+    CFRelease(observer);
+}
+#endif
 
 void PowerObserver::didReceiveSystemPowerNotification(io_service_t, uint32_t messageType, void* messageArgument)
 {
@@ -66,10 +97,17 @@ void PowerObserver::didReceiveSystemPowerNotification(io_service_t, uint32_t mes
     if (messageType != kIOMessageSystemWillPowerOn)
         return;
 
+#ifdef IOKIT_WITHOUT_LIBDISPATCH
+    CFRunLoopObserverContext context = { 0, this, 0, 0, 0 };
+    CFRunLoopObserverRef runLoopObserver = CFRunLoopObserverCreate(NULL, kCFRunLoopBeforeWaiting | kCFRunLoopExit, false /* don't repeat */,
+        0, runLoopCallBack, &context);
+    CFRunLoopAddObserver(CFRunLoopGetMain(), runLoopObserver, kCFRunLoopCommonModes);
+#else
     // We need to restart the timer on the main thread.
     CFRunLoopPerformBlock(CFRunLoopGetMain(), kCFRunLoopCommonModes, ^() {
         m_powerOnHander();
     });
+#endif
 }
 
 } // namespace WebCore

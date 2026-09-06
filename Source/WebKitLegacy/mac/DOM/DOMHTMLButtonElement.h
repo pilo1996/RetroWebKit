@@ -23,21 +23,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMHTMLFormElement;
 @class NSString;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLButtonElement : DOMHTMLElement
-@property BOOL autofocus WEBKIT_AVAILABLE_MAC(10_6);
+@property BOOL autofocus WEBKIT_AVAILABLE_MAC(10_5);
 @property BOOL disabled;
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @property (copy) NSString *type;
 @property (copy) NSString *name;
 @property (copy) NSString *value;
-@property (readonly) BOOL willValidate WEBKIT_AVAILABLE_MAC(10_6);
-@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_8);
+@property (readonly) BOOL willValidate WEBKIT_AVAILABLE_MAC(10_5);
+@property (copy) NSString *accessKey WEBKIT_DEPRECATED_MAC(10_4, 10_6);
 
 - (void)click WEBKIT_AVAILABLE_MAC(10_5);
 @end

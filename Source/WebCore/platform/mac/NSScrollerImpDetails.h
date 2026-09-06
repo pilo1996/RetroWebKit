@@ -26,10 +26,14 @@
 #ifndef WebCore_NSScrollerImpDetails_h
 #define WebCore_NSScrollerImpDetails_h
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+
 namespace WebCore {
 
 NSScrollerStyle recommendedScrollerStyle();
 
 }
+
+#endif
 
 #endif

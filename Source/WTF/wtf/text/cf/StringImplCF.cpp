@@ -28,6 +28,19 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 
+#if PLATFORM(MAC)
+#include <objc/objc-auto.h>
+#endif
+
+static inline bool garbageCollectionEnabled()
+{
+#if PLATFORM(MAC)
+    return objc_collectingEnabled();
+#else
+    return false;
+#endif
+}
+
 namespace WTF {
 
 namespace StringWrapperCFAllocator {
@@ -108,6 +121,7 @@ namespace StringWrapperCFAllocator {
 
     static CFAllocatorRef create()
     {
+        ASSERT(!garbageCollectionEnabled());
         CFAllocatorContext context = { 0, 0, retain, release, copyDescription, allocate, reallocate, deallocate, preferredSize };
         return CFAllocatorCreate(0, &context);
     }
@@ -122,7 +136,9 @@ namespace StringWrapperCFAllocator {
 
 RetainPtr<CFStringRef> StringImpl::createCFString()
 {
-    if (!m_length || !isMainThread()) {
+    // Since garbage collection isn't compatible with custom allocators, we
+    // can't use the NoCopy variants of CFStringCreate*() when GC is enabled.
+    if (!m_length || !isMainThread() || garbageCollectionEnabled()) {
         if (is8Bit())
             return adoptCF(CFStringCreateWithBytes(0, reinterpret_cast<const UInt8*>(characters8()), m_length, kCFStringEncodingISOLatin1, false));
         return adoptCF(CFStringCreateWithCharacters(0, reinterpret_cast<const UniChar*>(characters16()), m_length));

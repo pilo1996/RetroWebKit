@@ -40,9 +40,12 @@
 #endif
 
 #if OS(DARWIN) && !PLATFORM(GTK)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 SOFT_LINK_LIBRARY(libxslt)
 SOFT_LINK(libxslt, xsltRegisterExtFunction, int, (xsltTransformContextPtr ctxt, const xmlChar *name, const xmlChar *URI, xmlXPathFunction function), (ctxt, name, URI, function))
 SOFT_LINK(libxslt, xsltFunctionNodeSet, void, (xmlXPathParserContextPtr ctxt, int nargs), (ctxt, nargs))
+#pragma GCC diagnostic pop
 #endif
 
 namespace WebCore {

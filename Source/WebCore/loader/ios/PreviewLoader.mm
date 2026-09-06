@@ -26,7 +26,7 @@
 #import "config.h"
 #import "PreviewLoader.h"
 
-#if USE(QUICK_LOOK)
+#if PLATFORM(IOS) && USE(QUICK_LOOK)
 
 #import "DocumentLoader.h"
 #import "FrameLoader.h"

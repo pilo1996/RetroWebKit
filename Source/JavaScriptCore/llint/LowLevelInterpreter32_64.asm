@@ -1530,13 +1530,13 @@ _llint_op_put_by_id:
     loadp StructureChain::m_vector[t3], t3
     assert(macro (ok) btpnz t3, ok end)
 
-    loadp Structure::m_prototype[t2], t2
+    loadp Structure::m_prototype + PayloadOffset[t2], t2
     btpz t2, .opPutByIdTransitionChainDone
 .opPutByIdTransitionChainLoop:
     loadp [t3], t1
     bpneq t1, JSCell::m_structureID[t2], .opPutByIdSlow
     addp 4, t3
-    loadp Structure::m_prototype[t1], t2
+    loadp Structure::m_prototype + PayloadOffset[t1], t2
     btpnz t2, .opPutByIdTransitionChainLoop
 
 .opPutByIdTransitionChainDone:
@@ -1612,7 +1612,11 @@ _llint_op_get_by_val:
 
 .opGetByValOutOfBounds:
     loadpFromInstruction(4, t0)
-    storeb 1, ArrayProfile::m_outOfBounds[t0]
+    if FOUR_BYTE_BOOL
+        storei 1, ArrayProfile::m_outOfBounds[t0]
+    else
+        storeb 1, ArrayProfile::m_outOfBounds[t0]
+    end
 .opGetByValSlow:
     callOpcodeSlowPath(_llint_slow_path_get_by_val)
     dispatch(6)
@@ -1628,7 +1632,11 @@ macro contiguousPutByVal(storeCallback)
 .outOfBounds:
     biaeq t3, -sizeof IndexingHeader + IndexingHeader::u.lengths.vectorLength[t0], .opPutByValOutOfBounds
     loadp 16[PC], t2
-    storeb 1, ArrayProfile::m_mayStoreToHole[t2]
+    if FOUR_BYTE_BOOL
+        storei 1, ArrayProfile::m_mayStoreToHole[t2]
+    else
+        storeb 1, ArrayProfile::m_mayStoreToHole[t2]
+    end
     addi 1, t3, t2
     storei t2, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0]
     jmp .storeResult
@@ -1695,7 +1703,11 @@ macro putByVal(slowPath)
 
 .opPutByValArrayStorageEmpty:
     loadp 16[PC], t1
-    storeb 1, ArrayProfile::m_mayStoreToHole[t1]
+    if FOUR_BYTE_BOOL
+        storei 1, ArrayProfile::m_mayStoreToHole[t1]
+    else
+        storeb 1, ArrayProfile::m_mayStoreToHole[t1]
+    end
     addi 1, ArrayStorage::m_numValuesInVector[t0]
     bib t3, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], .opPutByValArrayStorageStoreResult
     addi 1, t3, t1
@@ -1704,7 +1716,11 @@ macro putByVal(slowPath)
 
 .opPutByValOutOfBounds:
     loadpFromInstruction(4, t0)
-    storeb 1, ArrayProfile::m_outOfBounds[t0]
+    if FOUR_BYTE_BOOL
+        storei 1, ArrayProfile::m_outOfBounds[t0]
+    else
+        storeb 1, ArrayProfile::m_outOfBounds[t0]
+    end
 .opPutByValSlow:
     callOpcodeSlowPath(slowPath)
     dispatch(5)
@@ -2015,7 +2031,7 @@ _llint_throw_from_slow_path_trampoline:
     # When throwing from the interpreter (i.e. throwing from LLIntSlowPaths), so
     # the throw target is not necessarily interpreted code, we come to here.
     # This essentially emulates the JIT's throwing protocol.
-    loadp Callee[cfr], t1
+    loadp Callee + PayloadOffset[cfr], t1
     andp MarkedBlockMask, t1
     loadp MarkedBlock::m_vm[t1], t1
     copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(t1, t2)
@@ -2182,7 +2198,7 @@ macro loadWithStructureCheck(operand, slowPath)
 end
 
 macro getProperty()
-    loadisFromInstruction(6, t3)
+    loadpFromInstruction(6, t3)
     loadPropertyAtVariableOffset(t3, t0, t1, t2)
     valueProfile(t1, t2, 28, t0)
     loadisFromInstruction(1, t0)
@@ -2202,7 +2218,7 @@ macro getGlobalVar(tdzCheckIfNecessary)
 end
 
 macro getClosureVar()
-    loadisFromInstruction(6, t3)
+    loadpFromInstruction(6, t3)
     loadp JSEnvironmentRecord_variables + TagOffset[t0, t3, 8], t1
     loadp JSEnvironmentRecord_variables + PayloadOffset[t0, t3, 8], t2
     valueProfile(t1, t2, 28, t0)
@@ -2277,7 +2293,7 @@ _llint_op_get_from_scope:
 macro putProperty()
     loadisFromInstruction(3, t1)
     loadConstantOrVariable(t1, t2, t3)
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     storePropertyAtVariableOffset(t1, t0, t2, t3)
 end
 
@@ -2294,7 +2310,7 @@ end
 macro putClosureVar()
     loadisFromInstruction(3, t1)
     loadConstantOrVariable(t1, t2, t3)
-    loadisFromInstruction(6, t1)
+    loadpFromInstruction(6, t1)
     storei t2, JSEnvironmentRecord_variables + TagOffset[t0, t1, 8]
     storei t3, JSEnvironmentRecord_variables + PayloadOffset[t0, t1, 8]
 end

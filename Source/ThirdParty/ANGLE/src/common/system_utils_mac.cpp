@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <mach-o/dyld.h>
 #include <vector>
 

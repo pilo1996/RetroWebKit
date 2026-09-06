@@ -61,9 +61,7 @@ public:
 
     Thread& thread() { return m_thread.get(); }
 
-#if OS(WINDOWS)
     static RefPtr<Thread> get(ThreadIdentifier);
-#endif
 
 private:
     ThreadHolder(Thread& thread)

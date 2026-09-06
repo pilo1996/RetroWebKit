@@ -43,6 +43,7 @@
 #include <CoreGraphics/CGDataProvider.h>
 #include <CoreGraphics/CGImage.h>
 
+#include <wtf/MallocPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
 
@@ -352,11 +353,12 @@ bool GraphicsContext3D::ImageExtractor::extractImage(bool premultiplyAlpha, bool
     CGColorSpaceModel model = CGColorSpaceGetModel(colorSpace);
     if (model == kCGColorSpaceModelIndexed) {
         RetainPtr<CGContextRef> bitmapContext;
+        auto bitmapData = adoptMallocPtr(static_cast<uint8_t*>(fastMalloc(m_imageWidth * 4 * m_imageHeight)));
         // FIXME: we should probably manually convert the image by indexing into
         // the color table, which would allow us to avoid premultiplying the
         // alpha channel. Creation of a bitmap context with an alpha channel
         // doesn't seem to work unless it's premultiplied.
-        bitmapContext = adoptCF(CGBitmapContextCreate(0, m_imageWidth, m_imageHeight, 8, m_imageWidth * 4,
+        bitmapContext = adoptCF(CGBitmapContextCreate(bitmapData.get(), m_imageWidth, m_imageHeight, 8, m_imageWidth * 4,
             sRGBColorSpaceRef(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
         if (!bitmapContext)
             return false;

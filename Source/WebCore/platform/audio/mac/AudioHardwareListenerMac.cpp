@@ -30,6 +30,14 @@
 
 #include <algorithm>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+enum
+{
+    kAudioDeviceTransportTypeUnknown        = 0,
+    kAudioDeviceTransportTypeBuiltIn        = 'bltn',
+};
+#endif
+
 enum {
     kAudioHardwarePropertyProcessIsRunning = 'prun'
 };
@@ -109,6 +117,22 @@ static const AudioObjectPropertyAddress& outputDevicePropertyDescriptor()
     return outputDeviceProperty;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+OSStatus AudioHardwareListenerMac::WebAudioObjectPropertyListener( AudioObjectID                       inObjectID,
+                                                                   UInt32                              inNumberAddresses,
+                                                                   const AudioObjectPropertyAddress    inAddresses[],
+                                                                   void*                               inClientData)
+{
+    UNUSED_PARAM(inObjectID);
+
+    if (inClientData != nullptr) {
+        (*reinterpret_cast<AudioObjectPropertyListenerBlock*>(inClientData))(inNumberAddresses, inAddresses);
+    }
+    
+    return noErr;
+}
+#endif
+
 Ref<AudioHardwareListener> AudioHardwareListener::create(Client& client)
 {
     return AudioHardwareListenerMac::create(client);
@@ -127,20 +151,38 @@ AudioHardwareListenerMac::AudioHardwareListenerMac(Client& client)
     setOutputDeviceSupportsLowPowerMode(currentDeviceSupportsLowPowerBufferSize());
 
     auto weakThis = m_weakFactory.createWeakPtr();
-    m_block = Block_copy(^(UInt32 count, const AudioObjectPropertyAddress properties[]) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    m_block = Block_copy([weakThis](UInt32 count, const AudioObjectPropertyAddress properties[]) {
+#else
+    m_block = [weakThis](UInt32 count, const AudioObjectPropertyAddress properties[]) {
+#endif
         if (weakThis)
             weakThis->propertyChanged(count, properties);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     });
+#else
+    };
+#endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     AudioObjectAddPropertyListenerBlock(kAudioObjectSystemObject, &processIsRunningPropertyDescriptor(), dispatch_get_main_queue(), m_block);
     AudioObjectAddPropertyListenerBlock(kAudioObjectSystemObject, &outputDevicePropertyDescriptor(), dispatch_get_main_queue(), m_block);
+#else
+    AudioObjectAddPropertyListener(kAudioObjectSystemObject, &processIsRunningPropertyDescriptor(), WebAudioObjectPropertyListener, &m_block);
+    AudioObjectAddPropertyListener(kAudioObjectSystemObject, &outputDevicePropertyDescriptor(), WebAudioObjectPropertyListener, &m_block);
+#endif
 }
 
 AudioHardwareListenerMac::~AudioHardwareListenerMac()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     AudioObjectRemovePropertyListenerBlock(kAudioObjectSystemObject, &processIsRunningPropertyDescriptor(), dispatch_get_main_queue(), m_block);
     AudioObjectRemovePropertyListenerBlock(kAudioObjectSystemObject, &outputDevicePropertyDescriptor(), dispatch_get_main_queue(), m_block);
     Block_release(m_block);
+#else
+    AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &processIsRunningPropertyDescriptor(), WebAudioObjectPropertyListener, &m_block);
+    AudioObjectRemovePropertyListener(kAudioObjectSystemObject, &outputDevicePropertyDescriptor(), WebAudioObjectPropertyListener, &m_block);
+#endif
 }
 
 void AudioHardwareListenerMac::propertyChanged(UInt32 propertyCount, const AudioObjectPropertyAddress properties[])

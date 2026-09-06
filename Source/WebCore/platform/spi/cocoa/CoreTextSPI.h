@@ -36,11 +36,60 @@
 #else
 
 enum {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    kCTFontUIFontNone = kCTFontNoFontType,
+    kCTFontUIFontUser = kCTFontUserFontType,
+    kCTFontUIFontUserFixedPitch = kCTFontUserFixedPitchFontType,
+    kCTFontUIFontSystem = kCTFontSystemFontType,
+    kCTFontUIFontEmphasizedSystem = kCTFontEmphasizedSystemFontType,
+    kCTFontUIFontSmallSystem = kCTFontSmallSystemFontType,
+    kCTFontUIFontSmallEmphasizedSystem = kCTFontSmallEmphasizedSystemFontType,
+    kCTFontUIFontMiniSystem = kCTFontMiniSystemFontType,
+    kCTFontUIFontMiniEmphasizedSystem = kCTFontMiniEmphasizedSystemFontType,
+    kCTFontUIFontViews = kCTFontViewsFontType,
+    kCTFontUIFontApplication = kCTFontApplicationFontType,
+    kCTFontUIFontLabel = kCTFontLabelFontType,
+    kCTFontUIFontMenuTitle = kCTFontMenuTitleFontType,
+    kCTFontUIFontMenuItem = kCTFontMenuItemFontType,
+    kCTFontUIFontMenuItemMark = kCTFontMenuItemMarkFontType,
+    kCTFontUIFontMenuItemCmdKey = kCTFontMenuItemCmdKeyFontType,
+    kCTFontUIFontWindowTitle = kCTFontWindowTitleFontType,
+    kCTFontUIFontPushButton = kCTFontPushButtonFontType,
+    kCTFontUIFontUtilityWindowTitle = kCTFontUtilityWindowTitleFontType,
+    kCTFontUIFontAlertHeader = kCTFontAlertHeaderFontType,
+    kCTFontUIFontSystemDetail = kCTFontSystemDetailFontType,
+    kCTFontUIFontEmphasizedSystemDetail = kCTFontEmphasizedSystemDetailFontType,
+    kCTFontUIFontToolbar = kCTFontToolbarFontType,
+    kCTFontUIFontSmallToolbar = kCTFontSmallToolbarFontType,
+    kCTFontUIFontMessage = kCTFontMessageFontType,
+    kCTFontUIFontPalette = kCTFontPaletteFontType,
+    kCTFontUIFontToolTip = kCTFontToolTipFontType,
+    kCTFontUIFontControlContent = kCTFontControlContentFontType,
+#endif
     kCTFontUIFontSystemItalic = 27,
     kCTFontUIFontSystemThin = 102,
     kCTFontUIFontSystemLight = 103,
     kCTFontUIFontSystemUltraLight = 104,
 };
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+enum {
+    kCTFontOrientationDefault = kCTFontDefaultOrientation,
+    kCTFontOrientationHorizontal = kCTFontHorizontalOrientation,
+    kCTFontOrientationVertical = kCTFontVerticalOrientation,
+};
+
+enum {
+    kCTFontTraitItalic = kCTFontItalicTrait,
+    kCTFontTraitBold = kCTFontBoldTrait,
+    kCTFontTraitExpanded = kCTFontExpandedTrait,
+    kCTFontTraitCondensed = kCTFontCondensedTrait,
+    kCTFontTraitMonoSpace = kCTFontMonoSpaceTrait,
+    kCTFontTraitVertical = kCTFontVerticalTrait,
+    kCTFontTraitUIOptimized = kCTFontUIOptimizedTrait,
+    kCTFontTraitClassMask = kCTFontClassMaskTrait,
+};
+#endif
 
 typedef CF_OPTIONS(uint32_t, CTFontTransformOptions)
 {
@@ -48,6 +97,9 @@ typedef CF_OPTIONS(uint32_t, CTFontTransformOptions)
     kCTFontTransformApplyPositioning = (1 << 1)
 };
 
+#ifndef kCTFontOptionsPreferSystemFont
+#define kCTFontOptionsPreferSystemFont (1 << 2)
+#endif
 typedef CF_OPTIONS(uint32_t, CTFontDescriptorOptions)
 {
     kCTFontDescriptorOptionSystemUIFont = 1 << 1,
@@ -78,6 +130,7 @@ CTTypesetterRef CTTypesetterCreateWithUniCharProviderAndOptions(CTUniCharProvide
 bool CTFontGetVerticalGlyphsForCharacters(CTFontRef, const UniChar characters[], CGGlyph glyphs[], CFIndex count);
 void CTFontGetUnsummedAdvancesForGlyphsAndStyle(CTFontRef, CTFontOrientation, CGFontRenderingStyle, const CGGlyph[], CGSize advances[], CFIndex count);
 
+CFArrayRef CTFontDescriptorCopyAvailableFontFamilyNames(CFArrayRef fontDescriptors);
 CTFontDescriptorRef CTFontDescriptorCreateForUIType(CTFontUIFontType, CGFloat size, CFStringRef language);
 CTFontDescriptorRef CTFontDescriptorCreateWithTextStyle(CFStringRef style, CFStringRef size, CFStringRef language);
 CTFontDescriptorRef CTFontDescriptorCreateCopyWithSymbolicTraits(CTFontDescriptorRef original, CTFontSymbolicTraits symTraitValue, CTFontSymbolicTraits symTraitMask);
@@ -97,6 +150,7 @@ bool CTFontDescriptorIsSystemUIFont(CTFontDescriptorRef);
 CTFontRef CTFontCreateForCSS(CFStringRef name, uint16_t weight, CTFontSymbolicTraits, CGFloat size);
 CTFontRef CTFontCreateForCharactersWithLanguage(CTFontRef currentFont, const UTF16Char *characters, CFIndex length, CFStringRef language, CFIndex *coveredLength);
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 extern const CFStringRef kCTUIFontTextStyleShortHeadline;
 extern const CFStringRef kCTUIFontTextStyleShortBody;
 extern const CFStringRef kCTUIFontTextStyleShortSubhead;
@@ -122,17 +176,33 @@ extern const CGFloat kCTFontWeightSemibold;
 extern const CGFloat kCTFontWeightBold;
 extern const CGFloat kCTFontWeightHeavy;
 extern const CGFloat kCTFontWeightBlack;
+#endif
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 extern const CFStringRef kCTUIFontTextStyleTitle0;
 extern const CFStringRef kCTUIFontTextStyleTitle1;
 extern const CFStringRef kCTUIFontTextStyleTitle2;
 extern const CFStringRef kCTUIFontTextStyleTitle3;
 extern const CFStringRef kCTUIFontTextStyleTitle4;
 CTFontDescriptorRef CTFontCreatePhysicalFontDescriptorForCharactersWithLanguage(CTFontRef currentFont, const UTF16Char* characters, CFIndex length, CFStringRef language, CFIndex* coveredLength);
-
 __attribute__((availability(macosx,obsoleted=10.13))) __attribute__((availability(ios,obsoleted=11.0))) CTFontRef CTFontCreatePhysicalFontForCharactersWithLanguage(CTFontRef, const UTF16Char* characters, CFIndex length, CFStringRef language, CFIndex* coveredLength);
+#endif
+
 bool CTFontIsAppleColorEmoji(CTFontRef);
 CTFontRef CTFontCreateForCharacters(CTFontRef currentFont, const UTF16Char *characters, CFIndex length, CFIndex *coveredLength);
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+CGSize CTFramesetterSuggestFrameSizeWithConstraints(CTFramesetterRef framesetter, CFRange stringRange, CFDictionaryRef frameAttributes, CGSize constraints, CFRange *fitRange);
+
+void CTRunGetAdvances(CTRunRef run, CFRange range, CGSize buffer[]);
+const CGSize* CTRunGetAdvancesPtr(CTRunRef run);
+extern const CFStringRef kCTTypesetterOptionForcedEmbeddingLevel;
+
+#define kCTFontFileURLAttribute CFSTR("NSCTFontFileURLAttribute")
+#define kCTFontURLAttribute kCTFontFileURLAttribute
+
+extern const CFStringRef kCTForegroundColorFromContextAttributeName;
+#endif
 
 WTF_EXTERN_C_END
 

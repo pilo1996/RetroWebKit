@@ -34,7 +34,11 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 @interface WebSpeechSynthesisWrapper : NSObject<NSSpeechSynthesizerDelegate>
+#else
+@interface WebSpeechSynthesisWrapper : NSObject
+#endif
 {
     WebCore::PlatformSpeechSynthesizer* m_synthesizerObject;
     // Hold a Ref to the utterance so that it won't disappear until the synth is done with it.
@@ -46,6 +50,9 @@
 
 - (WebSpeechSynthesisWrapper *)initWithSpeechSynthesizer:(WebCore::PlatformSpeechSynthesizer *)synthesizer;
 - (void)speakUtterance:(WebCore::PlatformSpeechSynthesisUtterance *)utterance;
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+- (void)updateBasePitchForSynthesizer;
+#endif
 
 @end
 
@@ -78,8 +85,8 @@
 - (void)updateBasePitchForSynthesizer
 {
     // Reset the base pitch whenever we change voices, since the base pitch is different for each voice.
-    [m_synthesizer setObject:nil forProperty:NSSpeechResetProperty error:nil];
-    m_basePitch = [[m_synthesizer objectForProperty:NSSpeechPitchBaseProperty error:nil] floatValue];
+    [m_synthesizer.get() setObject:nil forProperty:NSSpeechResetProperty error:nil];
+    m_basePitch = [[m_synthesizer.get() objectForProperty:NSSpeechPitchBaseProperty error:nil] floatValue];
 }
 
 - (void)speakUtterance:(WebCore::PlatformSpeechSynthesisUtterance *)utterance
@@ -90,7 +97,7 @@
 
     if (!m_synthesizer) {
         m_synthesizer = adoptNS([[NSSpeechSynthesizer alloc] initWithVoice:nil]);
-        [m_synthesizer setDelegate:self];
+        [m_synthesizer.get() setDelegate:self];
     }
 
     // Find if we should use a specific voice based on the voiceURI in utterance.
@@ -118,8 +125,8 @@
     // Don't set the voice unless necessary. There's a bug in NSSpeechSynthesizer such that
     // setting the voice for the first time will cause the first speechDone callback to report it was unsuccessful.
     BOOL updatePitch = NO;
-    if (![[m_synthesizer voice] isEqualToString:voiceURI]) {
-        [m_synthesizer setVoice:voiceURI];
+    if (![[m_synthesizer.get() voice] isEqualToString:voiceURI]) {
+        [m_synthesizer.get() setVoice:voiceURI];
         // Reset the base pitch whenever we change voices.
         updatePitch = YES;
     }
@@ -127,12 +134,12 @@
     if (m_basePitch == 0 || updatePitch)
         [self updateBasePitchForSynthesizer];
 
-    [m_synthesizer setObject:[NSNumber numberWithFloat:[self convertPitchToNSSpeechValue:utterance->pitch()]] forProperty:NSSpeechPitchBaseProperty error:nil];
-    [m_synthesizer setRate:[self convertRateToWPM:utterance->rate()]];
-    [m_synthesizer setVolume:utterance->volume()];
+    [m_synthesizer.get() setObject:[NSNumber numberWithFloat:[self convertPitchToNSSpeechValue:utterance->pitch()]] forProperty:NSSpeechPitchBaseProperty error:nil];
+    [m_synthesizer.get() setRate:[self convertRateToWPM:utterance->rate()]];
+    [m_synthesizer.get() setVolume:utterance->volume()];
 
     m_utterance = utterance;
-    [m_synthesizer startSpeakingString:utterance->text()];
+    [m_synthesizer.get() startSpeakingString:utterance->text()];
     m_synthesizerObject->client()->didStartSpeaking(*m_utterance);
 }
 
@@ -141,7 +148,7 @@
     if (!m_utterance)
         return;
 
-    [m_synthesizer pauseSpeakingAtBoundary:NSSpeechImmediateBoundary];
+    [m_synthesizer.get() pauseSpeakingAtBoundary:NSSpeechImmediateBoundary];
     m_synthesizerObject->client()->didPauseSpeaking(*m_utterance);
 }
 
@@ -150,7 +157,7 @@
     if (!m_utterance)
         return;
 
-    [m_synthesizer continueSpeaking];
+    [m_synthesizer.get() continueSpeaking];
     m_synthesizerObject->client()->didResumeSpeaking(*m_utterance);
 }
 
@@ -159,7 +166,7 @@
     if (!m_utterance)
         return;
 
-    [m_synthesizer stopSpeakingAtBoundary:NSSpeechImmediateBoundary];
+    [m_synthesizer.get() stopSpeakingAtBoundary:NSSpeechImmediateBoundary];
     m_synthesizerObject->client()->speakingErrorOccurred(*m_utterance);
     m_utterance = 0;
 }
@@ -167,8 +174,8 @@
 - (void)invalidate
 {
     m_utterance = 0;
-    [m_synthesizer setDelegate:nil];
-    [m_synthesizer stopSpeakingAtBoundary:NSSpeechImmediateBoundary];
+    [m_synthesizer.get() setDelegate:nil];
+    [m_synthesizer.get() stopSpeakingAtBoundary:NSSpeechImmediateBoundary];
 }
 
 - (void)speechSynthesizer:(NSSpeechSynthesizer *)sender didFinishSpeaking:(BOOL)finishedSpeaking
@@ -216,7 +223,15 @@ PlatformSpeechSynthesizer::~PlatformSpeechSynthesizer()
 
 void PlatformSpeechSynthesizer::initializeVoiceList()
 {
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+    NSString *defaultVoiceURI = [NSSpeechSynthesizer defaultVoice];
+    NSMutableArray *availableVoices = [[NSSpeechSynthesizer availableVoices] mutableCopy];
+    NSUInteger defaultVoiceIndex = [availableVoices indexOfObjectIdenticalTo:defaultVoiceURI];
+    [availableVoices removeObjectAtIndex:defaultVoiceIndex];
+    [availableVoices insertObject:defaultVoiceURI atIndex:0];
+#else
     NSArray *availableVoices = wkSpeechSynthesisGetVoiceIdentifiers();
+#endif
     NSUInteger count = [availableVoices count];
     for (NSUInteger k = 0; k < count; k++) {
         NSString *voiceName = [availableVoices objectAtIndex:k];
@@ -226,7 +241,9 @@ void PlatformSpeechSynthesizer::initializeVoiceList()
         NSString *name = [attributes objectForKey:NSVoiceName];
         NSString *language = [attributes objectForKey:NSVoiceLocaleIdentifier];
         NSLocale *locale = [[NSLocale alloc] initWithLocaleIdentifier:language];
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         NSString *defaultVoiceURI = wkSpeechSynthesisGetDefaultVoiceIdentifierForLocale(locale);
+#endif
         [locale release];
 
         // Change to BCP-47 format as defined by spec.
@@ -236,6 +253,9 @@ void PlatformSpeechSynthesizer::initializeVoiceList()
 
         m_voiceList.append(PlatformSpeechSynthesisVoice::create(voiceURI, name, language, true, isDefault));
     }
+#if MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+    [availableVoices release];
+#endif
 }
 
 void PlatformSpeechSynthesizer::pause()

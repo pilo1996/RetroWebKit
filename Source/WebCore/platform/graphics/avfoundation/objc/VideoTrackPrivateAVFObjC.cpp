@@ -23,13 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
-#import "VideoTrackPrivateAVFObjC.h"
+#include "config.h"
+#include "VideoTrackPrivateAVFObjC.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && USE(AVFOUNDATION)
 
-#import "AVTrackPrivateAVFObjCImpl.h"
-#import "MediaSelectionGroupAVFObjC.h"
+#include "AVTrackPrivateAVFObjCImpl.h"
+#include "MediaSelectionGroupAVFObjC.h"
 
 namespace WebCore {
 

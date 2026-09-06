@@ -83,7 +83,7 @@
     CTFontDescriptorRef fontDescriptor;
     if (index < _fontDescriptors.size()) {
         if ((fontDescriptor = _fontDescriptors[index].get()))
-            return (id)fontDescriptor;
+            return (const objc_object*)fontDescriptor;
     } else
         _fontDescriptors.grow(index + 1);
 
@@ -92,7 +92,7 @@
         font = &_font->fallbackRangesAt(index).fontForFirstRange();
     fontDescriptor = CTFontCopyFontDescriptor(font->platformData().ctFont());
     _fontDescriptors[index] = adoptCF(fontDescriptor);
-    return (id)fontDescriptor;
+    return (const objc_object*)fontDescriptor;
 }
 
 @end
@@ -100,7 +100,11 @@
 namespace WebCore {
 
 ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength, unsigned indexBegin, unsigned indexEnd)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     : m_initialAdvance(CTRunGetInitialAdvance(ctRun))
+#else
+    : m_initialAdvance(CGSizeZero)
+#endif
     , m_font(font)
     , m_characters(characters)
     , m_stringLength(stringLength)
@@ -132,6 +136,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
     for (unsigned i = 0; i < m_glyphCount; ++i)
         m_glyphs.uncheckedAppend(glyphsPtr[i]);
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     if (CTRunGetStatus(ctRun) & kCTRunStatusHasOrigins) {
         Vector<CGSize> baseAdvances(m_glyphCount);
         Vector<CGPoint> glyphOrigins(m_glyphCount);
@@ -142,7 +147,9 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
             m_baseAdvances.uncheckedAppend(baseAdvances[i]);
             m_glyphOrigins.uncheckedAppend(glyphOrigins[i]);
         }
-    } else {
+    } else
+#endif
+    {
         const CGSize* baseAdvances = CTRunGetAdvancesPtr(ctRun);
         Vector<CGSize> baseAdvancesVector;
         if (!baseAdvances) {
@@ -154,6 +161,12 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(CTRunRef ctRun, const Font
         for (unsigned i = 0; i < m_glyphCount; ++i)
             m_baseAdvances.uncheckedAppend(baseAdvances[i]);
     }
+
+//#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+//    CGPoint initialPosition;
+//    CTRunGetPositions(ctRun, CFRangeMake(0, 1), &initialPosition);
+//    m_initialAdvance = CGSizeMake(m_advances[0].width + initialPosition.x, m_advances[0].height + initialPosition.y);
+//#endif
 }
 
 struct ProviderInfo {
@@ -205,8 +218,21 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp,
         static const void* attributeKeys[] = { kCTFontCascadeListAttribute };
         const void* values[] = { cascadeList.get() };
         RetainPtr<CFDictionaryRef> attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, attributeKeys, values, sizeof(attributeKeys) / sizeof(*attributeKeys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        RetainPtr<CTFontDescriptorRef> newDescriptor;
+        CTFontDescriptorRef descriptor = NULL;
+        auto platformFont = CTFontGetPlatformFont(font->platformData().ctFont(), &descriptor);
+        if (descriptor) {
+            newDescriptor = adoptCF(CTFontDescriptorCreateCopyWithAttributes(descriptor, attributes.get()));
+            CFRelease(descriptor);
+        } else
+            newDescriptor = adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get()));
+        RetainPtr<CTFontRef> fontWithCascadeList = adoptCF(CTFontCreateWithPlatformFont(platformFont, m_font.pixelSize(), nullptr, newDescriptor.get()));
+        RELEASE_ASSERT(platformFont == CTFontGetPlatformFont(fontWithCascadeList.get(), nullptr));
+#else
         RetainPtr<CTFontDescriptorRef> fontDescriptor = adoptCF(CTFontDescriptorCreateWithAttributes(attributes.get()));
         RetainPtr<CTFontRef> fontWithCascadeList = adoptCF(CTFontCreateCopyWithAttributes(font->platformData().ctFont(), m_font.pixelSize(), 0, fontDescriptor.get()));
+#endif
         CFDictionarySetValue(const_cast<CFMutableDictionaryRef>(stringAttributes.get()), kCTFontAttributeName, fontWithCascadeList.get());
     } else
         stringAttributes = font->getCFStringAttributes(m_font.enableKerning(), font->platformData().orientation());
@@ -222,8 +248,14 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp,
         static CFDictionaryRef ltrTypesetterOptions = CFDictionaryCreate(kCFAllocatorDefault, optionKeys, ltrOptionValues, WTF_ARRAY_LENGTH(optionKeys), &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         static CFDictionaryRef rtlTypesetterOptions = CFDictionaryCreate(kCFAllocatorDefault, optionKeys, rtlOptionValues, WTF_ARRAY_LENGTH(optionKeys), &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         ProviderInfo info = { cp, length, stringAttributes.get() };
         RetainPtr<CTTypesetterRef> typesetter = adoptCF(CTTypesetterCreateWithUniCharProviderAndOptions(&provideStringAndAttributes, 0, &info, m_run.ltr() ? ltrTypesetterOptions : rtlTypesetterOptions));
+#else
+        RetainPtr<CFStringRef> string = adoptCF(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, cp, length, kCFAllocatorNull));
+        RetainPtr<CFAttributedStringRef> attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), stringAttributes.get()));
+        RetainPtr<CTTypesetterRef> typesetter = adoptCF(CTTypesetterCreateWithAttributedStringAndOptions(attributedString.get(), m_run.ltr() ? ltrTypesetterOptions : rtlTypesetterOptions));
+#endif
 
         line = adoptCF(CTTypesetterCreateLine(typesetter.get(), CFRangeMake(0, 0)));
     } else {
@@ -237,6 +269,12 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cp,
     CFArrayRef runArray = CTLineGetGlyphRuns(line.get());
 
     CFIndex runCount = CFArrayGetCount(runArray);
+
+    if (runCount == 0) {
+        // Create a run of missing glyphs from the primary font.
+        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), cp, stringLocation, length, 0, length, m_run.ltr()));
+        return;
+    } 
 
     for (CFIndex r = 0; r < runCount; r++) {
         CTRunRef ctRun = static_cast<CTRunRef>(CFArrayGetValueAtIndex(runArray, m_run.ltr() ? r : runCount - 1 - r));

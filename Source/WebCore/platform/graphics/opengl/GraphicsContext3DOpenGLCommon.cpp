@@ -71,8 +71,10 @@
 #elif PLATFORM(MAC)
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #include <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include <OpenGL/gl3.h>
 #include <OpenGL/gl3ext.h>
+#endif
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #elif PLATFORM(GTK) || PLATFORM(WIN)
 #include "OpenGLShims.h"
@@ -558,7 +560,7 @@ void GraphicsContext3D::bufferSubData(GC3Denum target, GC3Dintptr offset, GC3Dsi
     ::glBufferSubData(target, offset, size, data);
 }
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) || PLATFORM(IOS)
 void* GraphicsContext3D::mapBufferRange(GC3Denum target, GC3Dintptr offset, GC3Dsizeiptr length, GC3Dbitfield access)
 {
     makeContextCurrent();
@@ -843,7 +845,11 @@ void GraphicsContext3D::frontFace(GC3Denum mode)
 void GraphicsContext3D::generateMipmap(GC3Denum target)
 {
     makeContextCurrent();
+#ifdef glGenerateMipmap
     ::glGenerateMipmap(target);
+#else
+    ::glGenerateMipmapEXT(target);
+#endif
 }
 
 bool GraphicsContext3D::getActiveAttribImpl(Platform3DObject program, GC3Duint index, ActiveInfo& info)

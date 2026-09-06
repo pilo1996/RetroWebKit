@@ -104,7 +104,7 @@ inline bool operator==(const FormDataElement& a, const FormDataElement& b)
     if (a.m_type == FormDataElement::Type::EncodedFile)
         return a.m_filename == b.m_filename && a.m_fileStart == b.m_fileStart && a.m_fileLength == b.m_fileLength && a.m_expectedFileModificationTime == b.m_expectedFileModificationTime;
     if (a.m_type == FormDataElement::Type::EncodedBlob)
-        return a.m_url == b.m_url;
+        return a.m_url.string() == b.m_url.string();
 
     return true;
 }

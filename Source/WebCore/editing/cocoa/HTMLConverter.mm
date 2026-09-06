@@ -315,11 +315,13 @@ typedef NSUInteger NSTextTabType;
 static NSFileWrapper *fileWrapperForURL(DocumentLoader *, NSURL *);
 static RetainPtr<NSFileWrapper> fileWrapperForElement(HTMLImageElement&);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 @interface NSTextAttachment (WebCoreNSTextAttachment)
 - (void)setIgnoresOrientation:(BOOL)flag;
 - (void)setBounds:(CGRect)bounds;
 - (BOOL)ignoresOrientation;
 @end
+#endif
 
 #endif
 
@@ -389,7 +391,9 @@ private:
     NSMutableArray *_textTableRowArrays;
     NSMutableArray *_textTableRowBackgroundColors;
     NSMutableDictionary *_fontCache;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSMutableArray *_writingDirectionArray;
+#endif
     
     CGFloat _defaultTabInterval;
     NSUInteger _domRangeStartIndex;
@@ -455,7 +459,9 @@ HTMLConverter::HTMLConverter(Range& range)
     _textTableRowArrays = [[NSMutableArray alloc] init];
     _textTableRowBackgroundColors = [[NSMutableArray alloc] init];
     _fontCache = [[NSMutableDictionary alloc] init];
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     _writingDirectionArray = [[NSMutableArray alloc] init];
+#endif
 
     _defaultTabInterval = 36;
     _domRangeStartIndex = 0;
@@ -481,12 +487,14 @@ HTMLConverter::~HTMLConverter()
     [_textTableRowArrays release];
     [_textTableRowBackgroundColors release];
     [_fontCache release];
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [_writingDirectionArray release];
+#endif
 }
 
 NSAttributedString *HTMLConverter::convert()
 {
-    Node* commonAncestorContainer = _caches->cacheAncestorsOfStartToBeConverted(m_range);
+    Node* commonAncestorContainer = _caches->cacheAncestorsOfStartToBeConverted(m_range.get());
     ASSERT(commonAncestorContainer);
 
     m_dataSource = commonAncestorContainer->document().frame()->loader().documentLoader();
@@ -1031,12 +1039,12 @@ PlatformColor *HTMLConverter::_colorForElement(Element& element, CSSPropertyID p
     return platformResult;
 }
 
-static PlatformFont *_font(Element& element)
+static const PlatformFont *_font(Element& element)
 {
     auto* renderer = element.renderer();
     if (!renderer)
         return nil;
-    return (PlatformFont *)renderer->style().fontCascade().primaryFont().getCTFont();
+    return (const PlatformFont *)renderer->style().fontCascade().primaryFont().getCTFont();
 }
 
 #define UIFloatIsZero(number) (fabs(number - 0) < FLT_EPSILON)
@@ -1049,7 +1057,7 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
 #endif
 
     PlatformFont *font = nil;
-    PlatformFont *actualFont = _font(element);
+    const PlatformFont *actualFont = _font(element);
     PlatformColor *foregroundColor = _colorForElement(element, CSSPropertyColor);
     PlatformColor *backgroundColor = _colorForElement(element, CSSPropertyBackgroundColor);
     PlatformColor *strokeColor = _colorForElement(element, CSSPropertyWebkitTextStrokeColor);
@@ -1134,11 +1142,11 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
     String letterSpacing = _caches->propertyValueForNode(element, CSSPropertyLetterSpacing);
     if (fontKerning.length() || letterSpacing.length()) {
         if (fontKerning == "none")
-            [attrs setObject:@0.0 forKey:NSKernAttributeName];
+            [attrs setObject:[NSNumber numberWithDouble:0.0] forKey:NSKernAttributeName];
         else {
             double kernVal = letterSpacing.length() ? letterSpacing.toDouble() : 0.0;
             if (UIFloatIsZero(kernVal))
-                [attrs setObject:@0.0 forKey:NSKernAttributeName]; // auto and normal, the other possible values, are both "kerning enabled"
+                [attrs setObject:[NSNumber numberWithDouble:0.0] forKey:NSKernAttributeName]; // auto and normal, the other possible values, are both "kerning enabled"
             else
                 [attrs setObject:[NSNumber numberWithDouble:kernVal] forKey:NSKernAttributeName];
         }
@@ -1149,9 +1157,9 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
         if (fontLigatures.contains("normal"))
             ;   // default: whatever the system decides to do
         else if (fontLigatures.contains("common-ligatures"))
-            [attrs setObject:@1 forKey:NSLigatureAttributeName];   // explicitly enabled
+            [attrs setObject:[NSNumber numberWithInteger:1] forKey:NSLigatureAttributeName];   // explicitly enabled
         else if (fontLigatures.contains("no-common-ligatures"))
-            [attrs setObject:@0 forKey:NSLigatureAttributeName];  // explicitly disabled
+            [attrs setObject:[NSNumber numberWithInteger:0] forKey:NSLigatureAttributeName];  // explicitly disabled
     }
 
     String textDecoration = _caches->propertyValueForNode(element, CSSPropertyTextDecoration);
@@ -1182,8 +1190,10 @@ NSDictionary *HTMLConverter::computedAttributesForElement(Element& element)
     }
 
     Element* blockElement = _blockLevelElementForNode(&element);
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     if (&element != blockElement && [_writingDirectionArray count] > 0)
         [attrs setObject:[NSArray arrayWithArray:_writingDirectionArray] forKey:NSWritingDirectionAttributeName];
+#endif
 
     if (blockElement) {
         Element& coreBlockElement = *blockElement;
@@ -1296,7 +1306,7 @@ NSDictionary* HTMLConverter::aggregatedAttributesForElementAndItsAncestors(Eleme
     }
 
     RetainPtr<NSMutableDictionary> attributesForAncestors = adoptNS([aggregatedAttributesForElementAndItsAncestors(downcast<Element>(*ancestor)) mutableCopy]);
-    [attributesForAncestors addEntriesFromDictionary:attributesForCurrentElement];
+    [attributesForAncestors.get() addEntriesFromDictionary:attributesForCurrentElement];
     m_aggregatedAttributesForElements.set(&element, attributesForAncestors);
 
     return attributesForAncestors.get();
@@ -1310,7 +1320,9 @@ void HTMLConverter::_newParagraphForElement(Element& element, NSString *tag, BOO
     BOOL needBreak = (flag || lastChar != '\n');
     if (needBreak) {
         NSString *string = (([@"BODY" isEqualToString:tag] || [@"HTML" isEqualToString:tag]) ? @"" : @"\n");
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [_writingDirectionArray removeAllObjects];
+#endif
         [_attrStr replaceCharactersInRange:rangeToReplace withString:string];
         if (rangeToReplace.location < _domRangeStartIndex)
             _domRangeStartIndex += [string length] - rangeToReplace.length;
@@ -1329,7 +1341,7 @@ void HTMLConverter::_newLineForElement(Element& element)
     NSUInteger textLength = [_attrStr length];
     NSRange rangeToReplace = NSMakeRange(textLength, 0);
     [_attrStr replaceCharactersInRange:rangeToReplace withString:string.get()];
-    rangeToReplace.length = [string length];
+    rangeToReplace.length = [string.get() length];
     if (rangeToReplace.location < _domRangeStartIndex)
         _domRangeStartIndex += rangeToReplace.length;
     NSDictionary *attrs = attributesForElement(element);
@@ -1379,12 +1391,18 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
     NSFileWrapper *fileWrapper = nil;
     Frame* frame = element.document().frame();
     DocumentLoader *dataSource = frame->loader().frameHasLoaded() ? frame->loader().documentLoader() : 0;
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     BOOL ignoreOrientation = YES;
+#endif
 
     if ([url isFileURL]) {
         NSString *path = [[url path] stringByStandardizingPath];
         if (path)
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             fileWrapper = [[[NSFileWrapper alloc] initWithURL:url options:0 error:NULL] autorelease];
+#else
+            fileWrapper = [[[NSFileWrapper alloc] initWithPath:path] autorelease];
+#endif
     }
     if (!fileWrapper && dataSource) {
         RefPtr<ArchiveResource> resource = dataSource->subresource(url);
@@ -1423,7 +1441,9 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
             [WebMessageDocumentClass document:NULL attachment:&mimeTextAttachment forURL:url];
             if (mimeTextAttachment && [mimeTextAttachment respondsToSelector:@selector(fileWrapper)]) {
                 fileWrapper = [mimeTextAttachment performSelector:@selector(fileWrapper)];
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
                 ignoreOrientation = NO;
+#endif
             }
         }
     }
@@ -1439,9 +1459,9 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
         NSRange rangeToReplace = NSMakeRange(textLength, 0);
         NSDictionary *attrs;
         if (fileWrapper) {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             if (ignoreOrientation)
-                [attachment setIgnoresOrientation:YES];
+                [attachment.get() setIgnoresOrientation:YES];
 #endif
         } else {
 #if PLATFORM(IOS)
@@ -1454,12 +1474,12 @@ BOOL HTMLConverter::_addAttachmentForElement(Element& element, NSURL *url, BOOL 
             static NSImage *missingImage = nil;
             NSTextAttachmentCell *cell;
             cell = [[NSTextAttachmentCell alloc] initImageCell:missingImage];
-            [attachment setAttachmentCell:cell];
+            [attachment.get() setAttachmentCell:cell];
             [cell release];
 #endif
         }
         [_attrStr replaceCharactersInRange:rangeToReplace withString:string.get()];
-        rangeToReplace.length = [string length];
+        rangeToReplace.length = [string.get() length];
         if (rangeToReplace.location < _domRangeStartIndex)
             _domRangeStartIndex += rangeToReplace.length;
         attrs = attributesForElement(element);
@@ -1481,7 +1501,7 @@ void HTMLConverter::_addQuoteForElement(Element& element, BOOL opening, NSIntege
     NSUInteger textLength = [_attrStr length];
     NSRange rangeToReplace = NSMakeRange(textLength, 0);
     [_attrStr replaceCharactersInRange:rangeToReplace withString:string.get()];
-    rangeToReplace.length = [string length];
+    rangeToReplace.length = [string.get() length];
     if (rangeToReplace.location < _domRangeStartIndex)
         _domRangeStartIndex += rangeToReplace.length;
     RetainPtr<NSDictionary> attrs = attributesForElement(element);
@@ -1608,38 +1628,53 @@ static inline NSDate *_dateForString(NSString *string)
     const char *p = [string UTF8String];
     RetainPtr<NSDateComponents> dateComponents = adoptNS([[NSDateComponents alloc] init]);
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     // Set the time zone to GMT
-    [dateComponents setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    [dateComponents.get() setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+#endif
 
     NSInteger year = 0;
     while (*p && isASCIIDigit(*p))
         year = 10 * year + *p++ - '0';
     if (*p++ != '-')
         return nil;
-    [dateComponents setYear:year];
+    [dateComponents.get() setYear:year];
 
     int8_t component;
     if (!read2DigitNumber(&p, &component) || *p++ != '-')
         return nil;
-    [dateComponents setMonth:component];
+    [dateComponents.get() setMonth:component];
 
     if (!read2DigitNumber(&p, &component) || *p++ != 'T')
         return nil;
-    [dateComponents setDay:component];
+    [dateComponents.get() setDay:component];
 
     if (!read2DigitNumber(&p, &component) || *p++ != ':')
         return nil;
-    [dateComponents setHour:component];
+    [dateComponents.get() setHour:component];
 
     if (!read2DigitNumber(&p, &component) || *p++ != ':')
         return nil;
-    [dateComponents setMinute:component];
+    [dateComponents.get() setMinute:component];
 
     if (!read2DigitNumber(&p, &component) || *p++ != 'Z')
         return nil;
-    [dateComponents setSecond:component];
+    [dateComponents.get() setSecond:component];
     
-    return [[[[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian] autorelease] dateFromComponents:dateComponents.get()];
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
+    NSString *calendarIdentifier = NSCalendarIdentifierGregorian;
+#else
+    NSString *calendarIdentifier = NSGregorianCalendar;
+#endif
+
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    return [[[[NSCalendar alloc] initWithCalendarIdentifier:calendarIdentifier] autorelease] dateFromComponents:dateComponents.get()];
+#else
+    NSCalendar *calendar = [[[NSCalendar alloc] initWithCalendarIdentifier:calendarIdentifier] autorelease];
+    // Set the time zone to GMT
+    [calendar setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    return [calendar dateFromComponents:dateComponents.get()];
+#endif
 }
 
 static NSInteger _colCompare(id block1, id block2, void *)
@@ -1744,10 +1779,10 @@ void HTMLConverter::_addTableForElement(Element *tableElement)
     RetainPtr<NSTextTable> table = adoptNS([(NSTextTable *)[PlatformNSTextTable alloc] init]);
     CGFloat cellSpacingVal = 1;
     CGFloat cellPaddingVal = 1;
-    [table setNumberOfColumns:1];
-    [table setLayoutAlgorithm:NSTextTableAutomaticLayoutAlgorithm];
-    [table setCollapsesBorders:NO];
-    [table setHidesEmptyCells:NO];
+    [table.get() setNumberOfColumns:1];
+    [table.get() setLayoutAlgorithm:NSTextTableAutomaticLayoutAlgorithm];
+    [table.get() setCollapsesBorders:NO];
+    [table.get() setHidesEmptyCells:NO];
     
     if (tableElement) {
         ASSERT(tableElement);
@@ -1763,13 +1798,13 @@ void HTMLConverter::_addTableForElement(Element *tableElement)
         _fillInBlock(table.get(), coreTableElement, nil, 0, 0, YES);
 
         if (_caches->propertyValueForNode(coreTableElement, CSSPropertyBorderCollapse) == "collapse") {
-            [table setCollapsesBorders:YES];
+            [table.get() setCollapsesBorders:YES];
             cellSpacingVal = 0;
         }
         if (_caches->propertyValueForNode(coreTableElement, CSSPropertyEmptyCells) == "hide")
-            [table setHidesEmptyCells:YES];
+            [table.get() setHidesEmptyCells:YES];
         if (_caches->propertyValueForNode(coreTableElement, CSSPropertyTableLayout) == "fixed")
-            [table setLayoutAlgorithm:NSTextTableFixedLayoutAlgorithm];
+            [table.get() setLayoutAlgorithm:NSTextTableFixedLayoutAlgorithm];
     }
     
     [_textTables addObject:table.get()];
@@ -1818,13 +1853,13 @@ void HTMLConverter::_addTableCellForElement(Element* element)
         
         _fillInBlock(block.get(), *element, color, cellSpacingVal / 2, 0, NO);
         if (verticalAlign == "middle")
-            [block setVerticalAlignment:NSTextBlockMiddleAlignment];
+            [block.get() setVerticalAlignment:NSTextBlockMiddleAlignment];
         else if (verticalAlign == "bottom")
-            [block setVerticalAlignment:NSTextBlockBottomAlignment];
+            [block.get() setVerticalAlignment:NSTextBlockBottomAlignment];
         else if (verticalAlign == "baseline")
-            [block setVerticalAlignment:NSTextBlockBaselineAlignment];
+            [block.get() setVerticalAlignment:NSTextBlockBaselineAlignment];
         else if (verticalAlign == "top")
-            [block setVerticalAlignment:NSTextBlockTopAlignment];
+            [block.get() setVerticalAlignment:NSTextBlockTopAlignment];
     } else {
         block = adoptNS([[PlatformNSTextTableBlock alloc] initWithTable:table startingRow:rowNumber rowSpan:rowSpan startingColumn:columnNumber columnSpan:colSpan]);
     }
@@ -1839,6 +1874,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
     BOOL retval = YES;
     BOOL isBlockLevel = _caches->isBlockElement(element);
     String displayValue = _caches->propertyValueForNode(element, CSSPropertyDisplay);
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     if (isBlockLevel)
         [_writingDirectionArray removeAllObjects];
     else {
@@ -1855,6 +1891,7 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
             [_writingDirectionArray addObject:[NSNumber numberWithUnsignedInteger:val]];
         }
     }
+#endif
     if (displayValue == "table" || ([_textTables count] == 0 && displayValue == "table-row-group")) {
         Element* tableElement = &element;
         if (displayValue == "table-row-group") {
@@ -1956,10 +1993,12 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
         if (!listStyleType.length())
             listStyleType = "decimal";
         list = adoptNS([[PlatformNSTextList alloc] initWithMarkerFormat:String("{" + listStyleType + "}") options:0]);
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         if (is<HTMLOListElement>(element)) {
             NSInteger startingItemNumber = downcast<HTMLOListElement>(element).start();
             [list setStartingItemNumber:startingItemNumber];
         }
+#endif
         [_textLists addObject:list.get()];
     } else if (element.hasTagName(qTag)) {
         _addQuoteForElement(element, YES, _quoteLevel++);
@@ -1986,11 +2025,14 @@ BOOL HTMLConverter::_processElement(Element& element, NSInteger depth)
 
 void HTMLConverter::_addMarkersToList(NSTextList *list, NSRange range)
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSInteger itemNum = [list startingItemNumber];
+#else
+    NSInteger itemNum = 1;
+#endif
     NSString *string = [_attrStr string];
     NSString *stringToInsert;
     NSDictionary *attrsToInsert = nil;
-    PlatformFont *font;
     NSParagraphStyle *paragraphStyle;
     NSMutableParagraphStyle *newStyle;
     NSTextTab *tab = nil;
@@ -2018,7 +2060,6 @@ void HTMLConverter::_addMarkersToList(NSTextList *list, NSRange range)
             for (NSUInteger idx = range.location; idx < NSMaxRange(range);) {
                 paragraphRange = [string paragraphRangeForRange:NSMakeRange(idx, 0)];
                 paragraphStyle = [_attrStr attribute:NSParagraphStyleAttributeName atIndex:idx effectiveRange:&styleRange];
-                font = [_attrStr attribute:NSFontAttributeName atIndex:idx effectiveRange:NULL];
                 if ([[paragraphStyle textLists] count] == listIndex + 1) {
                     stringToInsert = [NSString stringWithFormat:@"\t%@\t", [list markerForItemNumber:itemNum++]];
                     insertLength = [stringToInsert length];
@@ -2050,7 +2091,7 @@ void HTMLConverter::_addMarkersToList(NSTextList *list, NSRange range)
                     tab = [[PlatformNSTextTab alloc] initWithType:NSLeftTabStopType location:markerLocation];
                     [newStyle addTabStop:tab];
                     [tab release];
-                    tab = [[PlatformNSTextTab alloc] initWithTextAlignment:NSTextAlignmentNatural location:listLocation options:@{ }];
+                    tab = [[PlatformNSTextTab alloc] initWithTextAlignment:NSTextAlignmentNatural location:listLocation options:[NSDictionary dictionary]];
                     [newStyle addTabStop:tab];
                     [tab release];
                     [_attrStr addAttribute:NSParagraphStyleAttributeName value:newStyle range:paragraphRange];
@@ -2083,7 +2124,9 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
         }
     }
     if (!_flags.reachedEnd && _caches->isBlockElement(element)) {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [_writingDirectionArray removeAllObjects];
+#endif
         if (displayValue == "table-cell" && [_textBlocks count] == 0) {
             _newTabForElement(element);
         } else if ([_textLists count] > 0 && displayValue == "block" && !element.hasTagName(liTag) && !element.hasTagName(ulTag) && !element.hasTagName(olTag)) {
@@ -2091,10 +2134,12 @@ void HTMLConverter::_exitElement(Element& element, NSInteger depth, NSUInteger s
         } else {
             _newParagraphForElement(element, element.tagName(), (range.length == 0), YES);
         }
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     } else if ([_writingDirectionArray count] > 0) {
         String bidi = _caches->propertyValueForNode(element, CSSPropertyUnicodeBidi);
         if (bidi == "embed" || bidi == "bidi-override")
             [_writingDirectionArray removeLastObject];
+#endif
     }
     range = NSMakeRange(startIndex, [_attrStr length] - startIndex);
     if (displayValue == "table" && [_textTables count] > 0) {
@@ -2413,7 +2458,11 @@ Node* HTMLConverterCaches::cacheAncestorsOfStartToBeConverted(const Range& range
 static NSFileWrapper *fileWrapperForURL(DocumentLoader* dataSource, NSURL *URL)
 {
     if ([URL isFileURL])
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         return [[[NSFileWrapper alloc] initWithURL:[URL URLByResolvingSymlinksInPath] options:0 error:nullptr] autorelease];
+#else
+        return [[[NSFileWrapper alloc] initWithPath:[[URL path] stringByResolvingSymlinksInPath]] autorelease];
+#endif
 
     if (dataSource) {
         if (RefPtr<ArchiveResource> resource = dataSource->subresource(URL)) {
@@ -2451,8 +2500,8 @@ static RetainPtr<NSFileWrapper> fileWrapperForElement(HTMLImageElement& element)
     if (is<RenderImage>(renderer)) {
         auto* image = downcast<RenderImage>(*renderer).cachedImage();
         if (image && !image->errorOccurred()) {
-            RetainPtr<NSFileWrapper> wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:(NSData *)image->imageForRenderer(renderer)->tiffRepresentation()]);
-            [wrapper setPreferredFilename:@"image.tiff"];
+            RetainPtr<NSFileWrapper> wrapper = adoptNS([[NSFileWrapper alloc] initRegularFileWithContents:(const NSData *)image->imageForRenderer(renderer)->tiffRepresentation()]);
+            [wrapper.get() setPreferredFilename:@"image.tiff"];
             return wrapper;
         }
     }

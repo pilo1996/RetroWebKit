@@ -26,7 +26,7 @@
 #import "config.h"
 #import "AudioSourceProviderAVFObjC.h"
 
-#if ENABLE(WEB_AUDIO) && USE(MEDIATOOLBOX)
+#if ENABLE(WEB_AUDIO) && USE(MEDIATOOLBOX) && USE(AVFOUNDATION)
 
 #import "AudioBus.h"
 #import "AudioChannel.h"

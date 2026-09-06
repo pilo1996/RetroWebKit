@@ -66,6 +66,9 @@ if (!defined $executablePathAge || !defined $buildTimestampAge || $executablePat
             # Ignore undefined, RTTI and typeinfo symbols.
             next if /\bundefined\b/ or /\b__ZT[IS]/;
 
+            # Ignore libgcc symbols.
+#            next if /\b__ZS/ or /\b__ZNS/ or /\b__ZNKS/ or /\b__ZN9__gnu_cxx/ or /\b__ZNK9__gnu_cxx/;
+
             # ASan compiler-rt calls into __asan_mapping_offset and __asan_mapping_scale
             next if /\b___asan/;
 

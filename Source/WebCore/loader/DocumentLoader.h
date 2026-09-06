@@ -214,7 +214,7 @@ public:
     String clientRedirectDestinationForHistory() const { return urlForHistory(); }
     void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
     
-    String serverRedirectSourceForHistory() const { return (urlForHistory() == url() || url() == blankURL()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
+    String serverRedirectSourceForHistory() const { return (urlForHistory().string() == url().string() || url().string() == blankURL().string()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
     String serverRedirectDestinationForHistory() const { return url(); }
 
     bool didCreateGlobalHistoryEntry() const { return m_didCreateGlobalHistoryEntry; }

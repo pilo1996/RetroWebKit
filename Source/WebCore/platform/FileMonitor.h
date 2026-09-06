@@ -29,7 +29,7 @@
 #include <wtf/WorkQueue.h>
 #include <wtf/text/WTFString.h>
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 #include <dispatch/dispatch.h>
 #include <wtf/DispatchPtr.h>
 #endif
@@ -47,7 +47,7 @@ public:
     WEBCORE_EXPORT ~FileMonitor();
 
 private:
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     DispatchPtr<dispatch_source_t> m_platformMonitor;
 #endif
 };

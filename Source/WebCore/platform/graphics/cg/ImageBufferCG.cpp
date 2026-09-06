@@ -90,7 +90,11 @@ std::unique_ptr<ImageBuffer> ImageBuffer::createCompatibleBuffer(const FloatSize
         break;
 #endif
     default:
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED <= 1060)
         colorSpace = adoptCF(CGContextCopyDeviceColorSpace(cgContext));
+#else
+        colorSpace = deviceRGBColorSpaceRef();
+#endif
     }
 
     if (!colorSpace)

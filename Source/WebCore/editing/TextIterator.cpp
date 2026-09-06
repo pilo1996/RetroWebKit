@@ -66,7 +66,14 @@
 #include <wtf/unicode/CharacterNames.h>
 
 #if !UCONFIG_NO_COLLATION
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
 #include <unicode/usearch.h>
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
 #include <wtf/text/TextBreakIteratorInternalICU.h>
 #endif
 

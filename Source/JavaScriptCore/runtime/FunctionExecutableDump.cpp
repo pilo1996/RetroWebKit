@@ -28,7 +28,7 @@
 
 #include "CodeBlock.h"
 #include "FunctionCodeBlock.h"
-#include "JSCellInlines.h"
+#include "HeapCellInlines.h"
 
 namespace JSC {
 

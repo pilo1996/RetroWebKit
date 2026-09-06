@@ -33,6 +33,7 @@
 #include "FontCustomPlatformData.h"
 #include "FontDescription.h"
 #include "FontPlatformData.h"
+#include "OpenTypeSanitizer.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
 #include "TypedElementDescendantIterator.h"
@@ -105,9 +106,18 @@ bool CachedFont::ensureCustomFontData(SharedBuffer* data)
 
 std::unique_ptr<FontCustomPlatformData> CachedFont::createCustomFontData(SharedBuffer& bytes, bool& wrapping)
 {
+#if USE(OPENTYPE_SANITIZER)
+    wrapping = false;
+
+    OpenTypeSanitizer sanitizer(bytes);
+    RefPtr<SharedBuffer> transcodeBuffer = sanitizer.sanitize();
+    if (!transcodeBuffer)
+        return nullptr;
+
+    return createFontCustomPlatformData(*transcodeBuffer.get());
+#elif (!PLATFORM(MAC) || __MAC_OS_X_VERSION_MIN_REQUIRED <= 1090) && !PLATFORM(IOS)
     wrapping = true;
 
-#if !PLATFORM(COCOA)
     if (isWOFF(bytes)) {
         wrapping = false;
         Vector<char> convertedFont;

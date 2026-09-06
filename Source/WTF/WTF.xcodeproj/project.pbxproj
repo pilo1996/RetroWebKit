@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 45;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -38,7 +38,6 @@
 		0FE1646A1B6FFC9600400E7C /* Lock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0FE164681B6FFC9600400E7C /* Lock.cpp */; };
 		0FE4479C1B7AAA03009498EB /* WordLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0FE4479A1B7AAA03009498EB /* WordLock.cpp */; };
 		0FFF19DC1BB334EB00886D91 /* ParallelHelperPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 0FFF19DA1BB334EB00886D91 /* ParallelHelperPool.cpp */; };
-		14022F4118F5C3FC007FF0EB /* libbmalloc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 14022F4018F5C3FC007FF0EB /* libbmalloc.a */; };
 		143F611F1565F0F900DB514A /* RAMSize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 143F611D1565F0F900DB514A /* RAMSize.cpp */; };
 		1447AEC618FCE57700B3D7FF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1447AEC518FCE57700B3D7FF /* Foundation.framework */; };
 		1447AEC718FCE58000B3D7FF /* libWTF.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5D247B6214689B8600E78B76 /* libWTF.a */; };
@@ -69,6 +68,8 @@
 		70ECA60D1B02426800449739 /* AtomicStringImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70ECA60A1B02426800449739 /* AtomicStringImpl.cpp */; };
 		7AFEC6B11EB22B5900DADE36 /* UUID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7AFEC6B01EB22B5900DADE36 /* UUID.cpp */; };
 		8134013815B092FD001FF0B8 /* Base64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8134013615B092FD001FF0B8 /* Base64.cpp */; };
+		8B5670A51527CFC200642838 /* ParallelJobsGeneric.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B5670A21527CFC200642838 /* ParallelJobsGeneric.cpp */; };
+		8B9E22011D50FCE500D6F8BB /* WorkQueueGeneric.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B9E22001D50FCE500D6F8BB /* WorkQueueGeneric.cpp */; };
 		93934BD318A1E8C300D0D6A1 /* StringViewObjC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 93934BD218A1E8C300D0D6A1 /* StringViewObjC.mm */; };
 		93934BD518A1F16900D0D6A1 /* StringViewCF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93934BD418A1F16900D0D6A1 /* StringViewCF.cpp */; };
 		93F1993E19D7958D00C2390B /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93F1993D19D7958D00C2390B /* StringView.cpp */; };
@@ -235,7 +236,7 @@
 		1447AEBE18FCE56900B3D7FF /* libmbmalloc.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libmbmalloc.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		1447AEC518FCE57700B3D7FF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		1447AEC818FCE59400B3D7FF /* mbmalloc.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mbmalloc.cpp; sourceTree = "<group>"; };
-		1447AECA18FCE5B900B3D7FF /* libicucore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicucore.dylib; path = /usr/lib/libicucore.dylib; sourceTree = "<absolute>"; };
+		1447AECA18FCE5B900B3D7FF /* libicucore.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libicucore.dylib; path = libicucore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		1469419016EAAF6D0024E146 /* RunLoopTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RunLoopTimer.h; sourceTree = "<group>"; };
 		1469419116EAAF6D0024E146 /* RunLoopTimerCF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RunLoopTimerCF.cpp; sourceTree = "<group>"; };
 		1469419416EAAFF80024E146 /* SchedulePair.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SchedulePair.h; sourceTree = "<group>"; };
@@ -333,6 +334,10 @@
 		83F2BADE1CF9524E003E99C3 /* Function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Function.h; sourceTree = "<group>"; };
 		83FBA93119DF459700F30ADB /* TypeCasts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TypeCasts.h; sourceTree = "<group>"; };
 		86F46F5F1A2840EE00CCBF22 /* RefCounter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RefCounter.h; sourceTree = "<group>"; };
+		8B5670A21527CFC200642838 /* ParallelJobsGeneric.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ParallelJobsGeneric.cpp; sourceTree = "<group>"; };
+		8B5670A31527CFC200642838 /* ParallelJobsGeneric.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParallelJobsGeneric.h; sourceTree = "<group>"; };
+		8B5670A41527CFC200642838 /* ParallelJobsOpenMP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ParallelJobsOpenMP.h; sourceTree = "<group>"; };
+		8B9E22001D50FCE500D6F8BB /* WorkQueueGeneric.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WorkQueueGeneric.cpp; sourceTree = "<group>"; };
 		93934BD218A1E8C300D0D6A1 /* StringViewObjC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = StringViewObjC.mm; path = mac/StringViewObjC.mm; sourceTree = "<group>"; };
 		93934BD418A1F16900D0D6A1 /* StringViewCF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StringViewCF.cpp; path = cf/StringViewCF.cpp; sourceTree = "<group>"; };
 		93AC91A718942FC400244939 /* LChar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LChar.h; sourceTree = "<group>"; };
@@ -585,7 +590,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				14022F4118F5C3FC007FF0EB /* libbmalloc.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -682,6 +686,14 @@
 			name = Source;
 			sourceTree = "<group>";
 		};
+		8B8C08861D50FDB80086421C /* generic */ = {
+			isa = PBXGroup;
+			children = (
+				8B9E22001D50FCE500D6F8BB /* WorkQueueGeneric.cpp */,
+			);
+			path = generic;
+			sourceTree = "<group>";
+		};
 		A5BA15F11824339F00A82E69 /* mac */ = {
 			isa = PBXGroup;
 			children = (
@@ -712,6 +724,7 @@
 				E4A0AD3B1A96251900536DF6 /* cocoa */,
 				37C7CC281EA40A54007BD956 /* darwin */,
 				A8A47281151A825A004123FF /* dtoa */,
+				8B8C08861D50FDB80086421C /* generic */,
 				1FA47C87152502DA00568D1B /* ios */,
 				A8A472C4151A825A004123FF /* mac */,
 				E43A46851E228B5700276B05 /* persistence */,
@@ -883,7 +896,10 @@
 				0FFF19DA1BB334EB00886D91 /* ParallelHelperPool.cpp */,
 				0FFF19DB1BB334EB00886D91 /* ParallelHelperPool.h */,
 				A8A472E6151A825B004123FF /* ParallelJobs.h */,
+				8B5670A21527CFC200642838 /* ParallelJobsGeneric.cpp */,
+				8B5670A31527CFC200642838 /* ParallelJobsGeneric.h */,
 				A8A472E9151A825B004123FF /* ParallelJobsLibdispatch.h */,
+				8B5670A41527CFC200642838 /* ParallelJobsOpenMP.h */,
 				0FEB3DD01BB7366B009D7AAD /* ParallelVectorIterator.h */,
 				0F824A641B7443A0002E345D /* ParkingLot.cpp */,
 				0F824A651B7443A0002E345D /* ParkingLot.h */,
@@ -1226,6 +1242,7 @@
 			buildPhases = (
 				5D247B5E14689B8600E78B76 /* Sources */,
 				5D247B5F14689B8600E78B76 /* Frameworks */,
+				8BCF48ED15CA85ED0056E4ED /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -1247,8 +1264,7 @@
 				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = 5D247B5C14689B8600E78B76 /* Build configuration list for PBXProject "WTF" */;
-			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -1279,6 +1295,21 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"${DEPLOYMENT_LOCATION}\" == \"NO\" ]]; then\n    PRIVATE_HEADERS_PATH=\"${TARGET_BUILD_DIR%/}/${PRIVATE_HEADERS_FOLDER_PATH}\"\n    ICU_PRIVATE_HEADERS_PATH=\"${TARGET_BUILD_DIR%/}/${ICU_PRIVATE_HEADERS_FOLDER_PATH}\"\nelse\n    PRIVATE_HEADERS_PATH=\"${DSTROOT}/${PRIVATE_HEADERS_FOLDER_PATH}\"\n    ICU_PRIVATE_HEADERS_PATH=\"${DSTROOT}/${ICU_PRIVATE_HEADERS_FOLDER_PATH}\"\nfi;\n\nmkdir -p \"${PRIVATE_HEADERS_PATH}\"\nrsync -av --no-owner --no-group --prune-empty-dirs --exclude \".svn\" --exclude \"usr\" --exclude \"DerivedSources\" --include \"*/\" --include \"*.h\" --exclude \"*\" \"${SRCROOT}/wtf/\" \"${PRIVATE_HEADERS_PATH}\"\n\nif [[ \"${USE_INTERNAL_SDK}\" != \"YES\" ]]; then\nmkdir -p \"${ICU_PRIVATE_HEADERS_PATH}\"\nrsync -av --no-owner --no-group --prune-empty-dirs --exclude \".svn\" --exclude \"usr\" --exclude \"DerivedSources\" --include \"*/\" --include \"*.h\" --exclude \"*\" \"${SRCROOT}/icu/\" \"${ICU_PRIVATE_HEADERS_PATH}\"\nfi";
+		};
+		8BCF48ED15CA85ED0056E4ED /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(CONFIGURATION_BUILD_DIR)/$(FULL_PRODUCT_NAME)",
+			);
+			outputPaths = (
+				"$(OBJECT_FILE_DIR)-$(CURRENT_VARIANT)/timestamp-last-time-linked-with-lipo",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "echo $ARCHS | awk 'BEGIN{FS=\" \"}\n                   {\n                       for (i=1; i<=NF && NF>1; i++)\n                           cmdline=cmdline\" $OBJECT_FILE_DIR-$CURRENT_VARIANT/\"$i\"/$FULL_PRODUCT_NAME\";\n                       if (NF>1)\n                           system(\"lipo -create \"cmdline\" -output $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME\");\n                   }'\ntouch -r $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME $OBJECT_FILE_DIR-$CURRENT_VARIANT/timestamp-last-time-linked-with-lipo";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1410,6 +1441,8 @@
 				E4A0AD3D1A96253C00536DF6 /* WorkQueueCocoa.cpp in Sources */,
 				A8A47445151A825B004123FF /* WTFString.cpp in Sources */,
 				A8A47486151A825B004123FF /* WTFThreadData.cpp in Sources */,
+				8B5670A51527CFC200642838 /* ParallelJobsGeneric.cpp in Sources */,
+				8B9E22011D50FCE500D6F8BB /* WorkQueueGeneric.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

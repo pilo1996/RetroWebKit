@@ -26,7 +26,7 @@
 
 #pragma once
 
-#if ENABLE(INDEXED_DATABASE_IN_WORKERS)
+#if ENABLE(INDEXED_DATABASE) && ENABLE(INDEXED_DATABASE_IN_WORKERS)
 
 #include "Supplementable.h"
 #include <wtf/text/WTFString.h>

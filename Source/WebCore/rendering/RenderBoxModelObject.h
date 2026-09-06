@@ -303,7 +303,7 @@ public:
     RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
 
 private:
-    LayoutUnit computedCSSPadding(const Length&) const;
+    WEBCORE_EXPORT LayoutUnit computedCSSPadding(const Length&) const;
     
     virtual LayoutRect frameRectForStickyPositioning() const = 0;
 

@@ -28,13 +28,22 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
+#ifdef __cplusplus
+#include <cmath>
+#else
+#include <math.h>
+#endif
 
 #if USE(IOSURFACE)
 #include "IOSurfaceSPI.h"
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
 #include <ColorSync/ColorSync.h>
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <ATS/ATSFont.h>
 #endif
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -104,7 +113,7 @@ typedef uint32_t CGFontRenderingStyle;
 enum {
     kCGFontAntialiasingStyleUnfiltered = 0 << 7,
     kCGFontAntialiasingStyleFilterLight = 1 << 7,
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     kCGFontAntialiasingStyleUnfilteredCustomDilation = (8 << 7),
 #endif
 };
@@ -134,7 +143,11 @@ typedef struct CGSRegionObject* CGRegionRef;
 #define CGFAbs(value) fabsf((value))
 #endif
 
+#ifdef __cplusplus
+static inline CGFloat CGFloatMin(CGFloat a, CGFloat b) { return std::isnan(a) ? b : ((std::isnan(b) || a < b) ? a : b); }
+#else
 static inline CGFloat CGFloatMin(CGFloat a, CGFloat b) { return isnan(a) ? b : ((isnan(b) || a < b) ? a : b); }
+#endif
 
 typedef struct CGFontCache CGFontCache;
 
@@ -170,6 +183,24 @@ void CGContextSetCompositeOperation(CGContextRef, CGCompositeOperation);
 void CGContextSetShouldAntialiasFonts(CGContextRef, bool shouldAntialiasFonts);
 void CGContextResetClip(CGContextRef);
 CGContextType CGContextGetType(CGContextRef);
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+void CGContextSetShouldSubpixelQuantizeFonts(CGContextRef, bool shouldSubpixelQuantizeFonts);
+void CGContextSetShouldSubpixelPositionFonts(CGContextRef, bool shouldSubpixelPositionFonts);
+void CGContextSetAllowsFontSubpixelQuantization(CGContextRef, bool allowsFontSubpixelQuantization);
+#endif
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+CGPathRef CGPathCreateWithRect(CGRect rect, const CGAffineTransform *transform);
+CGRect CGPathGetGeometricBoundingBox(CGPathRef path);
+void CGPathPrint(CGPathRef path, FILE* file);
+#endif
+
+#if PLATFORM(MAC)
+extern "C" {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+    CG_EXTERN void CGContextSetAllowsFontSmoothing(CGContextRef context, bool allowsFontSmoothing);
+#endif
+};
+#endif
 
 CFStringRef CGFontCopyFamilyName(CGFontRef);
 bool CGFontGetDescriptor(CGFontRef, CGFontDescriptor*);
@@ -221,7 +252,9 @@ CGError CGSSetConnectionProperty(CGSConnectionID, CGSConnectionID ownerCid, CFSt
 CGError CGSCopyConnectionProperty(CGSConnectionID, CGSConnectionID ownerCid, CFStringRef key, CFTypeRef *value);
 CGError CGSGetScreenRectForWindow(CGSConnectionID, CGSWindowID, CGRect *);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
 bool ColorSyncProfileIsWideGamut(ColorSyncProfileRef);
+#endif
 #endif
 
 WTF_EXTERN_C_END

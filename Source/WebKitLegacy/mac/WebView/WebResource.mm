@@ -59,7 +59,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 @public
     RefPtr<ArchiveResource> coreResource;
 }
-- (instancetype)initWithCoreResource:(Ref<ArchiveResource>&&)coreResource;
+- (id)initWithCoreResource:(Ref<ArchiveResource>&&)coreResource;
 @end
 
 @implementation WebResourcePrivate
@@ -71,14 +71,15 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
-- (instancetype)init
+- (id)init
 {
     return [super init];
 }
 
-- (instancetype)initWithCoreResource:(Ref<ArchiveResource>&&)passedResource
+- (id)initWithCoreResource:(Ref<ArchiveResource>&&)passedResource
 {
     self = [super init];
     if (!self)
@@ -94,11 +95,18 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     [super dealloc];
 }
 
+- (void)finalize
+{
+    if (coreResource)
+        coreResource->deref();
+    [super finalize];
+}
+
 @end
 
 @implementation WebResource
 
-- (instancetype)init
+- (id)init
 {
     self = [super init];
     if (!self)
@@ -107,12 +115,12 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
     return self;
 }
 
-- (instancetype)initWithData:(NSData *)data URL:(NSURL *)URL MIMEType:(NSString *)MIMEType textEncodingName:(NSString *)textEncodingName frameName:(NSString *)frameName
+- (id)initWithData:(NSData *)data URL:(NSURL *)URL MIMEType:(NSString *)MIMEType textEncodingName:(NSString *)textEncodingName frameName:(NSString *)frameName
 {
     return [self _initWithData:data URL:URL MIMEType:MIMEType textEncodingName:textEncodingName frameName:frameName response:nil copyData:YES];
 }
 
-- (instancetype)initWithCoder:(NSCoder *)decoder
+- (id)initWithCoder:(NSCoder *)decoder
 {
     WebCoreThreadViolationCheckRoundTwo();
 
@@ -197,6 +205,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSData *)data
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] data];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -206,6 +219,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSURL *)URL
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] URL];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -215,6 +233,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)MIMEType
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] MIMEType];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -225,6 +248,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)textEncodingName
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] textEncodingName];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -235,6 +263,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)frameName
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] frameName];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -245,7 +278,7 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)description
 {
-    return [NSString stringWithFormat:@"<%@ %@>", NSStringFromClass(self.class), self.URL];
+    return [NSString stringWithFormat:@"<%@ %@>", NSStringFromClass([self class]), [self URL]];
 }
 
 @end
@@ -275,6 +308,13 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 // FIXME: This "ignoreWhenUnarchiving" concept is an ugly one - can we find a cleaner solution for those who need this SPI?
 - (void)_ignoreWhenUnarchiving
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround()) {
+        [[self _webkit_invokeOnMainThread] _ignoreWhenUnarchiving];
+        return;
+    }
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -290,6 +330,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
            response:(NSURLResponse *)response
            copyData:(BOOL)copyData
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] _initWithData:data URL:URL MIMEType:MIMEType textEncodingName:textEncodingName frameName:frameName response:response copyData:copyData];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     self = [super init];
@@ -326,6 +371,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)_suggestedFilename
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] _suggestedFilename];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     if (!_private->coreResource)
@@ -348,6 +398,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSURLResponse *)_response
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] _response];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     NSURLResponse *response = nil;
@@ -358,6 +413,11 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 
 - (NSString *)_stringValue
 {
+#ifdef MAIL_THREAD_WORKAROUND
+    if (needMailThreadWorkaround())
+        return [[self _webkit_invokeOnMainThread] _stringValue];
+#endif
+
     WebCoreThreadViolationCheckRoundTwo();
 
     WebCore::TextEncoding encoding;
@@ -371,3 +431,19 @@ static NSString * const WebResourceResponseKey =          @"WebResourceResponse"
 }
 
 @end
+
+#ifdef MAIL_THREAD_WORKAROUND
+
+static const double newMailBundleVersion = 1050.0;
+
+@implementation WebResource (WebMailThreadWorkaround)
+
++ (BOOL)_needMailThreadWorkaroundIfCalledOffMainThread
+{
+    static BOOL isOldMail = MacApplication::isAppleMail() && [[[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey] doubleValue] < newMailBundleVersion;
+    return isOldMail;
+}
+
+@end
+
+#endif

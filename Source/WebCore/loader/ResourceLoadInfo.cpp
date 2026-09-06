@@ -67,8 +67,10 @@ ResourceType toResourceType(CachedResource::Type type)
 #if ENABLE(LINK_PREFETCH)
     case CachedResource::LinkPrefetch:
     case CachedResource::LinkSubresource:
-        ASSERT_NOT_REACHED();
+        RELEASE_ASSERT_NOT_REACHED();
 #endif
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     };
 }
 

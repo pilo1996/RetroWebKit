@@ -24,7 +24,7 @@
  */
 
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class NSString;
 

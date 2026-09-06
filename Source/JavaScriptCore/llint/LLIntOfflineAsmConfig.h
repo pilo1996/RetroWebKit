@@ -164,3 +164,9 @@
 #else
 #define OFFLINE_ASM_EXECUTION_TRACING 0
 #endif
+
+#if OS(DARWIN) && CPU(PPC)
+#define OFFLINE_ASM_FOUR_BYTE_BOOL 1
+#else
+#define OFFLINE_ASM_FOUR_BYTE_BOOL 0
+#endif

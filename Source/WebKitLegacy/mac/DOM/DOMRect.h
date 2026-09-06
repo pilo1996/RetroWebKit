@@ -23,14 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMCSSPrimitiveValue;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMRect : DOMObject
-@property (readonly, strong) DOMCSSPrimitiveValue *top;
-@property (readonly, strong) DOMCSSPrimitiveValue *right;
-@property (readonly, strong) DOMCSSPrimitiveValue *bottom;
-@property (readonly, strong) DOMCSSPrimitiveValue *left;
+@property (readonly, retain) DOMCSSPrimitiveValue *top;
+@property (readonly, retain) DOMCSSPrimitiveValue *right;
+@property (readonly, retain) DOMCSSPrimitiveValue *bottom;
+@property (readonly, retain) DOMCSSPrimitiveValue *left;
 @end

@@ -145,10 +145,16 @@ private:
     [super dealloc];
 }
 
+- (void)finalize
+{
+    [super finalize];
+}
+
 // MARK: MODIFYING CONTENTS
 
 static void getDayBoundaries(NSTimeInterval interval, NSTimeInterval& beginningOfDay, NSTimeInterval& beginningOfNextDay)
 {
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
     NSDate *date = [NSDate dateWithTimeIntervalSinceReferenceDate:interval];
     
     NSCalendar *calendar = [NSCalendar calendarWithIdentifier:NSCalendarIdentifierGregorian];
@@ -159,6 +165,17 @@ static void getDayBoundaries(NSTimeInterval interval, NSTimeInterval& beginningO
     
     beginningOfDay = beginningOfDayDate.timeIntervalSinceReferenceDate;
     beginningOfNextDay = beginningOfDay + dayLength;
+#else
+    CFTimeZoneRef timeZone = CFTimeZoneCopyDefault();
+    CFGregorianDate date = CFAbsoluteTimeGetGregorianDate(interval, timeZone);
+    date.hour = 0;
+    date.minute = 0;
+    date.second = 0;
+    beginningOfDay = CFGregorianDateGetAbsoluteTime(date, timeZone);
+    date.day += 1;
+    beginningOfNextDay = CFGregorianDateGetAbsoluteTime(date, timeZone);
+    CFRelease(timeZone);
+#endif
 }
 
 static inline NSTimeInterval beginningOfDay(NSTimeInterval date)
@@ -382,7 +399,9 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     // Next, we rebuild the history, restore the states, and notify the clients.
     _entriesByURL = entriesByURL;
     for (size_t dayIndex = 0; dayIndex < entryArrays.size(); ++dayIndex) {
-        for (WebHistoryItem *entry in (entryArrays[dayIndex]).get())
+        NSEnumerator *enumerator = [(entryArrays[dayIndex]).get() objectEnumerator];
+        WebHistoryItem *entry;
+        while ((entry = [enumerator nextObject]) != nil)
             [self addItemToDateCaches:entry];
     }
     [webHistory _sendNotification:WebHistoryItemsAddedNotification entries:allEntries];
@@ -447,8 +466,8 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
 
 // MARK: DATE-BASED RETRIEVAL
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
 
 - (NSArray *)orderedLastVisitedDays
 {
@@ -480,7 +499,7 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     return _entriesByDate->get(dateKey).get();
 }
 
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
 // MARK: URL MATCHING
 
@@ -532,8 +551,8 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     return [[NSUserDefaults standardUserDefaults] integerForKey:@"WebKitHistoryItemLimit"];
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
 
 // Return a date that marks the age limit for history entries saved to or
 // loaded from disk. Any entry older than this item should be rejected.
@@ -543,7 +562,7 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
                                                       hours:0 minutes:0 seconds:0];
 }
 
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
 - (BOOL)loadHistoryGutsFromURL:(NSURL *)URL savedItemsCount:(int *)numberOfItemsLoaded collectDiscardedItemsInto:(NSMutableArray *)discardedItems error:(NSError **)error
 {
@@ -562,12 +581,16 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
             return NO;
         }
     } else {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         NSData *data = [NSURLConnection sendSynchronousRequest:[NSURLRequest requestWithURL:URL] returningResponse:nil error:error];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         if (data.length)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             dictionary = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:nullptr error:nullptr];
+#else
+            dictionary = [NSPropertyListSerialization propertyListFromData:data mutabilityOption:NSPropertyListImmutable format:nil errorDescription:nil];
+#endif
     }
 
     // We used to support NSArrays here, but that was before Safari 1.0 shipped. We will no longer support
@@ -681,7 +704,9 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
 
 - (void)addVisitedLinksToVisitedLinkStore:(WebVisitedLinkStore&)visitedLinkStore
 {
-    for (NSString *urlString in _entriesByURL)
+    NSEnumerator *enumerator = [_entriesByURL keyEnumerator];
+    NSString *urlString;
+    while ((urlString = [enumerator nextObject]) != nil)
         visitedLinkStore.addVisitedLink(urlString);
 }
 
@@ -734,6 +759,14 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     [super dealloc];
 }
 
+- (void)finalize
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                    name:NSSystemTimeZoneDidChangeNotification
+                                                  object:nil];
+    [super finalize];
+}
+
 // MARK: MODIFYING CONTENTS
 
 - (void)_sendNotification:(NSString *)name entries:(NSArray *)entries
@@ -776,15 +809,15 @@ static inline WebHistoryDateKey dateKey(NSTimeInterval date)
     return [_historyPrivate orderedLastVisitedDays];
 }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
 
 - (NSArray *)orderedItemsLastVisitedOnDay:(NSCalendarDate *)date
 {
     return [_historyPrivate orderedItemsLastVisitedOnDay:date];
 }
 
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
 // MARK: URL MATCHING
 

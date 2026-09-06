@@ -28,14 +28,14 @@
 
 #if !PLATFORM(IOS)
 
-#import <WebKitLegacy/WebNSEventExtras.h>
+#import <WebKit/WebNSEventExtras.h>
 #import <wtf/mac/AppKitCompatibilityDeclarations.h>
 
 @implementation NSEvent (WebExtras)
 
 -(BOOL)_web_isKeyEvent:(unichar)key
 {
-    int type = [self type];
+    NSEventType type = [self type];
     if (type != NSEventTypeKeyDown && type != NSEventTypeKeyUp)
         return NO;
     

@@ -28,13 +28,13 @@
 
 #import <Foundation/Foundation.h>
 #import <Foundation/NSURLRequest.h>
-#import <WebKitLegacy/WebKitAvailability.h>
+#import <WebKit/WebKitAvailability.h>
 
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKitLegacy/WAKAppKitStubs.h>
-#import <WebKitLegacy/WAKView.h>
+#import <WebKit/WAKAppKitStubs.h>
+#import <WebKit/WAKView.h>
 #endif
 
 /*!
@@ -88,13 +88,14 @@ enum {
     @constant WebDragDestinationActionLoad Allows a location change from the drag
     @constant WebDragDestinationActionAny Allows any of the above to occur
 */
-typedef NS_OPTIONS(NSUInteger, WebDragDestinationAction) {
+enum {
     WebDragDestinationActionNone    = 0,
     WebDragDestinationActionDHTML   = 1,
     WebDragDestinationActionEdit    = 2,
     WebDragDestinationActionLoad    = 4,
     WebDragDestinationActionAny     = UINT_MAX
 };
+typedef NSUInteger WebDragDestinationAction;
 
 /*!
     @enum WebDragSourceAction
@@ -106,7 +107,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragDestinationAction) {
     @constant WebDragSourceActionSelection Allows a selection drag to occur
     @constant WebDragSourceActionAny Allows any of the above to occur
 */
-typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
+enum {
     WebDragSourceActionNone         = 0,
     WebDragSourceActionDHTML        = 1,
     WebDragSourceActionImage        = 2,
@@ -114,6 +115,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     WebDragSourceActionSelection    = 8,
     WebDragSourceActionAny          = UINT_MAX
 };
+typedef NSUInteger WebDragSourceAction;
 
 /*!
     @protocol WebOpenPanelResultListener
@@ -134,7 +136,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @abstract Call this method to return an array of filenames from the file open panel.
     @param fileNames an array of paths of selected files
 */
-- (void)chooseFilenames:(NSArray *)fileNames WEBKIT_AVAILABLE_MAC(10_6);
+- (void)chooseFilenames:(NSArray *)fileNames WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
     @method cancel
@@ -428,7 +430,7 @@ typedef NS_OPTIONS(NSUInteger, WebDragSourceAction) {
     @discussion This method is passed a callback object instead of giving a return
     value so that it can be handled with a sheet.
 */
-- (void)webView:(WebView *)sender runOpenPanelForFileButtonWithResultListener:(id<WebOpenPanelResultListener>)resultListener allowMultipleFiles:(BOOL)allowMultipleFiles WEBKIT_AVAILABLE_MAC(10_6);
+- (void)webView:(WebView *)sender runOpenPanelForFileButtonWithResultListener:(id<WebOpenPanelResultListener>)resultListener allowMultipleFiles:(BOOL)allowMultipleFiles WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
     @method webView:mouseDidMoveOverElement:modifierFlags:

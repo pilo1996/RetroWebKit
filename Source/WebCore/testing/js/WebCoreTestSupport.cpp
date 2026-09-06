@@ -32,6 +32,7 @@
 #include "Internals.h"
 #include "JSDocument.h"
 #include "JSInternals.h"
+#include "Logging.h"
 #include "LogInitialization.h"
 #include "MockGamepadProvider.h"
 #include "Page.h"

@@ -78,6 +78,9 @@
 #endif
 #endif
 
+#else
+#define __has_feature(feature) 0
+#define CLANG_PRAGMA(PRAGMA)
 #endif // defined(__clang__)
 
 /* COMPILER(GCC_OR_CLANG) - GNU Compiler Collection or Clang */
@@ -178,7 +181,7 @@
 
 /* ALWAYS_INLINE */
 
-#if !defined(ALWAYS_INLINE) && COMPILER(GCC_OR_CLANG) && defined(NDEBUG) && !COMPILER(MINGW)
+#if !defined(ALWAYS_INLINE) && COMPILER(GCC_OR_CLANG) && !COMPILER(MINGW)
 #define ALWAYS_INLINE inline __attribute__((__always_inline__))
 #endif
 

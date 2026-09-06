@@ -46,7 +46,9 @@
 #elif PLATFORM(MAC)
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #include <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include <OpenGL/gl3.h>
+#endif
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #elif PLATFORM(GTK) || PLATFORM(WIN)
 #include "OpenGLShims.h"
@@ -212,7 +214,7 @@ String Extensions3DOpenGLCommon::getTranslatedShaderSourceANGLE(Platform3DObject
 
 void Extensions3DOpenGLCommon::initializeAvailableExtensions()
 {
-#if PLATFORM(MAC) || (PLATFORM(GTK) && !USE(OPENGL_ES_2))
+#if (PLATFORM(MAC) || (PLATFORM(GTK) && !USE(OPENGL_ES_2))) && defined(GL_NUM_EXTENSIONS) && defined(GL_MAJOR_VERSION) && defined(GL_MINOR_VERSION)
     if (m_useIndexedGetString) {
         GLint numExtensions = 0;
         ::glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);

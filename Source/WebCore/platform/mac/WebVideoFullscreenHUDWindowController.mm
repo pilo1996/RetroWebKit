@@ -32,9 +32,14 @@
 #import <WebCore/HTMLVideoElement.h>
 #import <WebCoreSystemInterface.h>
 
+#define HAVE_MEDIA_CONTROL (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1050)
+
 using namespace WebCore;
 
-@interface WebVideoFullscreenHUDWindowController (Private) <NSWindowDelegate>
+@interface WebVideoFullscreenHUDWindowController (Private)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+<NSWindowDelegate>
+#endif
 
 - (void)updateTime;
 - (void)timelinePositionChanged:(id)sender;
@@ -48,6 +53,8 @@ using namespace WebCore;
 - (void)setVolume:(float)volume;
 - (void)decrementVolume;
 - (void)incrementVolume;
+- (void)setVolumeToZero:(id)sender;
+- (void)setVolumeToMaximum:(id)sender;
 
 - (void)updatePlayButton;
 - (void)togglePlaying:(id)sender;
@@ -61,10 +68,19 @@ using namespace WebCore;
 - (NSString *)elapsedTimeText;
 
 - (void)exitFullscreen:(id)sender;
+
+- (void)unscheduleTimeUpdate;
 @end
 
 @interface WebVideoFullscreenHUDWindow : NSWindow
 @end
+
+static inline CGFloat webkit_CGFloor(CGFloat value)
+{
+    if (sizeof(value) == sizeof(float))
+        return floorf(value);
+    return static_cast<float>(floor(value));
+}
 
 @implementation WebVideoFullscreenHUDWindow
 
@@ -265,11 +281,31 @@ static const NSTimeInterval HUDWindowFadeOutDelay = 3;
     [self setWindow:nil];
 }
 
+#if !HAVE_MEDIA_CONTROL
+// FIXME: Values in this enum have a different order than ones in WKMediaUIControlType.
+enum {
+    WKMediaUIControlPlayPauseButton,
+    WKMediaUIControlRewindButton,
+    WKMediaUIControlFastForwardButton,
+    WKMediaUIControlExitFullscreenButton,
+    WKMediaUIControlVolumeDownButton,
+    WKMediaUIControlSlider,
+    WKMediaUIControlVolumeUpButton,
+    WKMediaUIControlTimeline
+};
+#endif
+
 static NSControl *createControlWithMediaUIControlType(int controlType, NSRect frame)
 {
+#if HAVE_MEDIA_CONTROL
     NSControl *control = wkCreateMediaUIControl(controlType);
     [control setFrame:frame];
     return control;
+#else
+    if (controlType == WKMediaUIControlSlider)
+        return [[NSSlider alloc] initWithFrame:frame];
+    return [[NSControl alloc] initWithFrame:frame];
+#endif
 }
 
 static NSTextField *createTimeTextField(NSRect frame)
@@ -310,8 +346,11 @@ static NSTextField *createTimeTextField(NSRect frame)
     NSWindow *window = [self window];
     ASSERT(window);
 
+#if HAVE_MEDIA_CONTROL
     NSView *background = wkCreateMediaUIBackgroundView();
-
+#else
+    NSView *background = [[NSView alloc] init];
+#endif
     [window setContentView:background];
     _area = [[NSTrackingArea alloc] initWithRect:[background bounds] options:NSTrackingMouseEnteredAndExited | NSTrackingActiveAlways owner:self userInfo:nil];
     [background addTrackingArea:_area];
@@ -319,15 +358,23 @@ static NSTextField *createTimeTextField(NSRect frame)
 
     NSView *contentView = [window contentView];
 
-    CGFloat center = CGFloor((windowWidth - playButtonWidth) / 2);
+    CGFloat center = webkit_CGFloor((windowWidth - playButtonWidth) / 2);
+#if HAVE_MEDIA_CONTROL
     _playButton = (NSButton *)createControlWithMediaUIControlType(wkMediaUIControlPlayPauseButton, NSMakeRect(center, windowHeight - playButtonTopMargin - playButtonHeight, playButtonWidth, playButtonHeight));
     ASSERT([_playButton isKindOfClass:[NSButton class]]);
+#else
+    _playButton = (NSButton *)createControlWithMediaUIControlType(WKMediaUIControlPlayPauseButton, NSMakeRect(center, windowHeight - playButtonTopMargin - playButtonHeight, playButtonWidth, playButtonHeight));
+#endif
     [_playButton setTarget:self];
     [_playButton setAction:@selector(togglePlaying:)];
     [contentView addSubview:_playButton];
 
     CGFloat closeToRight = windowWidth - horizontalMargin - exitFullscreenButtonWidth;
+#if HAVE_MEDIA_CONTROL
     NSControl *exitFullscreenButton = createControlWithMediaUIControlType(wkMediaUIControlExitFullscreenButton, NSMakeRect(closeToRight, windowHeight - exitFullscreenButtonTopMargin - exitFullscreenButtonHeight, exitFullscreenButtonWidth, exitFullscreenButtonHeight));
+#else
+    NSControl *exitFullscreenButton = createControlWithMediaUIControlType(WKMediaUIControlExitFullscreenButton, NSMakeRect(closeToRight, windowHeight - exitFullscreenButtonTopMargin - exitFullscreenButtonHeight, exitFullscreenButtonWidth, exitFullscreenButtonHeight));
+#endif
     [exitFullscreenButton setAction:@selector(exitFullscreen:)];
     [exitFullscreenButton setTarget:self];
     [contentView addSubview:exitFullscreenButton];
@@ -335,31 +382,46 @@ static NSTextField *createTimeTextField(NSRect frame)
     
     CGFloat volumeControlsBottom = windowHeight - volumeControlsTopMargin - volumeButtonHeight;
     CGFloat left = horizontalMargin;
+#if HAVE_MEDIA_CONTROL
     NSControl *volumeDownButton = createControlWithMediaUIControlType(wkMediaUIControlVolumeDownButton, NSMakeRect(left, volumeControlsBottom, volumeButtonWidth, volumeButtonHeight));
+#else
+    NSControl *volumeDownButton = createControlWithMediaUIControlType(WKMediaUIControlVolumeDownButton, NSMakeRect(left, volumeControlsBottom, volumeButtonWidth, volumeButtonHeight));
+#endif
     [contentView addSubview:volumeDownButton];
     [volumeDownButton setTarget:self];
     [volumeDownButton setAction:@selector(setVolumeToZero:)];
     [volumeDownButton release];
 
     left += volumeButtonWidth;
-    _volumeSlider = createControlWithMediaUIControlType(wkMediaUIControlSlider, NSMakeRect(left, volumeControlsBottom + CGFloor((volumeButtonHeight - volumeSliderHeight) / 2), volumeSliderWidth, volumeSliderHeight));
+#if HAVE_MEDIA_CONTROL
+    _volumeSlider = createControlWithMediaUIControlType(wkMediaUIControlSlider, NSMakeRect(left, volumeControlsBottom + webkit_CGFloor((volumeButtonHeight - volumeSliderHeight) / 2), volumeSliderWidth, volumeSliderHeight));
+#else
+    _volumeSlider = createControlWithMediaUIControlType(WKMediaUIControlSlider, NSMakeRect(left, volumeControlsBottom + webkit_CGFloor((volumeButtonHeight - volumeSliderHeight) / 2), volumeSliderWidth, volumeSliderHeight));
+#endif
     [_volumeSlider setValue:[NSNumber numberWithDouble:[self maxVolume]] forKey:@"maxValue"];
     [_volumeSlider setTarget:self];
     [_volumeSlider setAction:@selector(volumeChanged:)];
     [contentView addSubview:_volumeSlider];
 
     left += volumeSliderWidth + volumeUpButtonLeftMargin;
+#if HAVE_MEDIA_CONTROL
     NSControl *volumeUpButton = createControlWithMediaUIControlType(wkMediaUIControlVolumeUpButton, NSMakeRect(left, volumeControlsBottom, volumeButtonWidth, volumeButtonHeight));
+#else
+    NSControl *volumeUpButton = createControlWithMediaUIControlType(WKMediaUIControlVolumeUpButton, NSMakeRect(left, volumeControlsBottom, volumeButtonWidth, volumeButtonHeight));
+#endif
     [volumeUpButton setTarget:self];
     [volumeUpButton setAction:@selector(setVolumeToMaximum:)];
     [contentView addSubview:volumeUpButton];
     [volumeUpButton release];
 
+#if HAVE_MEDIA_CONTROL
     _timeline = wkCreateMediaUIControl(wkMediaUIControlTimeline);
-
+#else
+    _timeline = [[NSSlider alloc] init];
+#endif
     [_timeline setTarget:self];
     [_timeline setAction:@selector(timelinePositionChanged:)];
-    [_timeline setFrame:NSMakeRect(CGFloor((windowWidth - timelineWidth) / 2), timelineBottomMargin, timelineWidth, timelineHeight)];
+    [_timeline setFrame:NSMakeRect(webkit_CGFloor((windowWidth - timelineWidth) / 2), timelineBottomMargin, timelineWidth, timelineHeight)];
     [contentView addSubview:_timeline];
 
     _elapsedTimeText = createTimeTextField(NSMakeRect(timeTextFieldHorizontalMargin, timelineBottomMargin, timeTextFieldWidth, timeTextFieldHeight));

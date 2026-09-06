@@ -43,7 +43,6 @@ EncodedJSValue JSC_HOST_CALL objectConstructorAssign(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorValues(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorGetPrototypeOf(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorSetPrototypeOf(ExecState*);
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyNames(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorDefineProperty(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorDefineProperties(ExecState*);
 EncodedJSValue JSC_HOST_CALL objectConstructorCreate(ExecState*);

@@ -26,6 +26,8 @@
 #import "config.h"
 #import "NetworkLoadMetrics.h"
 
+#if ENABLE(WEB_TIMING) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
+
 #import <WebCore/NSURLConnectionSPI.h>
 
 namespace WebCore {
@@ -77,3 +79,5 @@ void setCollectsTimingData()
 #endif
     
 }
+
+#endif

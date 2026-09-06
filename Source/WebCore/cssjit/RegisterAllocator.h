@@ -91,6 +91,39 @@ static const JSC::MacroAssembler::RegisterID calleeSavedRegisters[] = {
     JSC::X86Registers::r14,
     JSC::X86Registers::r15
 };
+#elif CPU(PPC) && OS(DARWIN)
+static const JSC::MacroAssembler::RegisterID callerSavedRegisters[] = {
+    JSC::PPCRegisters::r2,
+    JSC::PPCRegisters::r3,
+    JSC::PPCRegisters::r4,
+    JSC::PPCRegisters::r5,
+    JSC::PPCRegisters::r6,
+    JSC::PPCRegisters::r7,
+    JSC::PPCRegisters::r8,
+    JSC::PPCRegisters::r9,
+    JSC::PPCRegisters::r10,
+};
+static const JSC::MacroAssembler::RegisterID calleeSavedRegisters[] = {
+    JSC::PPCRegisters::r13,
+    JSC::PPCRegisters::r14,
+    JSC::PPCRegisters::r15,
+    JSC::PPCRegisters::r16,
+    JSC::PPCRegisters::r17,
+    JSC::PPCRegisters::r18,
+    JSC::PPCRegisters::r19,
+    JSC::PPCRegisters::r20,
+    JSC::PPCRegisters::r21,
+    JSC::PPCRegisters::r22,
+    JSC::PPCRegisters::r23,
+    JSC::PPCRegisters::r24,
+    JSC::PPCRegisters::r25,
+    JSC::PPCRegisters::r26,
+    JSC::PPCRegisters::r27,
+    JSC::PPCRegisters::r28,
+    JSC::PPCRegisters::r29,
+    JSC::PPCRegisters::r30,
+    JSC::PPCRegisters::r31
+};
 #else
 #error RegisterAllocator has no defined registers for the architecture.
 #endif
@@ -197,6 +230,9 @@ public:
 #elif CPU(X86_64)
         return (registerID >= JSC::X86Registers::eax && registerID <= JSC::X86Registers::edx)
             || (registerID >= JSC::X86Registers::esi && registerID <= JSC::X86Registers::r15);
+#elif CPU(PPC)
+        return (registerID >= JSC::PPCRegisters::r2 && registerID <= JSC::PPCRegisters::r10)
+            || (registerID >= JSC::PPCRegisters::r13 && registerID <= JSC::PPCRegisters::r31);
 #else
 #error RegisterAllocator does not define the valid register range for the current architecture.
 #endif
@@ -213,6 +249,8 @@ public:
 #elif CPU(X86_64)
         return (registerID >= JSC::X86Registers::eax && registerID <= JSC::X86Registers::edx)
             || (registerID >= JSC::X86Registers::esi && registerID <= JSC::X86Registers::r11);
+#elif CPU(PPC)
+        return registerID >= JSC::PPCRegisters::r2 && registerID <= JSC::PPCRegisters::r10;
 #else
 #error RegisterAllocator does not define the valid caller saved register range for the current architecture.
 #endif

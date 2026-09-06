@@ -28,7 +28,7 @@
 #include "RenderTheme.h"
 #include <wtf/RetainPtr.h>
 
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+#if ENABLE(MEDIA_CONTROLS_SCRIPT) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
 OBJC_CLASS NSDateComponentsFormatter;
 #endif
 
@@ -44,7 +44,7 @@ protected:
 #if ENABLE(VIDEO)
     String mediaControlsFormattedStringForDuration(double) override;
 #endif
-#if ENABLE(MEDIA_CONTROLS_SCRIPT)
+#if ENABLE(MEDIA_CONTROLS_SCRIPT) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     RetainPtr<NSDateComponentsFormatter> m_durationFormatter;
 #endif
 };

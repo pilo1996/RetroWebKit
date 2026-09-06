@@ -33,6 +33,8 @@
 #import <QuartzCore/QuartzCore.h>
 #import <wtf/text/WTFString.h>
 
+#define HAVE_MODERN_QUARTZCORE (__MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
+
 using namespace WebCore;
 
 static NSString * const WKExplicitBeginTimeFlag = @"WKPlatformCAAnimationExplicitBeginTimeFlag";
@@ -69,6 +71,7 @@ static PlatformCAAnimation::FillModeType fromCAFillModeType(NSString* string)
     return PlatformCAAnimation::Forwards;
 }
 
+#if HAVE_MODERN_QUARTZCORE
 NSString* WebCore::toCAValueFunctionType(PlatformCAAnimation::ValueFunctionType type)
 {
     switch (type) {
@@ -125,6 +128,7 @@ static PlatformCAAnimation::ValueFunctionType fromCAValueFunctionType(NSString* 
 
     return PlatformCAAnimation::NoValueFunction;
 }
+#endif
 
 CAMediaTimingFunction* WebCore::toCAMediaTimingFunction(const TimingFunction* timingFunction, bool reverse)
 {
@@ -159,6 +163,12 @@ Ref<PlatformCAAnimation> PlatformCAAnimationCocoa::create(PlatformAnimationRef a
     return adoptRef(*new PlatformCAAnimationCocoa(animation));
 }
 
+static Class CASpringAnimationClass()
+{
+     static Class CASpringAnimationClass = NSClassFromString(@"CASpringAnimation");
+     return CASpringAnimationClass;
+}
+
 PlatformCAAnimationCocoa::PlatformCAAnimationCocoa(AnimationType type, const String& keyPath)
     : PlatformCAAnimation(type)
 {
@@ -170,7 +180,7 @@ PlatformCAAnimationCocoa::PlatformCAAnimationCocoa(AnimationType type, const Str
         m_animation = [CAKeyframeAnimation animationWithKeyPath:keyPath];
         break;
     case Spring:
-        m_animation = [CASpringAnimation animationWithKeyPath:keyPath];
+        m_animation = [CASpringAnimationClass() animationWithKeyPath:keyPath];
         break;
     }
 }
@@ -178,7 +188,7 @@ PlatformCAAnimationCocoa::PlatformCAAnimationCocoa(AnimationType type, const Str
 PlatformCAAnimationCocoa::PlatformCAAnimationCocoa(PlatformAnimationRef animation)
 {
     if ([static_cast<CAAnimation*>(animation) isKindOfClass:[CABasicAnimation class]]) {
-        if ([static_cast<CAAnimation*>(animation) isKindOfClass:[CASpringAnimation class]])
+        if ([static_cast<CAAnimation*>(animation) isKindOfClass:CASpringAnimationClass()])
             setType(Spring);
         else
             setType(Basic);
@@ -234,17 +244,17 @@ PlatformAnimationRef PlatformCAAnimationCocoa::platformAnimation() const
 
 String PlatformCAAnimationCocoa::keyPath() const
 {
-    return [m_animation keyPath];
+    return [m_animation.get() keyPath];
 }
 
 CFTimeInterval PlatformCAAnimationCocoa::beginTime() const
 {
-    return [m_animation beginTime];
+    return [m_animation.get() beginTime];
 }
 
 void PlatformCAAnimationCocoa::setBeginTime(CFTimeInterval value)
 {
-    [m_animation setBeginTime:value];
+    [m_animation.get() setBeginTime:value];
     
     // Also set a flag to tell us if we've passed in a 0 value. 
     // The flag is needed because later beginTime will get changed
@@ -256,62 +266,62 @@ void PlatformCAAnimationCocoa::setBeginTime(CFTimeInterval value)
 
 CFTimeInterval PlatformCAAnimationCocoa::duration() const
 {
-    return [m_animation duration];
+    return [m_animation.get() duration];
 }
 
 void PlatformCAAnimationCocoa::setDuration(CFTimeInterval value)
 {
-    [m_animation setDuration:value];
+    [m_animation.get() setDuration:value];
 }
 
 float PlatformCAAnimationCocoa::speed() const
 {
-    return [m_animation speed];
+    return [m_animation.get() speed];
 }
 
 void PlatformCAAnimationCocoa::setSpeed(float value)
 {
-    [m_animation setSpeed:value];
+    [m_animation.get() setSpeed:value];
 }
 
 CFTimeInterval PlatformCAAnimationCocoa::timeOffset() const
 {
-    return [m_animation timeOffset];
+    return [m_animation.get() timeOffset];
 }
 
 void PlatformCAAnimationCocoa::setTimeOffset(CFTimeInterval value)
 {
-    [m_animation setTimeOffset:value];
+    [m_animation.get() setTimeOffset:value];
 }
 
 float PlatformCAAnimationCocoa::repeatCount() const
 {
-    return [m_animation repeatCount];
+    return [m_animation.get() repeatCount];
 }
 
 void PlatformCAAnimationCocoa::setRepeatCount(float value)
 {
-    [m_animation setRepeatCount:value];
+    [m_animation.get() setRepeatCount:value];
 }
 
 bool PlatformCAAnimationCocoa::autoreverses() const
 {
-    return [m_animation autoreverses];
+    return [m_animation.get() autoreverses];
 }
 
 void PlatformCAAnimationCocoa::setAutoreverses(bool value)
 {
-    [m_animation setAutoreverses:value];
+    [m_animation.get() setAutoreverses:value];
 }
 
 PlatformCAAnimation::FillModeType PlatformCAAnimationCocoa::fillMode() const
 {
-    return fromCAFillModeType([m_animation fillMode]);
+    return fromCAFillModeType([m_animation.get() fillMode]);
 }
 
 void PlatformCAAnimationCocoa::setFillMode(FillModeType value)
 {
-    [m_animation setFillMode:toCAFillModeType(value)];
+    [m_animation.get() setFillMode:toCAFillModeType(value)];
 }
 
 void PlatformCAAnimationCocoa::setTimingFunction(const TimingFunction* value, bool reverse)
@@ -319,17 +329,22 @@ void PlatformCAAnimationCocoa::setTimingFunction(const TimingFunction* value, bo
     switch (animationType()) {
     case Basic:
     case Keyframe:
-        [m_animation setTimingFunction:toCAMediaTimingFunction(value, reverse)];
+        [m_animation.get() setTimingFunction:toCAMediaTimingFunction(value, reverse)];
         break;
     case Spring:
         if (value->isSpringTimingFunction()) {
             // FIXME: Handle reverse.
             auto& function = *static_cast<const SpringTimingFunction*>(value);
             CASpringAnimation *springAnimation = (CASpringAnimation *)m_animation.get();
+            RELEASE_ASSERT([springAnimation isKindOfClass:CASpringAnimationClass()]);
             springAnimation.mass = function.mass();
             springAnimation.stiffness = function.stiffness();
             springAnimation.damping = function.damping();
+#if PLATFORM(IOS) || PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
             springAnimation.initialVelocity = function.initialVelocity();
+#else
+            springAnimation.velocity = function.initialVelocity();
+#endif
         }
         break;
     }
@@ -337,38 +352,46 @@ void PlatformCAAnimationCocoa::setTimingFunction(const TimingFunction* value, bo
 
 void PlatformCAAnimationCocoa::copyTimingFunctionFrom(const PlatformCAAnimation& value)
 {
-    [m_animation setTimingFunction:[downcast<PlatformCAAnimationCocoa>(value).m_animation.get() timingFunction]];
+    [m_animation.get() setTimingFunction:[downcast<PlatformCAAnimationCocoa>(value).m_animation.get() timingFunction]];
 }
 
 bool PlatformCAAnimationCocoa::isRemovedOnCompletion() const
 {
-    return [m_animation isRemovedOnCompletion];
+    return [m_animation.get() isRemovedOnCompletion];
 }
 
 void PlatformCAAnimationCocoa::setRemovedOnCompletion(bool value)
 {
-    [m_animation setRemovedOnCompletion:value];
+    [m_animation.get() setRemovedOnCompletion:value];
 }
 
 bool PlatformCAAnimationCocoa::isAdditive() const
 {
-    return [m_animation isAdditive];
+    return [m_animation.get() isAdditive];
 }
 
 void PlatformCAAnimationCocoa::setAdditive(bool value)
 {
-    [m_animation setAdditive:value];
+    [m_animation.get() setAdditive:value];
 }
 
 PlatformCAAnimation::ValueFunctionType PlatformCAAnimationCocoa::valueFunction() const
 {
-    CAValueFunction* vf = [m_animation valueFunction];
+#if HAVE_MODERN_QUARTZCORE
+    CAValueFunction* vf = [m_animation.get() valueFunction];
     return fromCAValueFunctionType([vf name]);
+#else
+    return NoValueFunction;
+#endif
 }
 
 void PlatformCAAnimationCocoa::setValueFunction(ValueFunctionType value)
 {
-    [m_animation setValueFunction:[CAValueFunction functionWithName:toCAValueFunctionType(value)]];
+#if HAVE_MODERN_QUARTZCORE
+    [m_animation.get() setValueFunction:[CAValueFunction functionWithName:toCAValueFunctionType(value)]];
+#else
+    UNUSED_PARAM(value);
+#endif
 }
 
 void PlatformCAAnimationCocoa::setFromValue(float value)

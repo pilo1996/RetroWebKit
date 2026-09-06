@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSRule.h>
+#import <WebKit/DOMCSSRule.h>
 
 @class DOMCSSStyleSheet;
 @class DOMMediaList;
@@ -32,6 +32,6 @@
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSImportRule : DOMCSSRule
 @property (readonly, copy) NSString *href;
-@property (readonly, strong) DOMMediaList *media;
-@property (readonly, strong) DOMCSSStyleSheet *styleSheet;
+@property (readonly, retain) DOMMediaList *media;
+@property (readonly, retain) DOMCSSStyleSheet *styleSheet;
 @end

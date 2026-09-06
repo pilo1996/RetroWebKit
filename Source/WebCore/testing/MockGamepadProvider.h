@@ -44,7 +44,7 @@ public:
 
     WEBCORE_EXPORT void startMonitoringGamepads(GamepadProviderClient&) final;
     WEBCORE_EXPORT void stopMonitoringGamepads(GamepadProviderClient&) final;
-    WEBCORE_EXPORT const Vector<PlatformGamepad*>& platformGamepads() final { return m_connectedGamepadVector; }
+    WEBCORE_EXPORT const Vector<PlatformGamepad*>& platformGamepads() final;
     bool isMockGamepadProvider() const final { return true; }
 
     void setMockGamepadDetails(unsigned index, const String& gamepadID, unsigned axisCount, unsigned buttonCount);

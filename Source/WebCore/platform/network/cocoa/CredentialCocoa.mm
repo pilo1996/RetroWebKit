@@ -26,11 +26,19 @@
 #import "config.h"
 #import "CredentialCocoa.h"
 
-#if USE(CFURLCONNECTION)
+#if USE(CFURLCONNECTION) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+#import "CFNetworkSPI.h"
+#import <wtf/SoftLinking.h>
+
 @interface NSURLCredential (WebDetails)
 - (id)_initWithCFURLCredential:(CFURLCredentialRef)credential;
 - (CFURLCredentialRef) _CFURLCredential;
 @end
+
+SOFT_LINK_FRAMEWORK_IN_UMBRELLA(CoreServices, CFNetwork)
+SOFT_LINK(CFNetwork, CFURLCredentialGetCertificateIdentity, SecIdentityRef, (CFURLCredentialRef credential), (credential))
+SOFT_LINK(CFNetwork, CFURLCredentialGetCertificateArray, CFArrayRef, (CFURLCredentialRef credential), (credential))
+SOFT_LINK(CFNetwork, CFURLCredentialCreateWithIdentityAndCertificateArray, CFURLCredentialRef, (CFAllocatorRef allocator, SecIdentityRef identity, CFArrayRef certificates, CFURLCredentialPersistence persistence), (allocator, identity, certificates, persistence))
 #endif
 
 namespace WebCore {
@@ -58,7 +66,9 @@ static CredentialPersistence toCredentialPersistence(NSURLCredentialPersistence 
     case NSURLCredentialPersistenceForSession:
         return CredentialPersistenceForSession;
     case NSURLCredentialPersistencePermanent:
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     case NSURLCredentialPersistenceSynchronizable:
+#endif
         return CredentialPersistencePermanent;
     }
 
@@ -73,10 +83,15 @@ Credential::Credential(const Credential& original, CredentialPersistence persist
     if (!originalNSURLCredential)
         return;
 
-    if (NSString *user = originalNSURLCredential.user)
-        m_nsCredential = adoptNS([[NSURLCredential alloc] initWithUser:user password:originalNSURLCredential.password persistence:toNSURLCredentialPersistence(persistence)]);
-    else if (SecIdentityRef identity = originalNSURLCredential.identity)
-        m_nsCredential = adoptNS([[NSURLCredential alloc] initWithIdentity:identity certificates:originalNSURLCredential.certificates persistence:toNSURLCredentialPersistence(persistence)]);
+    if (NSString *user = [originalNSURLCredential user])
+        m_nsCredential = adoptNS([[NSURLCredential alloc] initWithUser:user password:[originalNSURLCredential password] persistence:toNSURLCredentialPersistence(persistence)]);
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    else if (SecIdentityRef identity = (SecIdentityRef)[originalNSURLCredential identity])
+        m_nsCredential = adoptNS([[NSURLCredential alloc] initWithIdentity:identity certificates:[originalNSURLCredential certificates] persistence:toNSURLCredentialPersistence(persistence)]);
+#else
+    else if (SecIdentityRef identity = CFURLCredentialGetCertificateIdentity([originalNSURLCredential _CFURLCredential]))
+        m_nsCredential = adoptNS([[NSURLCredential alloc] _initWithCFURLCredential:CFURLCredentialCreateWithIdentityAndCertificateArray(kCFAllocatorDefault, identity, CFURLCredentialGetCertificateArray([originalNSURLCredential _CFURLCredential]), (CFURLCredentialPersistence)(persistence + 1))]);
+#endif
     else {
         // It is not possible to set the persistence of server trust credentials.
         ASSERT_NOT_REACHED();
@@ -92,7 +107,7 @@ Credential::Credential(CFURLCredentialRef credential)
 #endif
 
 Credential::Credential(NSURLCredential *credential)
-    : CredentialBase(credential.user, credential.password, toCredentialPersistence(credential.persistence))
+    : CredentialBase([credential user], [credential password], toCredentialPersistence([credential persistence]))
     , m_nsCredential(credential)
 {
 }

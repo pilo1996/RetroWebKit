@@ -2051,7 +2051,7 @@ void RenderElement::paintFocusRing(PaintInfo& paintInfo, const RenderStyle& styl
         rect.inflate(outlineOffset);
         pixelSnappedFocusRingRects.append(snapRectToDevicePixels(rect, deviceScaleFactor));
     }
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     bool needsRepaint;
     if (style.hasBorderRadius()) {
         Path path = PathUtilities::pathWithShrinkWrappedRectsForOutline(pixelSnappedFocusRingRects, style.border(), outlineOffset, style.direction(), style.writingMode(),

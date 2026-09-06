@@ -35,6 +35,8 @@
 
 extern "C" {
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+
 typedef CF_ENUM(CFIndex, CFStringCharacterClusterType)
 {
     kCFStringComposedCharacterCluster = 2,
@@ -42,13 +44,19 @@ typedef CF_ENUM(CFIndex, CFStringCharacterClusterType)
     kCFStringBackwardDeletionCluster = 4
 };
 
+#endif
+
 }
 
 #endif
 
 extern "C" {
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+
 CFRange CFStringGetRangeOfCharacterClusterAtIndex(CFStringRef, CFIndex charIndex, CFStringCharacterClusterType);
+
+#endif
 
 }
 

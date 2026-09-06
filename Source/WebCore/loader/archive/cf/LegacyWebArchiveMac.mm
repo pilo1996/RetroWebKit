@@ -42,7 +42,7 @@ ResourceResponse LegacyWebArchive::createResourceResponseFromMacArchivedData(CFD
         return ResourceResponse();
     
     NSURLResponse *response = nil;
-    NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:(NSData *)responseData];
+    NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:(const NSData *)responseData];
 #if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || PLATFORM(IOS)
     // Because of <rdar://problem/34063313> we can't use this for decoding in older OS's.
     [unarchiver setRequiresSecureCoding:YES];

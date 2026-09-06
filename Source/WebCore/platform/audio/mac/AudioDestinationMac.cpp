@@ -87,23 +87,36 @@ AudioDestinationMac::AudioDestinationMac(AudioIOCallback& callback, float sample
     , m_isPlaying(false)
 {
     // Open and initialize DefaultOutputUnit
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     AudioComponent comp;
     AudioComponentDescription desc;
+#else
+    Component comp;
+    ComponentDescription desc;
+#endif
 
     desc.componentType = kAudioUnitType_Output;
     desc.componentSubType = kAudioUnitSubType_DefaultOutput;
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     comp = AudioComponentFindNext(0, &desc);
+#else
+    comp = FindNextComponent(0, &desc);
+#endif
 
     ASSERT(comp);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     OSStatus result = AudioComponentInstanceNew(comp, &m_outputUnit);
-    ASSERT(!result);
+#else
+    OSStatus result = OpenAComponent(comp, &m_outputUnit);
+#endif
+    ASSERT_UNUSED(result, !result);
 
     result = AudioUnitInitialize(m_outputUnit);
-    ASSERT(!result);
+    ASSERT_UNUSED(result, !result);
 
     configure();
 }
@@ -111,7 +124,11 @@ AudioDestinationMac::AudioDestinationMac(AudioIOCallback& callback, float sample
 AudioDestinationMac::~AudioDestinationMac()
 {
     if (m_outputUnit)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         AudioComponentInstanceDispose(m_outputUnit);
+#else
+        CloseComponent(m_outputUnit);
+#endif
 }
 
 void AudioDestinationMac::configure()
@@ -135,7 +152,7 @@ void AudioDestinationMac::configure()
     streamFormat.mBytesPerFrame = sizeof(Float32);
 
     result = AudioUnitSetProperty(m_outputUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, (void*)&streamFormat, sizeof(AudioStreamBasicDescription));
-    ASSERT(!result);
+    ASSERT_UNUSED(result, !result);
 }
 
 void AudioDestinationMac::start()

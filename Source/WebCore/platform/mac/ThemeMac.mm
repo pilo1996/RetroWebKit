@@ -91,7 +91,13 @@ static BOOL themeWindowHasKeyAppearance;
 {
     if (NSIsEmptyRect(focusRingClipRect))
         return [self visibleRect];
-    return focusRingClipRect;
+
+    NSRect rect = focusRingClipRect;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
+    rect.origin.y = [self bounds].size.height - NSMaxY(rect);
+#endif
+
+    return rect;
 }
 
 - (NSView *)_focusRingClipAncestor
@@ -187,6 +193,10 @@ static void setControlSize(NSCell* cell, const std::array<IntSize, 3>& sizes, co
 
 static void updateStates(NSCell* cell, const ControlStates& controlStates, bool useAnimation = false)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 101000
+    UNUSED_PARAM(useAnimation);
+#endif
+
     // The animated state cause this thread to start and stop repeatedly on CoreAnimation synchronize calls.
     // This short burts of activity in between are not long enough for VoiceOver to retrieve accessibility attributes and makes the process appear unresponsive.
     if (AXObjectCache::accessibilityEnhancedUserInterfaceEnabled())
@@ -200,7 +210,11 @@ static void updateStates(NSCell* cell, const ControlStates& controlStates, bool 
     bool oldPressed = [cell isHighlighted];
     bool pressed = states & ControlStates::PressedState;
     if (pressed != oldPressed) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
         [(NSButtonCell*)cell _setHighlighted:pressed animated:useAnimation];
+#else
+        [cell setHighlighted:pressed];
+#endif
     }
     
     // Enabled state
@@ -208,6 +222,14 @@ static void updateStates(NSCell* cell, const ControlStates& controlStates, bool 
     bool enabled = states & ControlStates::EnabledState;
     if (enabled != oldEnabled)
         [cell setEnabled:enabled];
+    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    // Focused state
+    bool oldFocused = [cell showsFirstResponder];
+    bool focused = states & ControlStates::FocusState;
+    if (focused != oldFocused)
+        [cell setShowsFirstResponder:focused];
+#endif
 
     // Checked and Indeterminate
     bool oldIndeterminate = [cell state] == NSMixedState;
@@ -216,7 +238,11 @@ static void updateStates(NSCell* cell, const ControlStates& controlStates, bool 
     bool oldChecked = [cell state] == NSOnState;
     if (oldIndeterminate != indeterminate || checked != oldChecked) {
         NSCellStateValue newState = indeterminate ? NSMixedState : (checked ? NSOnState : NSOffState);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
         [(NSButtonCell*)cell _setState:newState animated:useAnimation];
+#else
+        [cell setState:newState];
+#endif
     }
 
     // Window inactive state does not need to be checked explicitly, since we paint parented to 
@@ -331,15 +357,15 @@ static RetainPtr<NSButtonCell> createToggleButtonCell(ControlPart buttonType)
     RetainPtr<NSButtonCell> toggleButtonCell = adoptNS([[NSButtonCell alloc] init]);
     
     if (buttonType == CheckboxPart) {
-        [toggleButtonCell setButtonType:NSSwitchButton];
-        [toggleButtonCell setAllowsMixedState:YES];
+        [toggleButtonCell.get() setButtonType:NSSwitchButton];
+        [toggleButtonCell.get() setAllowsMixedState:YES];
     } else {
         ASSERT(buttonType == RadioPart);
-        [toggleButtonCell setButtonType:NSRadioButton];
+        [toggleButtonCell.get() setButtonType:NSRadioButton];
     }
     
-    [toggleButtonCell setTitle:nil];
-    [toggleButtonCell setFocusRingType:NSFocusRingTypeExterior];
+    [toggleButtonCell.get() setTitle:nil];
+    [toggleButtonCell.get() setFocusRingType:NSFocusRingTypeExterior];
     return toggleButtonCell;
 }
     
@@ -361,7 +387,13 @@ static NSButtonCell *sharedCheckboxCell(const ControlStates& states, const IntSi
 
 static bool drawCellFocusRing(NSCell *cell, NSRect cellFrame, NSView *controlView)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     wkDrawCellFocusRingWithFrameAtTime(cell, cellFrame, controlView, std::numeric_limits<double>::max());
+#else
+    UNUSED_PARAM(cell);
+    UNUSED_PARAM(cellFrame);
+    UNUSED_PARAM(controlView);
+#endif
     return false;
 }
 
@@ -391,7 +423,7 @@ static void paintToggleButton(ControlPart buttonType, ControlStates& controlStat
 
     GraphicsContextStateSaver stateSaver(context);
 
-    NSControlSize controlSize = [toggleButtonCell controlSize];
+    NSControlSize controlSize = [toggleButtonCell.get() controlSize];
     IntSize zoomedSize = buttonType == CheckboxPart ? checkboxSizes()[controlSize] : radioSizes()[controlSize];
     zoomedSize.setWidth(zoomedSize.width() * zoomFactor);
     zoomedSize.setHeight(zoomedSize.height() * zoomFactor);
@@ -408,26 +440,34 @@ static void paintToggleButton(ControlPart buttonType, ControlStates& controlStat
 
     LocalCurrentGraphicsContext localContext(context);
 
-    NSView *view = ThemeMac::ensuredView(scrollView, controlStates, true /* useUnparentedView */);
+    bool useUnparentedView = false;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    useUnparentedView = true;
+#endif
+    NSView *view = ThemeMac::ensuredView(scrollView, controlStates, useUnparentedView);
 
     bool needsRepaint = false;
     bool useImageBuffer = pageScaleFactor != 1.0f || zoomFactor != 1.0f;
     bool isCellFocused = controlStates.states() & ControlStates::FocusState;
 
-    if ([toggleButtonCell _stateAnimationRunning]) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    if ([toggleButtonCell.get() _stateAnimationRunning]) {
         context.translate(inflatedRect.x(), inflatedRect.y());
         context.scale(FloatSize(1, -1));
         context.translate(0, -inflatedRect.height());
 
-        [toggleButtonCell _renderCurrentAnimationFrameInContext:context.platformContext() atLocation:NSMakePoint(0, 0)];
-        if (![toggleButtonCell _stateAnimationRunning] && isCellFocused)
+        [toggleButtonCell.get() _renderCurrentAnimationFrameInContext:context.platformContext() atLocation:NSMakePoint(0, 0)];
+        if (![toggleButtonCell.get() _stateAnimationRunning] && isCellFocused)
             needsRepaint = ThemeMac::drawCellOrFocusRingWithViewIntoContext(toggleButtonCell.get(), context, inflatedRect, view, false, true, useImageBuffer, deviceScaleFactor);
     } else
+#endif
         needsRepaint = ThemeMac::drawCellOrFocusRingWithViewIntoContext(toggleButtonCell.get(), context, inflatedRect, view, true, isCellFocused, useImageBuffer, deviceScaleFactor);
 
-    [toggleButtonCell setControlView:nil];
+    [toggleButtonCell.get() setControlView:nil];
 
-    needsRepaint |= [toggleButtonCell _stateAnimationRunning];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+    needsRepaint |= [toggleButtonCell.get() _stateAnimationRunning];
+#endif
     controlStates.setNeedsRepaint(needsRepaint);
     if (needsRepaint)
         controlStates.setPlatformControl(toggleButtonCell.get());
@@ -540,9 +580,12 @@ static void paintButton(ControlPart part, ControlStates& controlStates, Graphics
 
     bool useImageBuffer = pageScaleFactor != 1.0f || zoomFactor != 1.0f;
     bool needsRepaint = ThemeMac::drawCellOrFocusRingWithViewIntoContext(buttonCell, context, inflatedRect, view, true, states & ControlStates::FocusState, useImageBuffer, deviceScaleFactor);
-    if (states & ControlStates::DefaultState)
+    if (states & ControlStates::DefaultState) {
         [window setDefaultButtonCell:buttonCell];
-    else if ([previousDefaultButtonCell isEqual:buttonCell])
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 101000
+        wkAdvanceDefaultButtonPulseAnimation(buttonCell);
+#endif
+    } else if ([previousDefaultButtonCell isEqual:buttonCell])
         [window setDefaultButtonCell:nil];
     
     controlStates.setNeedsRepaint(needsRepaint);

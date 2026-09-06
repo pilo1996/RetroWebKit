@@ -50,13 +50,17 @@ using namespace WebCore;
 
 @interface NSClipView (WebNSClipViewDetails)
 - (void)_immediateScrollToPoint:(NSPoint)newOrigin;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 - (BOOL)_canCopyOnScrollForDeltaX:(CGFloat)deltaX deltaY:(CGFloat)deltaY;
+#endif
 @end
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 @interface NSWindow (WebNSWindowDetails)
 - (void)_disableDelayedWindowDisplay;
 - (void)_enableDelayedWindowDisplay;
 @end
+#endif
 
 @implementation WebClipView
 
@@ -66,8 +70,8 @@ using namespace WebCore;
     if (!self)
         return nil;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     // In WebHTMLView, we set a clip. This is not typical to do in an
     // NSView, and while correct for any one invocation of drawRect:,
     // it causes some bad problems if that clip is cached between calls.
@@ -78,7 +82,7 @@ using namespace WebCore;
     // See these bugs for more information:
     // <rdar://problem/3409315>: REGRESSSION (7B58-7B60)?: Safari draws blank frames on macosx.apple.com perf page
     [self releaseGState];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
     return self;
 }
@@ -105,13 +109,21 @@ using namespace WebCore;
 - (void)_immediateScrollToPoint:(NSPoint)newOrigin
 {
     _isScrolling = YES;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     _currentScrollIsBlit = NO;
+#else
+    _currentScrollIsBlit = [super copiesOnScroll];
+#endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[self window] _disableDelayedWindowDisplay];
+#endif
 
     [super _immediateScrollToPoint:newOrigin];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[self window] _enableDelayedWindowDisplay];
+#endif
 
     // We may hit this immediate scrolling code during a layout operation trigged by an AppKit call. When
     // this happens, WebCore will not paint. So, we need to mark this region dirty so that it paints properly.
@@ -128,11 +140,13 @@ using namespace WebCore;
     _isScrolling = NO;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 - (BOOL)_canCopyOnScrollForDeltaX:(CGFloat)deltaX deltaY:(CGFloat)deltaY
 {
     _currentScrollIsBlit = [super _canCopyOnScrollForDeltaX:deltaX deltaY:deltaY];
     return _currentScrollIsBlit;
 }
+#endif
 
 - (BOOL)currentScrollIsBlit
 {

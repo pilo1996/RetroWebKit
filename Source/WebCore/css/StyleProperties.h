@@ -99,7 +99,7 @@ public:
         CSSValue* value() { return const_cast<CSSValue*>(m_value); }
 
         // FIXME: Remove this.
-        CSSProperty toCSSProperty() const { return CSSProperty(id(), const_cast<CSSValue*>(m_value), isImportant(), m_metadata.m_isSetFromShorthand, m_metadata.m_indexInShorthandsVector, isImplicit()); }
+        CSSProperty toCSSProperty() const { return CSSProperty(this->id(), const_cast<CSSValue*>(m_value), isImportant(), m_metadata.m_isSetFromShorthand, m_metadata.m_indexInShorthandsVector, isImplicit()); }
 
     private:
         const StylePropertyMetadata& m_metadata;

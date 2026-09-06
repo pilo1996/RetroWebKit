@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMAbstractView.h>
+#import <WebKit/DOMAbstractView.h>
 
 namespace WebCore {
 class DOMWindow;

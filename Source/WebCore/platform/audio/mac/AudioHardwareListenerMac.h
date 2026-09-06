@@ -48,6 +48,10 @@ private:
 
     void propertyChanged(UInt32, const AudioObjectPropertyAddress[]);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    typedef std::function<void (UInt32, const AudioObjectPropertyAddress[])> AudioObjectPropertyListenerBlock;
+    static OSStatus WebAudioObjectPropertyListener(AudioObjectID, UInt32, const AudioObjectPropertyAddress[], void*);
+#endif
     AudioObjectPropertyListenerBlock m_block;
     WeakPtrFactory<AudioHardwareListenerMac> m_weakFactory;
 };

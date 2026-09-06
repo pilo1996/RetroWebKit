@@ -26,7 +26,11 @@
  */
 
 #include "config.h"
+//#define DONT_COMPILE_postCrossThreadTask
+//#define DONT_COMPILE_AddConsoleMessageTask
 #include "ScriptExecutionContext.h"
+//#undef DONT_COMPILE_postCrossThreadTask
+//#undef DONT_COMPILE_AddConsoleMessageTask
 
 #include "CachedScript.h"
 #include "CommonVM.h"
@@ -121,6 +125,17 @@ ScriptExecutionContext::~ScriptExecutionContext()
     m_inScriptExecutionContextDestructor = false;
 #endif
 }
+
+//#if COMPILER(GCC) && !COMPILER(CLANG)
+//template<typename... Arguments>
+//void ScriptExecutionContext::postCrossThreadTask(Arguments&&... arguments)
+//{
+//    postTask([crossThreadTask = createCrossThreadTask(arguments...)](ScriptExecutionContext&) mutable {
+//        crossThreadTask.performTask();
+//    });
+//}
+//#endif
+
 
 void ScriptExecutionContext::processMessagePortMessagesSoon()
 {
@@ -526,5 +541,14 @@ JSC::ExecState* ScriptExecutionContext::execState()
     WorkerGlobalScope* workerGlobalScope = static_cast<WorkerGlobalScope*>(this);
     return execStateFromWorkerGlobalScope(workerGlobalScope);
 }
+
+//#if COMPILER(GCC) && !COMPILER(CLANG)
+//ScriptExecutionContext::AddConsoleMessageTask::AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message)
+//    : Task([source, level, message = message.isolatedCopy()](ScriptExecutionContext& context) {
+//        context.addConsoleMessage(source, level, message);
+//    })
+//{
+//}
+//#endif      
 
 } // namespace WebCore

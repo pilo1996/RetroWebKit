@@ -31,8 +31,16 @@
 namespace WebCore {
 
 #ifdef __OBJC__
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+class ResourceHandle;
+WEBCORE_EXPORT NSURLResponse *synthesizeRedirectResponseIfNecessary(ResourceHandle *, NSURLRequest *newRequest, NSURLResponse *redirectResponse);
+
+#else
 WEBCORE_EXPORT NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLRequest *currentRequest, NSURLRequest *newRequest, NSURLResponse *redirectResponse);
 #endif
+
+#endif // __OBJC__
 
 WEBCORE_EXPORT void adjustMIMETypeIfNecessary(CFURLResponseRef, bool isMainResourceLoad);
 

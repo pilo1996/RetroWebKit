@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if USE(VIDEOTOOLBOX)
+
 #include <VideoToolbox/VideoToolbox.h>
 #include <wtf/SoftLinking.h>
 
@@ -68,3 +70,5 @@ SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, VideoToolbox, kVTImageRotationPropertyKey
 #define kVTImageRotationPropertyKey_FlipHorizontalOrientation get_VideoToolbox_kVTImageRotationPropertyKey_FlipHorizontalOrientation()
 SOFT_LINK_CONSTANT_FOR_HEADER(WebCore, VideoToolbox, kVTImageRotationPropertyKey_FlipVerticalOrientation, CFStringRef)
 #define kVTImageRotationPropertyKey_FlipVerticalOrientation get_VideoToolbox_kVTImageRotationPropertyKey_FlipVerticalOrientation()
+
+#endif

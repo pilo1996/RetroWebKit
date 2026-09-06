@@ -70,7 +70,11 @@ WebDragClient::WebDragClient(WebView* webView)
 
 bool WebDragClient::useLegacyDragClient()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     return false;
+#else
+    return true;
+#endif
 }
 
 void WebDragClient::didConcludeEditDrag()
@@ -103,7 +107,6 @@ void WebDragClient::willPerformDragSourceAction(WebCore::DragSourceAction action
 
 void WebDragClient::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Frame& frame)
 {
-    auto& dragImage = dragItem.image;
     auto dragLocationInContentCoordinates = dragItem.dragLocationInContentCoordinates;
 
     RetainPtr<WebHTMLView> htmlView = (WebHTMLView*)[[kit(&frame) frameView] documentView];
@@ -117,7 +120,7 @@ void WebDragClient::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Fra
     [topHTMLView _stopAutoscrollTimer];
     NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:dataTransfer.pasteboard().name()];
 
-    NSImage *dragNSImage = dragImage.get().get();
+    NSImage *dragNSImage = dragItem.image.get().get();
     WebHTMLView *sourceHTMLView = htmlView.get();
 
     IntSize size([dragNSImage size]);
@@ -133,14 +136,15 @@ void WebDragClient::startDrag(DragItem dragItem, DataTransfer& dataTransfer, Fra
             ReportDiscardedDelegateException(selector, exception);
         }
     } else
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         [topHTMLView dragImage:dragNSImage at:dragLocationInContentCoordinates offset:NSZeroSize event:event pasteboard:pasteboard source:sourceHTMLView slideBack:YES];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
 
 void WebDragClient::beginDrag(DragItem dragItem, Frame& frame, const IntPoint& mouseDownPosition, const IntPoint& mouseDraggedPosition, DataTransfer& dataTransfer, DragSourceAction dragSourceAction)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     ASSERT(!dataTransfer.pasteboard().hasData());
 
     RetainPtr<WebHTMLView> topWebHTMLView = dynamic_objc_cast<WebHTMLView>(m_webView.mainFrame.frameView.documentView);
@@ -161,6 +165,9 @@ void WebDragClient::beginDrag(DragItem dragItem, Frame& frame, const IntPoint& m
     // FIXME: We should be able to make a fake event with the mosue dragged coordinates.
     NSEvent *event = frame.eventHandler().currentNSEvent();
     [topWebHTMLView.get() beginDraggingSessionWithItems:@[ draggingItem.get() ] event:event source:topWebHTMLView.get()];
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 void WebDragClient::declareAndWriteDragImage(const String& pasteboardName, Element& element, const URL& url, const String& title, WebCore::Frame* frame)

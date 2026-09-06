@@ -45,7 +45,7 @@
  @param protectionSpace an NSURLProtectionSpace that will be used to generate an authentication challenge
  @result Return YES if the resource load delegate is prepared to respond to an authentication challenge generated with protectionSpace, NO otherwise
  */
-- (BOOL)webView:(WebView *)sender resource:(id)identifier canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace forDataSource:(WebDataSource *)dataSource WEBKIT_AVAILABLE_MAC(10_6);
+- (BOOL)webView:(WebView *)sender resource:(id)identifier canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace forDataSource:(WebDataSource *)dataSource WEBKIT_AVAILABLE_MAC(10_5);
 
 /*!
  @method webView:shouldPaintBrokenImageForURL:(NSURL*)imageURL

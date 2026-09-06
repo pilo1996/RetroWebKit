@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMStyleSheetList.h>
+#import <WebKit/DOMStyleSheetList.h>
 
 namespace WebCore {
 class StyleSheetList;

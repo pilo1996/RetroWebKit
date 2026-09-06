@@ -54,9 +54,10 @@
 #include "JSDOMWindowProperties.cpp"
 #include "JSDOMWindowProxy.cpp"
 #include "JSDOMWrapper.cpp"
-#include "JSDOMWrapperCache.cpp"
+#if PLATFORM(WIN)
 #include "JSDeprecatedCSSOMValueCustom.cpp"
 #include "JSDocumentCustom.cpp"
+#endif
 #include "JSDocumentFragmentCustom.cpp"
 #include "JSElementCustom.cpp"
 #include "JSErrorHandler.cpp"
@@ -64,7 +65,9 @@
 #include "JSEventListener.cpp"
 #include "JSEventTargetCustom.cpp"
 #include "JSExceptionBase.cpp"
+#if PLATFORM(WIN)
 #include "JSHTMLCanvasElementCustom.cpp"
+#endif
 #include "JSHTMLCollectionCustom.cpp"
 #include "JSHTMLDocumentCustom.cpp"
 #include "JSHTMLElementCustom.cpp"
@@ -106,7 +109,9 @@
 #include "JSXPathResultCustom.cpp"
 #include "ScheduledAction.cpp"
 #include "ScriptCachedFrameData.cpp"
+#if PLATFORM(WIN)
 #include "ScriptController.cpp"
+#endif
 #include "ScriptGlobalObject.cpp"
 #include "ScriptModuleLoader.cpp"
 #include "ScriptState.cpp"

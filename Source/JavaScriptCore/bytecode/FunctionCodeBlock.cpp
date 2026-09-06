@@ -30,6 +30,8 @@
 #include "config.h"
 #include "FunctionCodeBlock.h"
 
+#include "HeapCellInlines.h"
+
 namespace JSC {
 
 const ClassInfo FunctionCodeBlock::s_info = {

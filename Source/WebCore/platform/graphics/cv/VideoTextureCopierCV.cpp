@@ -193,6 +193,7 @@ static StringMap& enumToStringMap()
         map.get().emplace(STRINGIFY_PAIR(GL_LUMINANCE_ALPHA));
         map.get().emplace(STRINGIFY_PAIR(GL_LUMINANCE));
         map.get().emplace(STRINGIFY_PAIR(GL_ALPHA));
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         map.get().emplace(STRINGIFY_PAIR(GL_R8));
         map.get().emplace(STRINGIFY_PAIR(GL_R16F));
         map.get().emplace(STRINGIFY_PAIR(GL_R32F));
@@ -211,6 +212,7 @@ static StringMap& enumToStringMap()
         map.get().emplace(STRINGIFY_PAIR(GL_RG16I));
         map.get().emplace(STRINGIFY_PAIR(GL_RG32UI));
         map.get().emplace(STRINGIFY_PAIR(GL_RG32I));
+#endif
         map.get().emplace(STRINGIFY_PAIR(GL_RGB8));
         map.get().emplace(STRINGIFY_PAIR(GL_SRGB8));
         map.get().emplace(STRINGIFY_PAIR(GL_RGBA8));
@@ -219,31 +221,39 @@ static StringMap& enumToStringMap()
         map.get().emplace(STRINGIFY_PAIR(GL_RGB10_A2));
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH_COMPONENT16));
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH_COMPONENT24));
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH_COMPONENT32F));
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH24_STENCIL8));
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH32F_STENCIL8));
+#endif
         map.get().emplace(STRINGIFY_PAIR(GL_RGB));
         map.get().emplace(STRINGIFY_PAIR(GL_RGBA));
         map.get().emplace(STRINGIFY_PAIR(GL_LUMINANCE_ALPHA));
         map.get().emplace(STRINGIFY_PAIR(GL_LUMINANCE));
         map.get().emplace(STRINGIFY_PAIR(GL_ALPHA));
         map.get().emplace(STRINGIFY_PAIR(GL_RED));
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         map.get().emplace(STRINGIFY_PAIR(GL_RG_INTEGER));
         map.get().emplace(STRINGIFY_PAIR(GL_DEPTH_STENCIL));
+#endif
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_BYTE));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_SHORT_5_6_5));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_SHORT_4_4_4_4));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_SHORT_5_5_5_1));
         map.get().emplace(STRINGIFY_PAIR(GL_BYTE));
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         map.get().emplace(STRINGIFY_PAIR(GL_HALF_FLOAT));
+#endif
         map.get().emplace(STRINGIFY_PAIR(GL_FLOAT));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_SHORT));
         map.get().emplace(STRINGIFY_PAIR(GL_SHORT));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_INT));
         map.get().emplace(STRINGIFY_PAIR(GL_INT));
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_INT_2_10_10_10_REV));
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
         map.get().emplace(STRINGIFY_PAIR(GL_UNSIGNED_INT_24_8));
         map.get().emplace(STRINGIFY_PAIR(GL_FLOAT_32_UNSIGNED_INT_24_8_REV));
+#endif
 
 #if PLATFORM(IOS)
         map.get().emplace(STRINGIFY_PAIR(GL_RED_INTEGER));

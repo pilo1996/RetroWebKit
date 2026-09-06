@@ -90,7 +90,7 @@ void NPN_InitializeVariantWithStringCopy(NPVariant* variant, const NPString* val
     variant->value.stringValue.UTF8Characters = (NPUTF8*)malloc(sizeof(NPUTF8) * value->UTF8Length);
     if (value->UTF8Length && !variant->value.stringValue.UTF8Characters)
         CRASH();
-    memcpy((void*)variant->value.stringValue.UTF8Characters, value->UTF8Characters, sizeof(NPUTF8) * value->UTF8Length);
+    memcpy(const_cast<NPUTF8*>(variant->value.stringValue.UTF8Characters), value->UTF8Characters, sizeof(NPUTF8) * value->UTF8Length);
 }
 
 void _NPN_ReleaseVariantValue(NPVariant* variant)
@@ -101,7 +101,7 @@ void _NPN_ReleaseVariantValue(NPVariant* variant)
         _NPN_ReleaseObject(variant->value.objectValue);
         variant->value.objectValue = 0;
     } else if (variant->type == NPVariantType_String) {
-        free((void*)variant->value.stringValue.UTF8Characters);
+        free(const_cast<NPUTF8*>(variant->value.stringValue.UTF8Characters));
         variant->value.stringValue.UTF8Characters = 0;
         variant->value.stringValue.UTF8Length = 0;
     }

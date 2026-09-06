@@ -451,7 +451,7 @@ CString ViewportConfiguration::description() const
     TextStream ts;
 
     ts.startGroup();
-    ts << "viewport-configuration " << (void*)this;
+    ts << "viewport-configuration " << (const void*)this;
     {
         TextStream::GroupScope scope(ts);
         ts << "viewport arguments";

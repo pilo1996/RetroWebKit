@@ -56,6 +56,11 @@
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #endif
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
+// Targeting 10.6 or later: use kCGInterpolationMedium.
+#define WTF_USE_CG_INTERPOLATION_MEDIUM 1
+#endif
+
 // FIXME: The following using declaration should be in <wtf/HashFunctions.h>.
 using WTF::pairIntHash;
 
@@ -133,8 +138,10 @@ static InterpolationQuality convertInterpolationQuality(CGInterpolationQuality q
         return InterpolationNone;
     case kCGInterpolationLow:
         return InterpolationLow;
+#if USE(CG_INTERPOLATION_MEDIUM)
     case kCGInterpolationMedium:
         return InterpolationMedium;
+#endif
     case kCGInterpolationHigh:
         return InterpolationHigh;
     }
@@ -624,6 +631,10 @@ static inline bool calculateDrawingMode(const GraphicsContextState& state, CGPat
 
 void GraphicsContext::drawPath(const Path& path)
 {
+    CGRect pathBoundingBox = CGPathGetBoundingBox(path.platformPath());
+    if (fabsf(pathBoundingBox.size.width) > INT_MAX || fabsf(pathBoundingBox.size.height) > INT_MAX)
+        return;
+
     if (paintingDisabled() || path.isEmpty())
         return;
 
@@ -658,6 +669,10 @@ void GraphicsContext::drawPath(const Path& path)
 
 void GraphicsContext::fillPath(const Path& path)
 {
+    CGRect pathBoundingBox = CGPathGetBoundingBox(path.platformPath());
+    if (fabsf(pathBoundingBox.size.width) > INT_MAX || fabsf(pathBoundingBox.size.height) > INT_MAX)
+        return;
+
     if (paintingDisabled() || path.isEmpty())
         return;
 
@@ -721,6 +736,10 @@ void GraphicsContext::fillPath(const Path& path)
 
 void GraphicsContext::strokePath(const Path& path)
 {
+    CGRect pathBoundingBox = CGPathGetBoundingBox(path.platformPath());
+    if (fabsf(pathBoundingBox.size.width) > INT_MAX || fabsf(pathBoundingBox.size.height) > INT_MAX)
+        return;
+
     if (paintingDisabled() || path.isEmpty())
         return;
 
@@ -987,7 +1006,11 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     // has certain transforms that aren't just a translation or a scale. And due to <rdar://problem/14634453>
     // we cannot use it in for a printing context either.
     const AffineTransform& ctm = getCTM();
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     bool canUseCGRectInfinite = !wkCGContextIsPDFContext(platformContext()) && (!isAcceleratedContext() || (!ctm.b() && !ctm.c()));
+#else
+    bool canUseCGRectInfinite = (CGContextGetType(platformContext()) != kCGContextTypePDF) && (!isAcceleratedContext() || (!ctm.b() && !ctm.c()));
+#endif
     CGRect rects[2] = { canUseCGRectInfinite ? CGRectInfinite : CGContextGetClipBoundingBox(platformContext()), rect };
     CGContextBeginPath(platformContext());
     CGContextAddRects(platformContext(), rects, 2);
@@ -996,6 +1019,10 @@ void GraphicsContext::clipOut(const FloatRect& rect)
 
 void GraphicsContext::clipOut(const Path& path)
 {
+    CGRect pathBoundingBox = CGPathGetBoundingBox(path.platformPath());
+    if (fabsf(pathBoundingBox.size.width) > INT_MAX || fabsf(pathBoundingBox.size.height) > INT_MAX)
+        return;
+
     if (paintingDisabled())
         return;
 
@@ -1013,6 +1040,10 @@ void GraphicsContext::clipOut(const Path& path)
 
 void GraphicsContext::clipPath(const Path& path, WindRule clipRule)
 {
+    CGRect pathBoundingBox = CGPathGetBoundingBox(path.platformPath());
+    if (fabsf(pathBoundingBox.size.width) > INT_MAX || fabsf(pathBoundingBox.size.height) > INT_MAX)
+        return;
+
     if (paintingDisabled())
         return;
 
@@ -1093,8 +1124,10 @@ static void applyShadowOffsetWorkaroundIfNeeded(const GraphicsContext& context, 
     if (context.isAcceleratedContext())
         return;
 
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (wkCGContextDrawsWithCorrectShadowOffsets(context.platformContext()))
         return;
+#endif
 
     // Work around <rdar://problem/5539388> by ensuring that the offsets will get truncated
     // to the desired integer. Also see: <rdar://problem/10056277>
@@ -1591,9 +1624,13 @@ void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality 
     case InterpolationLow:
         quality = kCGInterpolationLow;
         break;
+
+    // Fall through to InterpolationHigh if kCGInterpolationMedium is not usable.
     case InterpolationMedium:
+#if USE(CG_INTERPOLATION_MEDIUM)
         quality = kCGInterpolationMedium;
         break;
+#endif
     case InterpolationHigh:
         quality = kCGInterpolationHigh;
         break;
@@ -1861,7 +1898,7 @@ void GraphicsContext::platformApplyDeviceScaleFactor(float deviceScaleFactor)
     // CoreGraphics expects the base CTM of a HiDPI context to have the scale factor applied to it.
     // Failing to change the base level CTM will cause certain CG features, such as focus rings,
     // to draw with a scale factor of 1 rather than the actual scale factor.
-    CGContextSetBaseCTM(platformContext(), CGAffineTransformScale(CGContextGetBaseCTM(platformContext()), deviceScaleFactor, deviceScaleFactor));
+    wkSetBaseCTM(platformContext(), CGAffineTransformScale(CGContextGetBaseCTM(platformContext()), deviceScaleFactor, deviceScaleFactor));
 }
 
 void GraphicsContext::platformFillEllipse(const FloatRect& ellipse)

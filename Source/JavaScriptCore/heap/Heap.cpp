@@ -72,6 +72,7 @@
 #if PLATFORM(IOS)
 #include <bmalloc/bmalloc.h>
 #endif
+#include <wtf/AutodrainedPool.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/ListDump.h>
 #include <wtf/MainThread.h>
@@ -79,15 +80,6 @@
 #include <wtf/ProcessID.h>
 #include <wtf/RAMSize.h>
 #include <wtf/SimpleStats.h>
-
-#if USE(FOUNDATION)
-#if __has_include(<objc/objc-internal.h>)
-#include <objc/objc-internal.h>
-#else
-extern "C" void* objc_autoreleasePoolPush(void);
-extern "C" void objc_autoreleasePoolPop(void *context);
-#endif
-#endif // USE(FOUNDATION)
 
 using namespace std;
 
@@ -459,9 +451,9 @@ void Heap::releaseDelayedReleasedObjects()
                 // We need to drop locks before calling out to arbitrary code.
                 JSLock::DropAllLocks dropAllLocks(m_vm);
 
-                void* context = objc_autoreleasePoolPush();
+                AutodrainedPool pool;
+
                 objectsToRelease.clear();
-                objc_autoreleasePoolPop(context);
             }
         }
     }

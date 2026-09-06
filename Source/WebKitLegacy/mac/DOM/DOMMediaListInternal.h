@@ -24,7 +24,7 @@
  */
 
 
-#import <WebKitLegacy/DOMMediaList.h>
+#import <WebKit/DOMMediaList.h>
 
 namespace WebCore {
 class MediaList;

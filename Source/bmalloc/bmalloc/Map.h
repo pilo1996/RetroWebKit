@@ -79,6 +79,20 @@ public:
         return value;
     }
 
+    bool removeIfExisting(const Key& key)
+    {
+        if (shouldShrink())
+            rehash();
+
+        auto& bucket = find(key, [&](const Bucket& bucket) { return !bucket.key || bucket.key == key; });
+        if (!bucket.key)
+            return false;
+        BASSERT(bucket.value == key.value);
+        bucket.key = Key();
+        --m_keyCount;
+        return true;
+    }
+
 private:
     static const unsigned minCapacity = 16;
     static const unsigned maxLoad = 2;

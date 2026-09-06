@@ -74,7 +74,7 @@ private:
     WEBCORE_EXPORT static Vector<Type>& types();
 
     using Container = Vector<std::unique_ptr<PlatformContentFilter>>;
-    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, DocumentLoader&);
+    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, WebCore::DocumentLoader&);
     ContentFilter(Container, DocumentLoader&);
 
     template <typename Function> void forEachContentFilterUntilBlocked(Function&&);

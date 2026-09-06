@@ -32,6 +32,9 @@
 #import "Logging.h"
 #import "ResourceRequest.h"
 #import <wtf/BlockObjCExceptions.h>
+#if !COMPILER_SUPPORTS(BLOCKS)
+#import <wtf/MainThread.h>
+#endif
 
 #if !LOG_DISABLED
 #import <wtf/text/CString.h>
@@ -75,12 +78,20 @@ ContentFilterUnblockHandler::ContentFilterUnblockHandler(String unblockURLHost, 
 void ContentFilterUnblockHandler::wrapWithDecisionHandler(const DecisionHandlerFunction& decisionHandler)
 {
     ContentFilterUnblockHandler wrapped { *this };
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
     UnblockRequesterFunction wrappedRequester { [wrapped, decisionHandler](DecisionHandlerFunction wrappedDecisionHandler) {
         wrapped.requestUnblockAsync([wrappedDecisionHandler, decisionHandler](bool unblocked) {
             wrappedDecisionHandler(unblocked);
             decisionHandler(unblocked);
         });
     }};
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
+
 #if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS)
     m_webFilterEvaluator = nullptr;
 #endif
@@ -98,7 +109,11 @@ bool ContentFilterUnblockHandler::needsUIProcess() const
 
 void ContentFilterUnblockHandler::encode(NSCoder *coder) const
 {
-    ASSERT_ARG(coder, coder.allowsKeyedCoding && coder.requiresSecureCoding);
+#if PLATFORM (IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
+    ASSERT_ARG(coder, [coder allowsKeyedCoding] && [coder requiresSecureCoding]);
+#else
+    ASSERT_ARG(coder, [coder allowsKeyedCoding]);
+#endif
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     [coder encodeObject:m_unblockURLHost forKey:unblockURLHostKey];
     [coder encodeObject:(NSURL *)m_unreachableURL forKey:unreachableURLKey];
@@ -110,10 +125,19 @@ void ContentFilterUnblockHandler::encode(NSCoder *coder) const
 
 bool ContentFilterUnblockHandler::decode(NSCoder *coder, ContentFilterUnblockHandler& unblockHandler)
 {
-    ASSERT_ARG(coder, coder.allowsKeyedCoding && coder.requiresSecureCoding);
+#if PLATFORM (IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
+    ASSERT_ARG(coder, [coder allowsKeyedCoding] && [coder requiresSecureCoding]);
+#else
+    ASSERT_ARG(coder, [coder allowsKeyedCoding]);
+#endif
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
+#if PLATFORM (IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
     unblockHandler.m_unblockURLHost = [coder decodeObjectOfClass:[NSString class] forKey:unblockURLHostKey];
     unblockHandler.m_unreachableURL = [coder decodeObjectOfClass:[NSURL class] forKey:unreachableURLKey];
+#else
+    unblockHandler.m_unblockURLHost = [coder decodeObjectForKey:unblockURLHostKey];
+    unblockHandler.m_unreachableURL = [coder decodeObjectForKey:unreachableURLKey];
+#endif
 #if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS)
     unblockHandler.m_webFilterEvaluator = [coder decodeObjectOfClass:getWebFilterEvaluatorClass() forKey:webFilterEvaluatorKey];
 #endif
@@ -141,9 +165,15 @@ bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& reques
     return isUnblockRequest;
 }
 
+#if COMPILER_SUPPORTS(BLOCKS)
 static inline void dispatchToMainThread(void (^block)())
 {
     dispatch_async(dispatch_get_main_queue(), ^{
+#else
+static inline void dispatchToMainThread(std::function<void ()> block)
+{
+    callOnMainThread([block] {
+#endif
 #if PLATFORM(IOS)
         WebThreadRun(block);
 #else
@@ -168,9 +198,16 @@ void ContentFilterUnblockHandler::requestUnblockAsync(DecisionHandlerFunction de
 
     if (m_unblockRequester) {
         m_unblockRequester([decisionHandler](bool unblocked) {
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
+#endif
             dispatchToMainThread([decisionHandler, unblocked] {
                 decisionHandler(unblocked);
             });
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
         });
     }
 }

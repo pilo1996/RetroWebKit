@@ -64,7 +64,11 @@ using namespace WebCore;
     if (!m_handle)
         return nil;
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    redirectResponse = synthesizeRedirectResponseIfNecessary(m_handle, newRequest, redirectResponse);
+#else
     redirectResponse = synthesizeRedirectResponseIfNecessary([connection currentRequest], newRequest, redirectResponse);
+#endif
     
     // See <rdar://problem/5380697>. This is a workaround for a behavior change in CFNetwork where willSendRequest gets called more often.
     if (!redirectResponse)
@@ -144,10 +148,39 @@ using namespace WebCore;
 
     ResourceResponse resourceResponse(response);
     resourceResponse.setSource(ResourceResponse::Source::Network);
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     ResourceHandle::getConnectionTimingData(connection, resourceResponse.deprecatedNetworkLoadMetrics());
 #else
     UNUSED_PARAM(connection);
+#endif
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // Workaround for <rdar://problem/5418646>
+    CFStringRef mimeType = (CFStringRef)[response MIMEType];
+    if (mimeType
+        && (CFStringCompare(mimeType, CFSTR("application/x-gzip"), 0) == kCFCompareEqualTo
+            || CFStringCompare(mimeType, CFSTR("application/x-compress"), 0) == kCFCompareEqualTo)
+        && [response isKindOfClass:[NSHTTPURLResponse class]])
+    {
+#if 0
+        RetainPtr<CFMutableStringRef> mutableExtension = adoptCF(CFStringLowercase(CFStringCreateMutableCopy(kCFAllocatorDefault, 0, [[[response URL] path] pathExtension]), NULL));
+        if (CFStringCompare(mutableExtension.get(), CFSTR("gz"), 0) == kCFCompareEqualTo) {
+#endif
+        CFStringRef contentTypeField = (CFStringRef)[[(NSHTTPURLResponse *)response allHeaderFields] objectForKey:@"Content-Type"];
+        if (contentTypeField) {
+            RetainPtr<CFArrayRef> contentTypes = adoptCF(CFStringCreateArrayBySeparatingStrings(NULL, contentTypeField, CFSTR(";")));
+            if (CFArrayGetCount(contentTypes.get()) >= 1) {
+                CFStringRef contentType = (CFStringRef)CFArrayGetValueAtIndex(contentTypes.get(), 0);
+                if (CFStringCompare(mimeType, contentType, 0) != kCFCompareEqualTo) {
+                    [response _setMIMEType:(const NSString*)contentType];
+                    m_nsGZipDecoder = adoptNS([[NSGZipDecoder alloc] init]);
+                }
+            }
+        }
+#if 0
+        }
+#endif
+    }
 #endif
 
     m_handle->didReceiveResponse(WTFMove(resourceResponse));
@@ -171,10 +204,37 @@ using namespace WebCore;
     // However, with today's computers and networking speeds, this won't happen in practice.
     // Could be an issue with a giant local file.
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (m_nsGZipDecoder)
+        data = [m_nsGZipDecoder.get() decodeData:data];
+#endif
+
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=19793
     // -1 means we do not provide any data about transfer size to inspector so it would use
     // Content-Length headers or content size to show transfer size.
     m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::create(data), -1);
+}
+
+- (void)connection:(NSURLConnection *)connection willStopBufferingData:(NSData *)data
+{
+    UNUSED_PARAM(connection);
+
+    LOG(Network, "Handle %p delegate connection:%p willStopBufferingData:%p", m_handle, connection, data);
+
+    if (!m_handle || !m_handle->client())
+        return;
+    // FIXME: If we get a resource with more than 2B bytes, this code won't do the right thing.
+    // However, with today's computers and networking speeds, this won't happen in practice.
+    // Could be an issue with a giant local file.
+
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    if (m_nsGZipDecoder) {
+        m_nsGZipDecoder = adoptNS([[NSGZipDecoder alloc] init]);
+        data = [m_nsGZipDecoder.get() decodeData:data];
+    }
+#endif
+
+    m_handle->client()->willStopBufferingData(m_handle, SharedBuffer::create(data));
 }
 
 - (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
@@ -210,6 +270,10 @@ using namespace WebCore;
     if (!m_handle || !m_handle->client())
         return;
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    m_nsGZipDecoder = nullptr;
+#endif
+
     m_handle->client()->didFail(m_handle, error);
 }
 
@@ -221,6 +285,12 @@ using namespace WebCore;
     UNUSED_PARAM(connection);
 
     if (!m_handle || !m_handle->client())
+        return nil;
+
+    // Workaround for <rdar://problem/6300990> Caching does not respect Vary HTTP header.
+    // FIXME: WebCore cache has issues with Vary, too (bug 58797, bug 71509).
+    if ([[cachedResponse response] isKindOfClass:[NSHTTPURLResponse class]]
+        && [[(NSHTTPURLResponse *)[cachedResponse response] allHeaderFields] objectForKey:@"Vary"])
         return nil;
 
     return m_handle->client()->willCacheResponse(m_handle, cachedResponse);

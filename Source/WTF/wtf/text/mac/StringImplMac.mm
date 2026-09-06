@@ -28,7 +28,7 @@ namespace WTF {
 
 StringImpl::operator NSString *()
 {
-    return (NSString *)createCFString().autorelease();
+    return const_cast<NSString *>(reinterpret_cast<const NSString *>(createCFString().autorelease()));
 }
 
 }

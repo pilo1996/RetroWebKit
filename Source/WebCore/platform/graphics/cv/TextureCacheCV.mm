@@ -23,12 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "TextureCacheCV.h"
+#import "config.h"
+#import "TextureCacheCV.h"
 
-#include "GraphicsContext3D.h"
+#import "GraphicsContext3D.h"
 
-#include "CoreVideoSoftLink.h"
+#import "CoreVideoSoftLink.h"
+
+#if !HAVE(DISPATCH_H)
+#import <wtf/MainThread.h>
+#endif
 
 namespace WebCore {
 
@@ -74,7 +78,11 @@ RetainPtr<TextureCacheCV::TextureType> TextureCacheCV::textureFromImage(CVPixelB
     RetainPtr<TextureType> videoTexture = adoptCF(bareVideoTexture);
 
     auto weakThis = m_weakPtrFactory.createWeakPtr();
+#if HAVE(DISPATCH_H)
     dispatch_async(dispatch_get_main_queue(), [weakThis] {
+#else
+    callOnMainThread([weakThis] {
+#endif
         if (!weakThis)
             return;
         

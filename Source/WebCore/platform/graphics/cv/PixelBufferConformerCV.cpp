@@ -31,6 +31,12 @@
 
 #include "CoreVideoSoftLink.h"
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+enum CVPixelBufferLockFlags {
+        kCVPixelBufferLock_ReadOnly = 0x00000001, 
+};
+#endif
+
 #if USE(VIDEOTOOLBOX)
 SOFT_LINK_FRAMEWORK_OPTIONAL(VideoToolbox)
 SOFT_LINK(VideoToolbox, VTPixelBufferConformerCreateWithAttributes, OSStatus, (CFAllocatorRef allocator, CFDictionaryRef attributes, VTPixelBufferConformerRef* conformerOut), (allocator, attributes, conformerOut));

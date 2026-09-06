@@ -38,7 +38,14 @@ static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBacking
         return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Caret);
 #endif
     case TextBreakIterator::Mode::Delete:
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
         return TextBreakIteratorCF(string, TextBreakIteratorCF::Mode::Delete);
+#else
+        return TextBreakIteratorICU(string, TextBreakIteratorICU::Mode::Character, locale.string().utf8().data());
+        ASSERT_NOT_REACHED();
+#endif
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
     }
 }
 

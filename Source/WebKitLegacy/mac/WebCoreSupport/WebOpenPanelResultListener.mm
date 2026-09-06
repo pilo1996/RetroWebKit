@@ -45,6 +45,14 @@ using namespace WebCore;
     return self;
 }
 
+#ifndef NDEBUG
+- (void)finalize
+{
+    ASSERT(!_chooser);
+    [super finalize];
+}
+#endif
+
 - (void)cancel
 {
     _chooser = nullptr;

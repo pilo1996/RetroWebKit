@@ -44,6 +44,7 @@
 #include <wtf/Condition.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
+#include <wtf/SoftLinking.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(WIN)
@@ -53,13 +54,20 @@
 #include "WebCoreSystemInterface.h"
 #endif
 
-#if PLATFORM(IOS) || PLATFORM(MAC)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 extern "C" const CFStringRef kCFStreamPropertySourceApplication;
 extern "C" const CFStringRef _kCFStreamSocketSetNoDelay;
+#else
+SOFT_LINK_FRAMEWORK_IN_UMBRELLA(CoreServices, CFNetwork)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+SOFT_LINK(CFNetwork, CFNetworkCopySystemProxySettings, CFDictionaryRef, (), ())
+#pragma GCC diagnostic pop
+#define _kCFStreamSocketSetNoDelay CFSTR("_kCFStreamSocketSetNoDelay")
 #endif
 
 #if PLATFORM(COCOA)
-#import <CFNetworkSPI.h>
+#include <CFNetworkSPI.h>
 #endif
 
 namespace WebCore {
@@ -80,7 +88,7 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
     URL httpsURL(URL(), "https://" + m_url.host());
     m_httpsURL = httpsURL.createCFURL();
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070))
     // Don't check for HSTS violation for ephemeral sessions since
     // HSTS state should not transfer between regular and private browsing.
     if (url.protocolIs("ws")
@@ -92,6 +100,8 @@ SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, SocketStreamHandl
         });
         return;
     }
+#else
+    UNUSED_PARAM(sessionID);
 #endif
 
     createStreams();
@@ -321,11 +331,12 @@ void SocketStreamHandleImpl::createStreams()
 #if PLATFORM(COCOA)
     // <rdar://problem/12855587> _kCFStreamSocketSetNoDelay is not exported on Windows
     CFWriteStreamSetProperty(writeStream, _kCFStreamSocketSetNoDelay, kCFBooleanTrue);
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
     if (m_auditData.sourceApplicationAuditData && m_auditData.sourceApplicationAuditData.get()) {
         CFReadStreamSetProperty(readStream, kCFStreamPropertySourceApplication, m_auditData.sourceApplicationAuditData.get());
         CFWriteStreamSetProperty(writeStream, kCFStreamPropertySourceApplication, m_auditData.sourceApplicationAuditData.get());
     }
-    
+#endif    
 #endif
 
     m_readStream = adoptCF(readStream);

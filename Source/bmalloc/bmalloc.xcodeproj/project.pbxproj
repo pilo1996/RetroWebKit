@@ -378,6 +378,7 @@
 			buildPhases = (
 				14F271BA18EA3963008C152F /* Sources */,
 				14F271BB18EA3963008C152F /* Frameworks */,
+				8BCF48ED15CA85ED0056E4ED /* ShellScript */,
 				14F271BC18EA3963008C152F /* Headers */,
 			);
 			buildRules = (
@@ -415,6 +416,24 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		8BCF48ED15CA85ED0056E4ED /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(CONFIGURATION_BUILD_DIR)/$(FULL_PRODUCT_NAME)",
+			);
+			outputPaths = (
+				"$(OBJECT_FILE_DIR)-$(CURRENT_VARIANT)/timestamp-last-time-linked-with-lipo",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "echo $ARCHS | awk 'BEGIN{FS=\" \"}\n                   {\n                       for (i=1; i<=NF && NF>1; i++)\n                           cmdline=cmdline\" $OBJECT_FILE_DIR-$CURRENT_VARIANT/\"$i\"/$FULL_PRODUCT_NAME\";\n                       if (NF>1)\n                           system(\"lipo -create \"cmdline\" -output $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME\");\n                   }'\ntouch -r $CONFIGURATION_BUILD_DIR/$FULL_PRODUCT_NAME $OBJECT_FILE_DIR-$CURRENT_VARIANT/timestamp-last-time-linked-with-lipo";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		14CC394018EA8743004AFE34 /* Sources */ = {

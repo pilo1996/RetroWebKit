@@ -550,7 +550,7 @@ void EventHandler::selectClosestWordFromMouseEvent(const MouseEventWithHitTestRe
         selectClosestWordFromHitTestResult(result.hitTestResult(), shouldAppendTrailingWhitespace(result, m_frame));
 }
 
-#if !PLATFORM(MAC)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000)
 VisibleSelection EventHandler::selectClosestWordFromHitTestResultBasedOnLookup(const HitTestResult&)
 {
     return VisibleSelection();

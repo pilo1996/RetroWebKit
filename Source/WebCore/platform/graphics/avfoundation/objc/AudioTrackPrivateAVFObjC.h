@@ -26,7 +26,7 @@
 #ifndef AudioTrackPrivateAVFObjC_h
 #define AudioTrackPrivateAVFObjC_h
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && USE(AVFOUNDATION)
 
 #include "AudioTrackPrivateAVF.h"
 

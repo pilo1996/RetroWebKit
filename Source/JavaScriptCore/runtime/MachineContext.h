@@ -63,6 +63,9 @@ void* llintInstructionPointer(const mcontext_t&);
 #endif // HAVE(MACHINE_CONTEXT)
 #endif // OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+
 #if OS(WINDOWS) || HAVE(MACHINE_CONTEXT)
 inline void*& stackPointer(PlatformRegisters& regs)
 {
@@ -182,6 +185,8 @@ inline void*& framePointer(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.__ebp);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rbp);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.__r1);
 #elif CPU(ARM_THUMB2)
     return reinterpret_cast<void*&>(regs.__r[7]);
 #elif CPU(ARM)
@@ -198,6 +203,8 @@ inline void*& framePointer(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.esp);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.rsp);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.r1);
 #else
 #error Unknown Architecture
 #endif
@@ -290,6 +297,8 @@ inline void*& instructionPointer(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.__eip);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rip);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.__srr0);
 #elif CPU(ARM_THUMB2) || CPU(ARM) || CPU(ARM64)
     return reinterpret_cast<void*&>(regs.__pc);
 #else
@@ -301,6 +310,8 @@ inline void*& instructionPointer(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.eip);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.rip);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.srr0);
 #else
 #error Unknown Architecture
 #endif
@@ -398,6 +409,8 @@ inline void*& argumentPointer<1>(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.__edx);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.__rsi);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.__r3);
 #elif CPU(ARM_THUMB2) || CPU(ARM)
     return reinterpret_cast<void*&>(regs.__r[1]);
 #elif CPU(ARM64)
@@ -412,6 +425,8 @@ inline void*& argumentPointer<1>(PlatformRegisters& regs)
     return reinterpret_cast<void*&>(regs.edx);
 #elif CPU(X86_64)
     return reinterpret_cast<void*&>(regs.rsi);
+#elif CPU(PPC) || CPU(PPC64)
+    return reinterpret_cast<void*&>(regs.r3);
 #else
 #error Unknown Architecture
 #endif
@@ -611,6 +626,8 @@ inline void* llintInstructionPointer(const mcontext_t& machineContext)
 }
 #endif // HAVE(MACHINE_CONTEXT)
 #endif // ENABLE(JIT)
+
+#pragma GCC diagnostic pop
 
 }
 }

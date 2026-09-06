@@ -28,7 +28,7 @@
 #ifndef WebNetscapePluginEventHandlerCocoa_h
 #define WebNetscapePluginEventHandlerCocoa_h
 
-#include <WebKitLegacy/npapi.h>
+#include <WebKit/npapi.h>
 #include "WebNetscapePluginEventHandler.h"
 
 class WebNetscapePluginEventHandlerCocoa : public WebNetscapePluginEventHandler {

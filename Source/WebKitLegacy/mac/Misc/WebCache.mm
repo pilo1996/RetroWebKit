@@ -106,6 +106,18 @@
 #endif
             [NSNumber numberWithInt:s.scripts.decodedSize], @"JavaScript",
             nil],
+        [NSDictionary dictionaryWithObjectsAndKeys: 
+            [NSNumber numberWithInt:0], @"Images", 
+            [NSNumber numberWithInt:0] ,@"CSS", 
+            [NSNumber numberWithInt:0], @"XSL", 
+            [NSNumber numberWithInt:0], @"JavaScript", 
+            nil], 
+        [NSDictionary dictionaryWithObjectsAndKeys: 
+            [NSNumber numberWithInt:0], @"Images", 
+            [NSNumber numberWithInt:0] ,@"CSS", 
+            [NSNumber numberWithInt:0], @"XSL", 
+            [NSNumber numberWithInt:0], @"JavaScript", 
+            nil],
         nil];
 }
 

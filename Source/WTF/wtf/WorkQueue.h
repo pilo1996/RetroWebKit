@@ -32,7 +32,7 @@
 #include <wtf/Seconds.h>
 #include <wtf/Threading.h>
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 #include <dispatch/dispatch.h>
 #endif
 
@@ -41,7 +41,7 @@
 #include <wtf/Vector.h>
 #endif
 
-#if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
 #include <wtf/Condition.h>
 #include <wtf/RunLoop.h>
 #endif
@@ -70,9 +70,9 @@ public:
 
     WTF_EXPORT_PRIVATE static void concurrentApply(size_t iterations, WTF::Function<void(size_t index)>&&);
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     dispatch_queue_t dispatchQueue() const { return m_dispatchQueue; }
-#elif USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
+#elif USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     RunLoop& runLoop() const { return *m_runLoop; }
 #endif
 
@@ -91,7 +91,7 @@ private:
     void performWorkOnRegisteredWorkThread();
 #endif
 
-#if USE(COCOA_EVENT_LOOP)
+#if USE(COCOA_EVENT_LOOP) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     static void executeFunction(void*);
     dispatch_queue_t m_dispatchQueue;
 #elif USE(WINDOWS_EVENT_LOOP)
@@ -101,7 +101,7 @@ private:
     Vector<Function<void()>> m_functionQueue;
 
     HANDLE m_timerQueue;
-#elif USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
+#elif USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     RefPtr<Thread> m_workQueueThread;
     Lock m_initializeRunLoopConditionMutex;
     Condition m_initializeRunLoopCondition;

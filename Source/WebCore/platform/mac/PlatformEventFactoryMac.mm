@@ -35,16 +35,77 @@
 #import "WindowsKeyboardCodes.h"
 #import <HIToolbox/Events.h>
 #import <mach/mach_time.h>
+#import <mutex>
 #import <wtf/ASCIICType.h>
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+namespace WebCore {
+static void updateSystemStartupTimeIntervalSince1970();
+}
+
+@interface WakeEventReceiver : NSObject
+
++ (id)sharedWakeEventReceiver;
+- (void)receiveWakeNote:(NSNotification *)note;
+
+@end
+
+static WakeEventReceiver *sharedMyWakeEventReceiver = nil;
+
+@implementation WakeEventReceiver
+
+#pragma mark Singleton Methods
++ (id)sharedWakeEventReceiver {
+  @synchronized(self) {
+      if(sharedMyWakeEventReceiver == nil)
+          sharedMyWakeEventReceiver = [[super allocWithZone:nil] init];
+  }
+  return sharedMyWakeEventReceiver;
+}
++ (id)allocWithZone:(NSZone *)zone {
+  UNUSED_PARAM(zone);
+  return [[self sharedWakeEventReceiver] retain];
+}
+- (void)receiveWakeNote:(NSNotification *)note {
+  UNUSED_PARAM(note);
+  WebCore::updateSystemStartupTimeIntervalSince1970();
+}
+- (id)copyWithZone:(NSZone *)zone {
+  UNUSED_PARAM(zone);
+  return self;
+}
+- (id)retain {
+  return self;
+}
+- (NSUInteger)retainCount {
+  return UINT_MAX; //denotes an object that cannot be released
+}
+- (oneway void)release {
+  // never release
+}
+- (id)autorelease {
+  return self;
+}
+- (id)init {
+  self = [super init];
+  return self;
+}
+- (void)dealloc {
+  // Should never be called, but just here for clarity really.
+  [super dealloc];
+}
+
+@end
+#endif
 
 namespace WebCore {
 
 NSPoint globalPoint(const NSPoint& windowPoint, NSWindow *window)
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     return flipScreenPoint([window convertBaseToScreen:windowPoint], screen(window));
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
 
 static NSPoint globalPointForEvent(NSEvent *event)
@@ -171,6 +232,7 @@ static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
 {
     uint32_t phase = PlatformWheelEventPhaseNone;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if ([event momentumPhase] & NSEventPhaseBegan)
         phase |= PlatformWheelEventPhaseBegan;
     if ([event momentumPhase] & NSEventPhaseStationary)
@@ -181,12 +243,29 @@ static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
         phase |= PlatformWheelEventPhaseEnded;
     if ([event momentumPhase] & NSEventPhaseCancelled)
         phase |= PlatformWheelEventPhaseCancelled;
+#else
+    switch (wkGetNSEventMomentumPhase(event)) {
+    case wkEventPhaseNone:
+        phase = PlatformWheelEventPhaseNone;
+        break;
+    case wkEventPhaseBegan:
+        phase = PlatformWheelEventPhaseBegan;
+        break;
+    case wkEventPhaseChanged:
+        phase = PlatformWheelEventPhaseChanged;
+        break;
+    case wkEventPhaseEnded:
+        phase = PlatformWheelEventPhaseEnded;
+        break;
+    }
+#endif
 
     return static_cast<PlatformWheelEventPhase>(phase);
 }
 
 static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     uint32_t phase = PlatformWheelEventPhaseNone; 
     if ([event phase] & NSEventPhaseBegan)
         phase |= PlatformWheelEventPhaseBegan;
@@ -202,6 +281,10 @@ static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
         phase |= PlatformWheelEventPhaseMayBegin;
 
     return static_cast<PlatformWheelEventPhase>(phase);
+#else
+    UNUSED_PARAM(event);
+    return PlatformWheelEventPhaseNone;
+#endif
 }
 
 static inline String textFromEvent(NSEvent* event)
@@ -596,8 +679,9 @@ static void updateSystemStartupTimeIntervalSince1970()
 
 static CFTimeInterval cachedStartupTimeIntervalSince1970()
 {
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
+    static std::once_flag onceToken;
+    std::call_once(onceToken, []{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         void (^updateBlock)(NSNotification *) = Block_copy(^(NSNotification *){ updateSystemStartupTimeIntervalSince1970(); });
         [[[NSWorkspace sharedWorkspace] notificationCenter] addObserverForName:NSWorkspaceDidWakeNotification
                                                                         object:nil
@@ -608,6 +692,12 @@ static CFTimeInterval cachedStartupTimeIntervalSince1970()
                                                            queue:nil
                                                       usingBlock:updateBlock];
         Block_release(updateBlock);
+#else
+        [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:[WakeEventReceiver sharedWakeEventReceiver]
+                                                               selector:@selector(receiveWakeNote:)
+                                                                   name:NSWorkspaceDidWakeNotification
+                                                                 object:nil];
+#endif
 
         updateSystemStartupTimeIntervalSince1970();
     });
@@ -671,7 +761,16 @@ static inline OptionSet<PlatformEvent::Modifier> modifiersForEvent(NSEvent *even
 
 static int typeForEvent(NSEvent *event)
 {
-    return static_cast<int>([NSMenu menuTypeForEvent:event]);
+    if ([NSMenu respondsToSelector:@selector(menuTypeForEvent:)])
+        return static_cast<int>([NSMenu menuTypeForEvent:event]);
+
+    if (mouseButtonForEvent(event) == RightButton)
+        return static_cast<int>(NSMenuTypeContextMenu);
+
+    if (mouseButtonForEvent(event) == LeftButton && modifiersForEvent(event).contains(PlatformEvent::Modifier::CtrlKey))
+        return static_cast<int>(NSMenuTypeContextMenu);
+
+    return static_cast<int>(NSMenuTypeNone);
 }
     
 class PlatformMouseEventBuilder : public PlatformMouseEvent {
@@ -758,7 +857,11 @@ public:
         m_phase = phaseForEvent(event);
         m_momentumPhase = momentumPhaseForEvent(event);
         m_hasPreciseScrollingDeltas = continuous;
+#if HAVE(INVERTED_WHEEL_EVENTS)
         m_directionInvertedFromDevice = [event isDirectionInvertedFromDevice];
+#else
+        m_directionInvertedFromDevice = false;
+#endif
     }
 };
 

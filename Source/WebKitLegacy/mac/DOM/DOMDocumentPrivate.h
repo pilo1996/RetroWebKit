@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMDocument.h>
+#import <WebKit/DOMDocument.h>
 
 @class DOMHTMLHeadElement;
 @class DOMHTMLScriptElement;
@@ -31,23 +31,23 @@
 @interface DOMDocument (DOMDocumentPrivate)
 @property (readonly, copy) NSString *contentType;
 @property (copy) NSString *dir;
-@property (readonly, strong) DOMHTMLHeadElement *head;
+@property (readonly, retain) DOMHTMLHeadElement *head;
 @property (readonly, copy) NSString *compatMode;
 #if !TARGET_OS_IPHONE
 @property (readonly) BOOL webkitIsFullScreen;
 @property (readonly) BOOL webkitFullScreenKeyboardInputAllowed;
-@property (readonly, strong) DOMElement *webkitCurrentFullScreenElement;
+@property (readonly, retain) DOMElement *webkitCurrentFullScreenElement;
 @property (readonly) BOOL webkitFullscreenEnabled;
-@property (readonly, strong) DOMElement *webkitFullscreenElement;
+@property (readonly, retain) DOMElement *webkitFullscreenElement;
 #endif
 @property (readonly, copy) NSString *visibilityState;
 @property (readonly) BOOL hidden;
-@property (readonly, strong) DOMHTMLScriptElement *currentScript;
+@property (readonly, retain) DOMHTMLScriptElement *currentScript;
 @property (readonly, copy) NSString *origin;
-@property (readonly, strong) DOMElement *scrollingElement;
-@property (readonly, strong) DOMHTMLCollection *children;
-@property (readonly, strong) DOMElement *firstElementChild;
-@property (readonly, strong) DOMElement *lastElementChild;
+@property (readonly, retain) DOMElement *scrollingElement;
+@property (readonly, retain) DOMHTMLCollection *children;
+@property (readonly, retain) DOMElement *firstElementChild;
+@property (readonly, retain) DOMElement *lastElementChild;
 @property (readonly) unsigned childElementCount;
 
 - (DOMRange *)caretRangeFromPoint:(int)x y:(int)y;

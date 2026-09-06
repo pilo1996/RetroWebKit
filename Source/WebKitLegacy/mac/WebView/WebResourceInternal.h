@@ -29,6 +29,10 @@
 #import "WebResourcePrivate.h"
 #import <wtf/Ref.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#define MAIL_THREAD_WORKAROUND 1
+#endif
+
 namespace WebCore {
     class ArchiveResource;
 }
@@ -37,3 +41,16 @@ namespace WebCore {
 - (id)_initWithCoreResource:(Ref<WebCore::ArchiveResource>&&)coreResource;
 - (WebCore::ArchiveResource&)_coreResource;
 @end
+
+#ifdef MAIL_THREAD_WORKAROUND
+
+@interface WebResource (WebMailThreadWorkaround)
++ (BOOL)_needMailThreadWorkaroundIfCalledOffMainThread;
+@end
+
+inline bool needMailThreadWorkaround()
+{
+    return !pthread_main_np() && [WebResource _needMailThreadWorkaroundIfCalledOffMainThread];
+}
+
+#endif

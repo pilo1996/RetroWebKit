@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMStyleSheet.h>
+#import <WebKit/DOMStyleSheet.h>
 
 @class DOMCSSRule;
 @class DOMCSSRuleList;
@@ -31,14 +31,14 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSStyleSheet : DOMStyleSheet
-@property (readonly, strong) DOMCSSRule *ownerRule;
-@property (readonly, strong) DOMCSSRuleList *cssRules;
-@property (readonly, strong) DOMCSSRuleList *rules WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, retain) DOMCSSRule *ownerRule;
+@property (readonly, retain) DOMCSSRuleList *cssRules;
+@property (readonly, retain) DOMCSSRuleList *rules WEBKIT_AVAILABLE_MAC(10_5);
 
 - (unsigned)insertRule:(NSString *)rule index:(unsigned)index WEBKIT_AVAILABLE_MAC(10_5);
 - (void)deleteRule:(unsigned)index;
-- (int)addRule:(NSString *)selector style:(NSString *)style index:(unsigned)index WEBKIT_AVAILABLE_MAC(10_6);
-- (void)removeRule:(unsigned)index WEBKIT_AVAILABLE_MAC(10_6);
+- (int)addRule:(NSString *)selector style:(NSString *)style index:(unsigned)index WEBKIT_AVAILABLE_MAC(10_5);
+- (void)removeRule:(unsigned)index WEBKIT_AVAILABLE_MAC(10_5);
 @end
 
 @interface DOMCSSStyleSheet (DOMCSSStyleSheetDeprecated)

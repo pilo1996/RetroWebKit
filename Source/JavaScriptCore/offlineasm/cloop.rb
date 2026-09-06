@@ -561,6 +561,10 @@ end
 class Instruction
     @@didReturnFromJSLabelCounter = 0
 
+    def self.resetDidReturnFromJSLabelCounter
+        @@didReturnFromJSLabelCounter = 0
+    end
+
     def lowerC_LOOP
         $asm.codeOrigin codeOriginString if $enableCodeOriginComments
         $asm.annotation annotation if $enableInstrAnnotations && (opcode != "cloopDo")

@@ -159,7 +159,7 @@ unsigned DirectArguments::mappedArgumentsSize()
     // We always allocate something; in the relatively uncommon case of overriding an empty argument we
     // still allocate so that m_mappedArguments is non-null. We use that to indicate that the other properties
     // (length, etc) are overridden.
-    return WTF::roundUpToMultipleOf<8>(m_length ? m_length : 1);
+    return WTF::roundUpToMultipleOf<8>((m_length ? m_length : 1) * sizeof(bool));
 }
 
 } // namespace JSC

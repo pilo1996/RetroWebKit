@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSValue.h>
+#import <WebKit/DOMCSSValue.h>
 
 @class DOMCSSValue;
 

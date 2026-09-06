@@ -201,9 +201,9 @@ public:
     const Vector<RefPtr<Attr>>& attrNodeList();
 
     const QualifiedName& tagQName() const { return m_tagName; }
-#if ENABLE(JIT)
+#if ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
     static ptrdiff_t tagQNameMemoryOffset() { return OBJECT_OFFSETOF(Element, m_tagName); }
-#endif // ENABLE(JIT)
+#endif // ENABLE(JIT) || ENABLE(CSS_SELECTOR_JIT)
     String tagName() const { return nodeName(); }
     bool hasTagName(const QualifiedName& tagName) const { return m_tagName.matches(tagName); }
     bool hasTagName(const HTMLQualifiedName& tagName) const { return ContainerNode::hasTagName(tagName); }

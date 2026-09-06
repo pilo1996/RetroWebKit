@@ -32,7 +32,7 @@
 
 #if PLATFORM(MAC) || USE(APPLE_INTERNAL_SDK)
 #include <mach/mach_vm.h>
-#endif
+#else
 
 WTF_EXTERN_C_BEGIN
 
@@ -47,5 +47,7 @@ kern_return_t mach_vm_region_recurse(vm_map_t targetTask, mach_vm_address_t*, ma
 kern_return_t mach_vm_purgable_control(vm_map_t target, mach_vm_address_t, vm_purgable_t control, int* state);
 
 WTF_EXTERN_C_END
+
+#endif
 
 #endif // MachVMSPI_h

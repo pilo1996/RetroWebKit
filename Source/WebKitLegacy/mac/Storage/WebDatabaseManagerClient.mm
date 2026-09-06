@@ -134,7 +134,7 @@ void WebDatabaseManagerClient::dispatchDidModifyDatabase(const SecurityOriginDat
     }
 
     auto webSecurityOrigin = adoptNS([[WebSecurityOrigin alloc] _initWithWebCoreSecurityOrigin:origin.securityOrigin().ptr()]);
-    auto userInfo = adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:(NSString *)databaseIdentifier, WebDatabaseIdentifierKey, nil]);
+    RetainPtr<NSDictionary> userInfo = adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:(NSString *)databaseIdentifier, WebDatabaseIdentifierKey, nil]);
     [[NSNotificationCenter defaultCenter] postNotificationName:WebDatabaseDidModifyDatabaseNotification object:webSecurityOrigin.get() userInfo:userInfo.get()];
 }
 

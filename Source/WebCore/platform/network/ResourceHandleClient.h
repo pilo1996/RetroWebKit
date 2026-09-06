@@ -38,6 +38,8 @@
 #endif
 
 #if PLATFORM(COCOA)
+#include <wtf/RefPtr.h>
+
 OBJC_CLASS NSCachedURLResponse;
 #endif
 
@@ -120,6 +122,7 @@ public:
 
 #elif PLATFORM(COCOA)
     virtual NSCachedURLResponse *willCacheResponse(ResourceHandle*, NSCachedURLResponse *response) { return response; }
+    virtual void willStopBufferingData(ResourceHandle*, RefPtr<SharedBuffer>&&) { }
 #endif
 };
 

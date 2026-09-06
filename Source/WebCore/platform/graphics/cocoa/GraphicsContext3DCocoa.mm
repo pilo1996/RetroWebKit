@@ -58,11 +58,19 @@
 #import <IOKit/IOKitLib.h>
 #import <OpenGL/CGLRenderers.h>
 #import <OpenGL/gl.h>
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+extern "C" CGLError CGLUpdateContext(CGLContextObj ctx);
+#endif
 #endif
 
 namespace WebCore {
 
+#define USE_GPU_STATUS_CHECK ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000) || PLATFORM(IOS))
+
+#if USE_GPU_STATUS_CHECK
 static const unsigned statusCheckThreshold = 5;
+#endif
 
 #if PLATFORM(MAC)
 
@@ -354,12 +362,16 @@ static void setPixelFormat(Vector<CGLPixelFormatAttribute>& attribs, int colorBi
         attribs.append(static_cast<CGLPixelFormatAttribute>(4));
     }
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     if (useGLES3) {
         // FIXME: Instead of backing a WebGL2 GraphicsContext3D with a OpenGL 3.2 context, we should instead back it with ANGLE.
         // Use an OpenGL 3.2 context for now until the ANGLE backend is ready.
         attribs.append(kCGLPFAOpenGLProfile);
         attribs.append(static_cast<CGLPixelFormatAttribute>(kCGLOGLPVersion_3_2_Core));
     }
+#else
+    UNUSED_PARAM(useGLES3);
+#endif
         
     attribs.append(static_cast<CGLPixelFormatAttribute>(0));
 }
@@ -443,11 +455,13 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attrs, HostWind
         return;
 
     CGLError err = CGLCreateContext(pixelFormatObj, 0, &m_contextObj);
+#if USE_GPU_STATUS_CHECK
     GLint abortOnBlacklist = 0;
 #if PLATFORM(MAC)
     CGLSetParameter(m_contextObj, kCGLCPAbortOnGPURestartStatusBlacklisted, &abortOnBlacklist);
 #elif PLATFORM(IOS)
     CGLSetParameter(m_contextObj, kEAGLCPAbortOnGPURestartStatusBlacklisted, &abortOnBlacklist);
+#endif
 #endif
 
     CGLDestroyPixelFormat(pixelFormatObj);
@@ -458,7 +472,9 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attrs, HostWind
         return;
     }
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     m_isForWebGL2 = attrs.useGLES3;
+#endif
 
     // Set the current context to the one given to us.
     CGLSetCurrentContext(m_contextObj);
@@ -471,7 +487,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attrs, HostWind
     BEGIN_BLOCK_OBJC_EXCEPTIONS
         m_webGLLayer = adoptNS([[WebGLLayer alloc] initWithGraphicsContext3D:this]);
 #ifndef NDEBUG
-        [m_webGLLayer setName:@"WebGL Layer"];
+        [m_webGLLayer.get() setName:@"WebGL Layer"];
 #endif
     END_BLOCK_OBJC_EXCEPTIONS
 
@@ -483,7 +499,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attrs, HostWind
     // Create the texture that will be used for the framebuffer.
 #if PLATFORM(IOS)
     ::glGenRenderbuffers(1, &m_texture);
-#else
+#elif USE(IOSURFACE)
     ::glGenTextures(1, &m_texture);
     // We bind to GL_TEXTURE_RECTANGLE_EXT rather than TEXTURE_2D because
     // that's what is required for a texture backed by IOSurface.
@@ -493,6 +509,15 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attrs, HostWind
     ::glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     ::glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     ::glBindTexture(GL_TEXTURE_RECTANGLE_EXT, 0);
+#else
+    // create a texture to render into
+    ::glGenTextures(1, &m_texture);
+    ::glBindTexture(GL_TEXTURE_2D, m_texture);
+    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    ::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    ::glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 
     // Create the framebuffer object.
@@ -576,7 +601,7 @@ GraphicsContext3D::~GraphicsContext3D()
         CGLSetCurrentContext(0);
         CGLDestroyContext(m_contextObj);
 #endif
-        [m_webGLLayer setContext:nullptr];
+        [m_webGLLayer.get() setContext:nullptr];
     }
 
     LOG(WebGL, "Destroyed a GraphicsContext3D (%p).", this);
@@ -616,6 +641,7 @@ bool GraphicsContext3D::makeContextCurrent()
 
 void GraphicsContext3D::checkGPUStatus()
 {
+#if USE_GPU_STATUS_CHECK
     if (m_failNextStatusCheck) {
         LOG(WebGL, "Pretending the GPU has reset (%p). Lose the context.", this);
         m_failNextStatusCheck = false;
@@ -655,6 +681,7 @@ void GraphicsContext3D::checkGPUStatus()
         [EAGLContext setCurrentContext:0];
     }
 #endif
+#endif
 }
 
 #if PLATFORM(IOS)
@@ -671,6 +698,7 @@ void GraphicsContext3D::presentRenderbuffer()
 }
 #endif
 
+#if USE(IOSURFACE)
 bool GraphicsContext3D::texImageIOSurface2D(GC3Denum target, GC3Denum internalFormat, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, IOSurfaceRef surface, GC3Duint plane)
 {
 #if PLATFORM(MAC)
@@ -689,8 +717,10 @@ bool GraphicsContext3D::texImageIOSurface2D(GC3Denum target, GC3Denum internalFo
     return false;
 #endif
 }
+#endif
 
 #if PLATFORM(MAC)
+#if USE(IOSURFACE)
 void GraphicsContext3D::allocateIOSurfaceBackingStore(IntSize size)
 {
     LOG(WebGL, "GraphicsContext3D::allocateIOSurfaceBackingStore at %d x %d. (%p)", size.width(), size.height(), this);
@@ -702,6 +732,7 @@ void GraphicsContext3D::updateFramebufferTextureBackingStoreFromLayer()
     LOG(WebGL, "GraphicsContext3D::updateFramebufferTextureBackingStoreFromLayer(). (%p)", this);
     [m_webGLLayer bindFramebufferToNextAvailableSurface];
 }
+#endif
 
 void GraphicsContext3D::updateCGLContext()
 {

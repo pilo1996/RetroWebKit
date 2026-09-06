@@ -54,7 +54,7 @@ namespace WebCore {
 
 IntSize dragImageSize(RetainPtr<NSImage> image)
 {
-    return (IntSize)[image size];
+    return (IntSize)[image.get() size];
 }
 
 void deleteDragImage(RetainPtr<NSImage>)
@@ -65,15 +65,15 @@ void deleteDragImage(RetainPtr<NSImage>)
 
 RetainPtr<NSImage> scaleDragImage(RetainPtr<NSImage> image, FloatSize scale)
 {
-    NSSize originalSize = [image size];
+    NSSize originalSize = [image.get() size];
     NSSize newSize = NSMakeSize((originalSize.width * scale.width()), (originalSize.height * scale.height()));
     newSize.width = roundf(newSize.width);
     newSize.height = roundf(newSize.height);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    [image setScalesWhenResized:YES];
-#pragma clang diagnostic pop
-    [image setSize:newSize];
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
+    [image.get() setScalesWhenResized:YES];
+CLANG_PRAGMA(diagnostic pop)
+    [image.get() setSize:newSize];
     return image;
 }
     
@@ -82,11 +82,11 @@ RetainPtr<NSImage> dissolveDragImageToFraction(RetainPtr<NSImage> image, float d
     if (!image)
         return nil;
 
-    RetainPtr<NSImage> dissolvedImage = adoptNS([[NSImage alloc] initWithSize:[image size]]);
+    RetainPtr<NSImage> dissolvedImage = adoptNS([[NSImage alloc] initWithSize:[image.get() size]]);
     
-    [dissolvedImage lockFocus];
-    [image drawAtPoint:NSZeroPoint fromRect:NSMakeRect(0, 0, [image size].width, [image size].height) operation:NSCompositingOperationCopy fraction:delta];
-    [dissolvedImage unlockFocus];
+    [dissolvedImage.get() lockFocus];
+    [image.get() drawAtPoint:NSZeroPoint fromRect:NSMakeRect(0, 0, [image.get() size].width, [image.get() size].height) operation:NSCompositingOperationCopy fraction:delta];
+    [dissolvedImage.get() unlockFocus];
 
     return dissolvedImage;
 }
@@ -108,7 +108,7 @@ RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientationDescri
             FloatRect destRect(FloatPoint(), sizeRespectingOrientation);
 
             RetainPtr<NSImage> rotatedDragImage = adoptNS([[NSImage alloc] initWithSize:(NSSize)(sizeRespectingOrientation)]);
-            [rotatedDragImage lockFocus];
+            [rotatedDragImage.get() lockFocus];
 
             // ImageOrientation uses top-left coordinates, need to flip to bottom-left, apply...
             CGAffineTransform transform = CGAffineTransformMakeTranslation(0, destRect.height());
@@ -123,19 +123,19 @@ RetainPtr<NSImage> createDragImageFromImage(Image* image, ImageOrientationDescri
             transform = CGAffineTransformScale(transform, 1, -1);
 
             RetainPtr<NSAffineTransform> cocoaTransform = adoptNS([[NSAffineTransform alloc] init]);
-            [cocoaTransform setTransformStruct:*(NSAffineTransformStruct*)&transform];
-            [cocoaTransform concat];
+            [cocoaTransform.get() setTransformStruct:*(NSAffineTransformStruct*)&transform];
+            [cocoaTransform.get() concat];
 
-            [image->snapshotNSImage() drawInRect:destRect fromRect:NSMakeRect(0, 0, size.width(), size.height()) operation:NSCompositingOperationSourceOver fraction:1.0];
+            [image->snapshotNSImage().get() drawInRect:destRect fromRect:NSMakeRect(0, 0, size.width(), size.height()) operation:NSCompositingOperationSourceOver fraction:1.0];
 
-            [rotatedDragImage unlockFocus];
+            [rotatedDragImage.get() unlockFocus];
 
             return rotatedDragImage;
         }
     }
 
     auto dragImage = image->snapshotNSImage();
-    [dragImage setSize:(NSSize)size];
+    [dragImage.get() setSize:(NSSize)size];
     return dragImage;
 }
     
@@ -213,37 +213,50 @@ LinkImageLayout::LinkImageLayout(URL& url, const String& titleString)
     NSFont *titleFont = [NSFont boldSystemFontOfSize:linkImageFontSize];
     NSFont *domainFont = [NSFont systemFontOfSize:linkImageFontSize];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
     NSColor *titleColor = [NSColor labelColor];
     NSColor *domainColor = [NSColor secondaryLabelColor];
+#else
+    NSColor *titleColor = [NSColor colorWithDeviceWhite:0.0f alpha:0.75f];
+    NSColor *domainColor = [NSColor colorWithDeviceWhite:0.0f alpha:0.75f];
+#endif
 
     CGFloat maximumAvailableWidth = linkImageMaximumWidth - linkImagePadding * 2;
 
     CGFloat currentY = linkImagePadding;
     CGFloat maximumUsedTextWidth = 0;
 
-    auto buildLines = [this, maximumAvailableWidth, &maximumUsedTextWidth, &currentY] (NSString *text, NSColor *color, NSFont *font, CFIndex maximumLines, CTLineBreakMode lineBreakMode) {
+    auto buildLines = [&] (NSString *text, NSColor *color, NSFont *font, CFIndex maximumLines, CTLineBreakMode lineBreakMode) {
         CTParagraphStyleSetting paragraphStyleSettings[1];
         paragraphStyleSettings[0].spec = kCTParagraphStyleSpecifierLineBreakMode;
         paragraphStyleSettings[0].valueSize = sizeof(CTLineBreakMode);
         paragraphStyleSettings[0].value = &lineBreakMode;
         RetainPtr<CTParagraphStyleRef> paragraphStyle = adoptCF(CTParagraphStyleCreate(paragraphStyleSettings, 1));
 
-        NSDictionary *textAttributes = @{
-            (id)kCTFontAttributeName: font,
-            (id)kCTForegroundColorAttributeName: color,
-            (id)kCTParagraphStyleAttributeName: (id)paragraphStyle.get()
-        };
-        NSDictionary *frameAttributes = @{
-            (id)kCTFrameMaximumNumberOfLinesAttributeName: @(maximumLines)
-        };
+        NSDictionary *textAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            font, (const objc_object*)kCTFontAttributeName,
+            color, (const objc_object*)kCTForegroundColorAttributeName,
+            (const objc_object*)paragraphStyle.get(), (const objc_object*)kCTParagraphStyleAttributeName,
+            nil];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+        NSDictionary *frameAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
+            [NSNumber numberWithInteger:maximumLines], (const objc_object*)kCTFrameMaximumNumberOfLinesAttributeName,
+            nil];
+#else
+        UNUSED_PARAM(maximumLines);
+        NSDictionary *frameAttributes = nullptr;
+#endif
 
         RetainPtr<NSAttributedString> attributedText = adoptNS([[NSAttributedString alloc] initWithString:text attributes:textAttributes]);
         RetainPtr<CTFramesetterRef> textFramesetter = adoptCF(CTFramesetterCreateWithAttributedString((CFAttributedStringRef)attributedText.get()));
 
         CFRange fitRange;
         CGSize textSize = CTFramesetterSuggestFrameSizeWithConstraints(textFramesetter.get(), CFRangeMake(0, 0), (CFDictionaryRef)frameAttributes, CGSizeMake(maximumAvailableWidth, CGFLOAT_MAX), &fitRange);
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 101100
+        textSize.height = font.ascender - font.descender;
+#endif
 
-        RetainPtr<CGPathRef> textPath = adoptCF(CGPathCreateWithRect(CGRectMake(0, 0, textSize.width, textSize.height), nullptr));
+        RetainPtr<CGPathRef> textPath = adoptCF(CGPathCreateWithRect(CGRectMake(0, 0, std::max(textSize.width, 12.0f), textSize.height), nullptr));
         RetainPtr<CTFrameRef> textFrame = adoptCF(CTFramesetterCreateFrame(textFramesetter.get(), fitRange, textPath.get(), (CFDictionaryRef)frameAttributes));
 
         CFArrayRef ctLines = CTFrameGetLines(textFrame.get());
@@ -252,15 +265,17 @@ LinkImageLayout::LinkImageLayout(URL& url, const String& titleString)
             return;
 
         Vector<CGPoint> origins(lineCount);
-        CGRect lineBounds;
+        CGFloat lineHeight;
         CGFloat height = 0;
         CTFrameGetLineOrigins(textFrame.get(), CFRangeMake(0, 0), origins.data());
         for (CFIndex lineIndex = 0; lineIndex < lineCount; ++lineIndex) {
             CTLineRef line = (CTLineRef)CFArrayGetValueAtIndex(ctLines, lineIndex);
 
-            lineBounds = CTLineGetBoundsWithOptions(line, 0);
+            CGFloat ascent, descent, leading;
+            CGFloat width = CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
+            lineHeight = ascent + descent + leading;
             CGFloat trailingWhitespaceWidth = CTLineGetTrailingWhitespaceWidth(line);
-            CGFloat lineWidthIgnoringTrailingWhitespace = lineBounds.size.width - trailingWhitespaceWidth;
+            CGFloat lineWidthIgnoringTrailingWhitespace = width - trailingWhitespaceWidth;
             maximumUsedTextWidth = std::max(maximumUsedTextWidth, lineWidthIgnoringTrailingWhitespace);
 
             if (lineIndex)
@@ -272,7 +287,7 @@ LinkImageLayout::LinkImageLayout(URL& url, const String& titleString)
         label.origin = FloatPoint(linkImagePadding, currentY + origins[0].y);
         labels.append(label);
 
-        currentY += height + lineBounds.size.height;
+        currentY += height + lineHeight;
     };
 
     if (title)
@@ -303,7 +318,7 @@ DragImageRef createDragImageForLink(Element&, URL& url, const String& title, Tex
     imageSize.expand(2 * linkImageShadowRadius, 2 * linkImageShadowRadius - linkImageShadowOffsetY);
 #endif
     RetainPtr<NSImage> dragImage = adoptNS([[NSImage alloc] initWithSize:imageSize]);
-    [dragImage lockFocus];
+    [dragImage.get() lockFocus];
 
     GraphicsContext context((CGContextRef)[NSGraphicsContext currentContext].graphicsPort);
 #if __MAC_OS_X_VERSION_MIN_REQUIRED < 101300
@@ -321,7 +336,7 @@ DragImageRef createDragImageForLink(Element&, URL& url, const String& title, Tex
         CTFrameDraw(label.frame.get(), context.platformContext());
     }
 
-    [dragImage unlockFocus];
+    [dragImage.get() unlockFocus];
 
     return dragImage;
 }

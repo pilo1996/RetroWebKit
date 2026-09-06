@@ -501,6 +501,7 @@ __ZN20WebFrameLoaderClient32postProgressFinishedNotificationEv
 __ZN20WebDocumentLoaderMacD0Ev
 -[WebView _windowChangedKeyState]
 -[WebHTMLView windowDidBecomeKey:]
+_WKMouseMovedNotification
 -[WebHTMLView(WebNSTextInputSupport) _updateSecureInputState]
 -[WebView _windowWillOrderOnScreen:]
 -[WebHTMLView windowWillOrderOnScreen:]
@@ -579,6 +580,7 @@ __ZN20WebFrameLoaderClient26dispatchDidReceiveResponseEPN7WebCore14DocumentLoade
 __ZNK20WebFrameLoaderClient15canShowMIMETypeERKN3WTF6StringE
 -[WebView _canShowMIMEType:]
 +[WebView _canShowMIMEType:allowingPlugins:]
+-[WebView(WebPrivate) _setJavaScriptURLsAreAllowed:]
 __ZN20WebFrameLoaderClient31dispatchDidReceiveContentLengthEPN7WebCore14DocumentLoaderEmi
 __ZN20WebFrameLoaderClient17dispatchWillCloseEv
 __ZN20WebFrameLoaderClient18makeRepresentationEPN7WebCore14DocumentLoaderE

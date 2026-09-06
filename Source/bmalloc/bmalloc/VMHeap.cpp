@@ -53,7 +53,11 @@ LargeRange VMHeap::tryAllocateLargeChunk(size_t alignment, size_t size)
     m_zone.addRange(Range(chunk->bytes(), size));
 #endif
 
+#if !(BPLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     return LargeRange(chunk->bytes(), size, 0);
+#else
+    return LargeRange(chunk->bytes(), size, size);
+#endif
 }
 
 } // namespace bmalloc

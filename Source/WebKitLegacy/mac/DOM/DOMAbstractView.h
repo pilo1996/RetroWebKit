@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMDocument;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMAbstractView : DOMObject
-@property (readonly, strong) DOMDocument *document;
+@property (readonly, retain) DOMDocument *document;
 @end

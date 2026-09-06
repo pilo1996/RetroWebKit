@@ -41,7 +41,7 @@
 @implementation DOMObject
 
 // Prevent creation of DOM objects by clients who just "[[xxx alloc] init]".
-- (instancetype)init
+- (id)init
 {
     [NSException raise:NSGenericException format:@"+[%@ init]: should never be used", NSStringFromClass([self class])];
 

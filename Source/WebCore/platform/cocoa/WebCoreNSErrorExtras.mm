@@ -26,6 +26,7 @@
 #import "config.h"
 #import "WebCoreNSErrorExtras.h"
 
+#if USE(AVFOUNDATION)
 #import <AVFoundation/AVError.h>
 
 namespace WebCore {
@@ -44,3 +45,4 @@ long mediaKeyErrorSystemCode(NSError *error)
 }
 
 }
+#endif

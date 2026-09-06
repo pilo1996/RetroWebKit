@@ -112,6 +112,7 @@ bool ProtectionSpaceBase::isPasswordBased() const
     case ProtectionSpaceAuthenticationSchemeClientCertificateRequested:
     case ProtectionSpaceAuthenticationSchemeServerTrustEvaluationRequested:
     case ProtectionSpaceAuthenticationSchemeUnknown:
+    default:
         return false;
     }
 

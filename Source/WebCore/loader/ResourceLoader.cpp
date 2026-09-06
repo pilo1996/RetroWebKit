@@ -508,6 +508,11 @@ void ResourceLoader::didReceiveDataOrBuffer(const char* data, unsigned length, R
         frameLoader()->notifier().didReceiveData(this, buffer ? buffer->data() : data, buffer ? buffer->size() : length, static_cast<int>(encodedDataLength));
 }
 
+void ResourceLoader::willStopBufferingData(ResourceHandle*, RefPtr<SharedBuffer>&& buffer)
+{
+    addDataOrBuffer(nullptr, 0, buffer.get(), DataPayloadWholeResource);
+}
+
 void ResourceLoader::didFinishLoading(const NetworkLoadMetrics& networkLoadMetrics)
 {
     didFinishLoadingOnePart(networkLoadMetrics);

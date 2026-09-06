@@ -23,16 +23,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
-#import "MainThreadSharedTimer.h"
+#include "config.h"
+#include "MainThreadSharedTimer.h"
 
 #include <wtf/AutodrainedPool.h>
 
 #if PLATFORM(MAC)
-#import "PowerObserverMac.h"
+#include "PowerObserverMac.h"
 #elif PLATFORM(IOS)
-#import "WebCoreThreadInternal.h"
-#import "WebCoreThreadRun.h"
+#include "WebCoreThreadInternal.h"
+#include "WebCoreThreadRun.h"
 #endif
 
 namespace WebCore {

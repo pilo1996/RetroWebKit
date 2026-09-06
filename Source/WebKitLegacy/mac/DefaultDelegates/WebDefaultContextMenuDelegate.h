@@ -28,7 +28,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <WebKitLegacy/WebDefaultUIDelegate.h>
+#import <WebKit/WebDefaultUIDelegate.h>
 
 @interface WebDefaultUIDelegate (WebContextMenu)
 @end

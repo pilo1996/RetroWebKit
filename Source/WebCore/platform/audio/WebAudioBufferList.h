@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(MEDIA_STREAM)
+
 #include "PlatformAudioData.h"
 #include <wtf/IteratorRange.h>
 #include <wtf/RetainPtr.h>
@@ -69,3 +71,5 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebAudioBufferList)
 static bool isType(const WebCore::PlatformAudioData& data) { return data.kind() == WebCore::PlatformAudioData::Kind::WebAudioBufferList; }
 SPECIALIZE_TYPE_TRAITS_END()
+
+#endif

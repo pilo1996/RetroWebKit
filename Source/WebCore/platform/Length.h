@@ -127,9 +127,9 @@ private:
         float m_floatValue;
         unsigned m_calculationValueHandle;
     };
-    bool m_hasQuirk;
+    bool m_hasQuirk : 8;
     unsigned char m_type;
-    bool m_isFloat;
+    bool m_isFloat : 8;
 };
 
 // Blend two lengths to produce a new length that is in between them. Used for animation.

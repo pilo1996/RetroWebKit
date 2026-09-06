@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMNode;
 @class DOMNodeList;
@@ -35,5 +35,5 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 
 - (DOMNode *)item:(unsigned)index;
 - (DOMNode *)namedItem:(NSString *)name;
-- (DOMNodeList *)tags:(NSString *)name WEBKIT_AVAILABLE_MAC(10_6);
+- (DOMNodeList *)tags:(NSString *)name WEBKIT_AVAILABLE_MAC(10_5);
 @end

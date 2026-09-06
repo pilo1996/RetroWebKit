@@ -200,6 +200,8 @@ void LibWebRTCProvider::setActive(bool value)
 #endif
 }
 
+LibWebRTCProvider::~LibWebRTCProvider() {}
+
 bool LibWebRTCProvider::webRTCAvailable()
 {
 #if USE(LIBWEBRTC)

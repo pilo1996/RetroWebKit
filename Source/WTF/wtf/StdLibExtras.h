@@ -34,6 +34,10 @@
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
 
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#include <cinttypes>
+#endif
+
 // This was used to declare and define a static local variable (static T;) so that
 //  it was leaked so that its destructors were not called at exit.
 // Newly written code should use static NeverDestroyed<T> instead.

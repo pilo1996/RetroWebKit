@@ -158,29 +158,52 @@ bool FontCascadeDescription::familiesEqualForTextAutoSizing(const FontCascadeDes
 
 bool FontCascadeDescription::familyNamesAreEqual(const AtomicString& family1, const AtomicString& family2)
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
     // always take the case insensitive patch once this radar is fixed.
     if (family1.startsWith('.'))
+#else
+    if (family1.isNull() && family2.isNull())
+        return true;
+    else if ((family1.isNull() && !family2.isNull())
+      || (!family1.isNull() && family2.isNull()))
+        return false;
+    else
+#endif
         return StringHash::equal(family1.string(), family2.string());
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     return ASCIICaseInsensitiveHash::equal(family1, family2);
+#endif
 }
 
 unsigned FontCascadeDescription::familyNameHash(const AtomicString& family)
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
     // always take the case insensitive patch once this radar is fixed.
     if (family.startsWith('.'))
+#else
+    if (family.isNull())
+        return 0;
+    else
+#endif
         return StringHash::hash(family.string());
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     return ASCIICaseInsensitiveHash::hash(family);
+#endif
 }
 
 String FontCascadeDescription::foldedFamilyName(const AtomicString& family)
 {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     // FIXME: <rdar://problem/33594253> CoreText matches dot-prefixed font names case sensitively. We should
     // always take the case insensitive patch once this radar is fixed.
     if (family.startsWith('.'))
+#endif
         return family.string();
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     return family.string().foldCase();
+#endif
 }
 
 } // namespace WebCore

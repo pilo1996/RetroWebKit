@@ -89,7 +89,7 @@ using SignalHandler = Function<SignalAction(Signal, SigInfo&, PlatformRegisters&
 WTF_EXPORT_PRIVATE void installSignalHandler(Signal, SignalHandler&&);
 
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 class Thread;
 void registerThreadForMachExceptionHandling(Thread*);
 void unregisterThreadForMachExceptionHandling(Thread*);
@@ -99,7 +99,7 @@ void handleSignalsWithMach();
 
 } // namespace WTF
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 using WTF::registerThreadForMachExceptionHandling;
 using WTF::unregisterThreadForMachExceptionHandling;
 using WTF::handleSignalsWithMach;

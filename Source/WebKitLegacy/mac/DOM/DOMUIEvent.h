@@ -23,19 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMEvent.h>
+#import <WebKit/DOMEvent.h>
 
 @class DOMAbstractView;
 @class NSString;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMUIEvent : DOMEvent
-@property (readonly, strong) DOMAbstractView *view;
+@property (readonly, retain) DOMAbstractView *view;
 @property (readonly) int detail;
 @property (readonly) int keyCode WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int charCode WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly) int layerX WEBKIT_DEPRECATED_MAC(10_5, 10_5);
-@property (readonly) int layerY WEBKIT_DEPRECATED_MAC(10_5, 10_5);
+@property (readonly) int layerX WEBKIT_DEPRECATED_MAC(10_5, 10_6);
+@property (readonly) int layerY WEBKIT_DEPRECATED_MAC(10_5, 10_6);
 @property (readonly) int pageX WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int pageY WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int which WEBKIT_AVAILABLE_MAC(10_5);

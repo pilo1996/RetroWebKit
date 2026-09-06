@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMMediaList;
 @class DOMNode;
@@ -33,9 +33,9 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMStyleSheet : DOMObject
 @property (readonly, copy) NSString *type;
 @property BOOL disabled;
-@property (readonly, strong) DOMNode *ownerNode;
-@property (readonly, strong) DOMStyleSheet *parentStyleSheet;
+@property (readonly, retain) DOMNode *ownerNode;
+@property (readonly, retain) DOMStyleSheet *parentStyleSheet;
 @property (readonly, copy) NSString *href;
 @property (readonly, copy) NSString *title;
-@property (readonly, strong) DOMMediaList *media;
+@property (readonly, retain) DOMMediaList *media;
 @end

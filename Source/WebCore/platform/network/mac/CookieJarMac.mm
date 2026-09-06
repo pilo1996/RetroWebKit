@@ -43,6 +43,7 @@ namespace WebCore {
 
 static NSArray *httpCookiesForURL(CFHTTPCookieStorageRef cookieStorage, NSURL *firstParty, NSURL *url)
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (!cookieStorage)
         cookieStorage = _CFHTTPCookieStorageGetDefault(kCFAllocatorDefault);
 
@@ -50,6 +51,10 @@ static NSArray *httpCookiesForURL(CFHTTPCookieStorageRef cookieStorage, NSURL *f
     
     auto cookies = adoptCF(_CFHTTPCookieStorageCopyCookiesForURLWithMainDocumentURL(cookieStorage, static_cast<CFURLRef>(url), static_cast<CFURLRef>(firstParty), secure));
     NSArray *nsCookies = [NSHTTPCookie _cf2nsCookies:cookies.get()];
+#else
+    UNUSED_PARAM(firstParty);
+    NSArray *nsCookies = wkHTTPCookiesForURL(cookieStorage, url);
+#endif
 
     return nsCookies;
 }
@@ -141,7 +146,9 @@ static String cookiesForSession(const NetworkStorageSession& session, const URL&
         return String(); // Return a null string, not an empty one that StringBuilder would create below.
 
     StringBuilder cookiesBuilder;
-    for (NSHTTPCookie *cookie in cookies) {
+    NSEnumerator *enumerator = [cookies objectEnumerator];
+    NSHTTPCookie *cookie;
+    while ((cookie = [enumerator nextObject]) != nil) {
         if (![[cookie name] length])
             continue;
 
@@ -187,7 +194,7 @@ void setCookiesFromDOM(const NetworkStorageSession& session, const URL& firstPar
     NSURL *cookieURL = url;
     NSDictionary *headerFields = [NSDictionary dictionaryWithObject:cookieString forKey:@"Set-Cookie"];
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
     NSArray *unfilteredCookies = [NSHTTPCookie _parsedCookiesWithResponseHeaderFields:headerFields forURL:cookieURL];
 #else
     NSArray *unfilteredCookies = [NSHTTPCookie cookiesWithResponseHeaderFields:headerFields forURL:cookieURL];
@@ -260,7 +267,9 @@ void getHostnamesWithCookies(const NetworkStorageSession& session, HashSet<Strin
 
     NSArray *cookies = wkHTTPCookies(session.cookieStorage().get());
     
-    for (NSHTTPCookie* cookie in cookies)
+    NSEnumerator *enumerator = [cookies objectEnumerator];
+    NSHTTPCookie *cookie;
+    while ((cookie = [enumerator nextObject]) != nil)
         hostnames.add([cookie domain]);
     
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -268,7 +277,23 @@ void getHostnamesWithCookies(const NetworkStorageSession& session, HashSet<Strin
 
 void deleteAllCookies(const NetworkStorageSession& session)
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     wkDeleteAllHTTPCookies(session.cookieStorage().get());
+#else
+    BEGIN_BLOCK_OBJC_EXCEPTIONS;
+
+    RetainPtr<CFHTTPCookieStorageRef> cookieStorage = session.cookieStorage();
+    NSArray *cookies = wkHTTPCookies(cookieStorage.get());
+    if (!cookies)
+        return;
+    
+    NSEnumerator *enumerator = [cookies objectEnumerator];
+    NSHTTPCookie *cookie;
+    while ((cookie = [enumerator nextObject]) != nil)
+        wkDeleteHTTPCookie(cookieStorage.get(), cookie);
+    
+    END_BLOCK_OBJC_EXCEPTIONS;
+#endif
 }
 
 }
@@ -287,7 +312,9 @@ void deleteCookiesForHostnames(const NetworkStorageSession& session, const Vecto
         return;
 
     HashMap<String, Vector<RetainPtr<NSHTTPCookie>>> cookiesByDomain;
-    for (NSHTTPCookie* cookie in cookies) {
+    NSEnumerator *enumerator = [cookies objectEnumerator];
+    NSHTTPCookie *cookie;
+    while ((cookie = [enumerator nextObject]) != nil) {
         auto& cookies = cookiesByDomain.add(cookie.domain, Vector<RetainPtr<NSHTTPCookie>>()).iterator->value;
         cookies.append(cookie);
     }

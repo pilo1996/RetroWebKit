@@ -33,16 +33,16 @@
 #import <WebCore/GraphicsContext.h>
 #import <WebCore/TextRun.h>
 #import <WebCore/WebCoreNSStringExtras.h>
-#import <WebKitLegacy/WebNSFileManagerExtras.h>
-#import <WebKitLegacy/WebNSObjectExtras.h>
+#import <WebKit/WebNSFileManagerExtras.h>
+#import <WebKit/WebNSObjectExtras.h>
 #import <unicode/uchar.h>
 #import <sys/param.h>
 
 #if PLATFORM(IOS)
-#import <WebKitLegacy/DOM.h>
-#import <WebKitLegacy/WebFrame.h>
-#import <WebKitLegacy/WebFrameView.h>
-#import <WebKitLegacy/WebViewPrivate.h>
+#import <WebKit/DOM.h>
+#import <WebKit/WebFrame.h>
+#import <WebKit/WebFrameView.h>
+#import <WebKit/WebViewPrivate.h>
 #endif
 
 NSString *WebKitLocalCacheDefaultsKey = @"WebKitLocalCache";
@@ -321,8 +321,12 @@ static BOOL canUseFastRenderer(const UniChar *buffer, unsigned length)
     NSString *storageDirectory = [defaults objectForKey:WebKitResourceLoadStatisticsDirectoryDefaultsKey];
 
     if (!storageDirectory || ![storageDirectory isKindOfClass:[NSString class]]) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         NSError *error;
         NSString *storageDirectory = [[[NSFileManager defaultManager] URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:&error] path];
+#else
+        NSString *storageDirectory = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+#endif
         
         if (!storageDirectory || ![storageDirectory isKindOfClass:[NSString class]])
             storageDirectory = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"];

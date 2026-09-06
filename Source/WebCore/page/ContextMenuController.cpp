@@ -578,19 +578,19 @@ void ContextMenuController::createAndAppendSpellingAndGrammarSubMenu(ContextMenu
         contextMenuItemTagCheckSpellingWhileTyping());
     ContextMenuItem grammarWithSpelling(CheckableActionType, ContextMenuItemTagCheckGrammarWithSpelling, 
         contextMenuItemTagCheckGrammarWithSpelling());
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     ContextMenuItem correctSpelling(CheckableActionType, ContextMenuItemTagCorrectSpellingAutomatically, 
         contextMenuItemTagCorrectSpellingAutomatically());
 #endif
 
     appendItem(showSpellingPanel, &spellingAndGrammarMenu);
     appendItem(checkSpelling, &spellingAndGrammarMenu);
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     appendItem(*separatorItem(), &spellingAndGrammarMenu);
 #endif
     appendItem(checkAsYouType, &spellingAndGrammarMenu);
     appendItem(grammarWithSpelling, &spellingAndGrammarMenu);
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
     appendItem(correctSpelling, &spellingAndGrammarMenu);
 #endif
 
@@ -683,7 +683,7 @@ void ContextMenuController::createAndAppendTextDirectionSubMenu(ContextMenuItem&
 
 #endif
 
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
 
 void ContextMenuController::createAndAppendSubstitutionsSubMenu(ContextMenuItem& substitutionsMenuItem)
 {
@@ -722,6 +722,14 @@ void ContextMenuController::createAndAppendTransformationsSubMenu(ContextMenuIte
     transformationsMenuItem.setSubMenu(&transformationsMenu);
 }
 
+#endif
+
+#if PLATFORM(MAC)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+#define INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM 1
+#else
+#define INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM 0
+#endif
 #endif
 
 #if PLATFORM(COCOA)
@@ -891,11 +899,20 @@ void ContextMenuController::populate()
 #if PLATFORM(COCOA)
                     ContextMenuItem LookUpInDictionaryItem(ActionType, ContextMenuItemTagLookUpInDictionary, contextMenuItemTagLookUpInDictionary(selectedString));
 
+#if INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM
+                    appendItem(SearchSpotlightItem, m_contextMenu.get());
+#else
                     appendItem(LookUpInDictionaryItem, m_contextMenu.get());
+#endif
 #endif
 
 #if !PLATFORM(GTK)
                     appendItem(SearchWebItem, m_contextMenu.get());
+                    appendItem(*separatorItem(), m_contextMenu.get());
+#endif
+
+#if PLATFORM(MAC) && INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM
+                    appendItem(LookUpInDictionaryItem, m_contextMenu.get());
                     appendItem(*separatorItem(), m_contextMenu.get());
 #endif
                 }
@@ -983,7 +1000,7 @@ void ContextMenuController::populate()
                         appendItem(IgnoreGrammarItem, m_contextMenu.get());
                     appendItem(*separatorItem(), m_contextMenu.get());
                     haveContextMenuItemsForMisspellingOrGrammer = true;
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
                 } else {
                     // If the string was autocorrected, generate a contextual menu item allowing it to be changed back.
                     String replacedString = m_context.hitTestResult().replacedString();
@@ -1027,11 +1044,20 @@ void ContextMenuController::populate()
 #if PLATFORM(COCOA)
             ContextMenuItem LookUpInDictionaryItem(ActionType, ContextMenuItemTagLookUpInDictionary, contextMenuItemTagLookUpInDictionary(selectedText));
 
+#if INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM
+            appendItem(SearchSpotlightItem, m_contextMenu.get());
+#else
             appendItem(LookUpInDictionaryItem, m_contextMenu.get());
+#endif
 #endif
 
 #if !PLATFORM(GTK)
             appendItem(SearchWebItem, m_contextMenu.get());
+            appendItem(*separatorItem(), m_contextMenu.get());
+#endif
+
+#if PLATFORM(MAC) && INCLUDE_SPOTLIGHT_CONTEXT_MENU_ITEM
+            appendItem(LookUpInDictionaryItem, m_contextMenu.get());
             appendItem(*separatorItem(), m_contextMenu.get());
 #endif
         }
@@ -1055,7 +1081,7 @@ void ContextMenuController::populate()
             createAndAppendSpellingAndGrammarSubMenu(SpellingAndGrammarMenuItem);
             appendItem(SpellingAndGrammarMenuItem, m_contextMenu.get());
 #endif
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060)
             ContextMenuItem substitutionsMenuItem(SubmenuType, ContextMenuItemTagSubstitutionsMenu, 
                 contextMenuItemTagSubstitutionsMenu());
             createAndAppendSubstitutionsSubMenu(substitutionsMenuItem);
@@ -1263,11 +1289,13 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
         case ContextMenuItemTagTransformationsMenu:
             break;
         case ContextMenuItemTagShowSubstitutions:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             if (frame->editor().substitutionsPanelIsShowing())
                 item.setTitle(contextMenuItemTagShowSubstitutions(false));
             else
                 item.setTitle(contextMenuItemTagShowSubstitutions(true));
             shouldEnable = frame->editor().canEdit();
+#endif
             break;
         case ContextMenuItemTagMakeUpperCase:
         case ContextMenuItemTagMakeLowerCase:
@@ -1276,22 +1304,34 @@ void ContextMenuController::checkOrEnableIfNeeded(ContextMenuItem& item) const
             shouldEnable = frame->editor().canEdit();
             break;
         case ContextMenuItemTagCorrectSpellingAutomatically:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().isAutomaticSpellingCorrectionEnabled();
+#endif
             break;
         case ContextMenuItemTagSmartCopyPaste:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().smartInsertDeleteEnabled();
+#endif
             break;
         case ContextMenuItemTagSmartQuotes:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().isAutomaticQuoteSubstitutionEnabled();
+#endif
             break;
         case ContextMenuItemTagSmartDashes:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().isAutomaticDashSubstitutionEnabled();
+#endif
             break;
         case ContextMenuItemTagSmartLinks:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().isAutomaticLinkDetectionEnabled();
+#endif
             break;
         case ContextMenuItemTagTextReplacement:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             shouldCheck = frame->editor().isAutomaticTextReplacementEnabled();
+#endif
             break;
         case ContextMenuItemTagStopSpeaking:
             shouldEnable = m_client.isSpeaking();

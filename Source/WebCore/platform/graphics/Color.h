@@ -33,6 +33,7 @@
 #include <unicode/uchar.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
+#include <wtf/MathExtras.h>
 #include <wtf/Optional.h>
 #include <wtf/text/LChar.h>
 

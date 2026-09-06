@@ -147,6 +147,32 @@ void fastAlignedFree(void* p)
 
 #else
 
+#if !defined(posix_memalign) && OS(DARWIN)
+void posix_memalign(void** p, size_t alignment, size_t size)
+{
+#define SYSTEM_ALIGNMENT 16
+    // malloc'ed memory is always (at least) {SYSTEM_ALIGNMENT} byte aligned
+    // minimum alignment required is {SYSTEM_ALIGNMENT}
+    if (alignment < SYSTEM_ALIGNMENT)
+        alignment = SYSTEM_ALIGNMENT;
+    // always allocate at least {alignment} bytes more than needed
+    // the allocation base address must fit into that extra space
+    ASSERT(alignment >= sizeof(void*));
+    const uintptr_t allocationBaseAddress = (uintptr_t)malloc(size + alignment);
+    ASSERT((void*)allocationBaseAddress != nullptr && allocationBaseAddress % SYSTEM_ALIGNMENT == 0);
+    // reserve at least {SYSTEM_ALIGNMENT} bytes of memory _before_ the returned address
+    uintptr_t alignedAddress = (allocationBaseAddress + (alignment - 1)) & ~(alignment - 1);
+    if (alignedAddress == allocationBaseAddress)
+        alignedAddress += alignment;
+    ASSERT(alignedAddress % alignment == 0 && alignedAddress + size <= allocationBaseAddress + size + alignment);
+    // store the allocation base address immediately before the returned address
+    ASSERT(&(((uintptr_t*)alignedAddress)[-1]) >= (void*)allocationBaseAddress);
+    ((uintptr_t*)alignedAddress)[-1] = allocationBaseAddress;
+    *p = (void*)alignedAddress;
+#undef SYSTEM_ALIGNMENT
+}
+#endif
+
 void* fastAlignedMalloc(size_t alignment, size_t size) 
 {
     ASSERT_IS_WITHIN_LIMIT(size);
@@ -167,6 +193,10 @@ void* tryFastAlignedMalloc(size_t alignment, size_t size)
 
 void fastAlignedFree(void* p) 
 {
+#if !defined(posix_memalign)
+    // read the allocation base address from immediately before the returned address
+    p = ((void**)p)[-1];
+#endif
     free(p);
 }
 

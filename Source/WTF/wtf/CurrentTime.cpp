@@ -255,15 +255,17 @@ double monotonicallyIncreasingTime()
 double monotonicallyIncreasingTime()
 {
     // Based on listing #2 from Apple QA 1398, but modified to be thread-safe.
-    static mach_timebase_info_data_t timebaseInfo;
+    static double factorNanosecondsToSeconds;
     static std::once_flag initializeTimerOnceFlag;
     std::call_once(initializeTimerOnceFlag, [] {
+        mach_timebase_info_data_t timebaseInfo;
         kern_return_t kr = mach_timebase_info(&timebaseInfo);
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
         ASSERT(timebaseInfo.denom);
+        factorNanosecondsToSeconds = timebaseInfo.numer / (1.0e9 * timebaseInfo.denom);
     });
 
-    return (mach_absolute_time() * timebaseInfo.numer) / (1.0e9 * timebaseInfo.denom);
+    return mach_absolute_time() * factorNanosecondsToSeconds;
 }
 
 #else

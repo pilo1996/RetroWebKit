@@ -27,7 +27,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <WebKitLegacy/WebDocument.h>
+#import <WebKit/WebDocument.h>
 
 @class NSMutableURLRequest;
 @class NSURLConnection;
@@ -56,7 +56,7 @@
     @param request The request to use in creating a datasource.
     @result Returns an initialized WebDataSource.
 */
-- (instancetype)initWithRequest:(NSURLRequest *)request;
+- (id)initWithRequest:(NSURLRequest *)request;
 
 /*!
     @property data
@@ -75,32 +75,32 @@
     a MIME type to a class.  The representation is created once the MIME type
     of the datasource content has been determined.
 */
-@property (nonatomic, readonly, strong) id<WebDocumentRepresentation> representation;
+@property (nonatomic, readonly, retain) id<WebDocumentRepresentation> representation;
 
 /*!
     @property webFrame
     @abstract The frame that represents this data source.
 */
-@property (nonatomic, readonly, strong) WebFrame *webFrame;
+@property (nonatomic, readonly, retain) WebFrame *webFrame;
 
 /*!
     @property initialRequest
     @abstract A reference to the original request that created the
     datasource.  This request will be unmodified by WebKit. 
 */
-@property (nonatomic, readonly, strong) NSURLRequest *initialRequest;
+@property (nonatomic, readonly, retain) NSURLRequest *initialRequest;
 
 /*!
     @property request
     @abstract The request that was used to create this datasource.
 */
-@property (nonatomic, readonly, strong) NSMutableURLRequest *request;
+@property (nonatomic, readonly, retain) NSMutableURLRequest *request;
 
 /*!
     @property response
     @abstract The NSURLResponse for the data source.
 */
-@property (nonatomic, readonly, strong) NSURLResponse *response;
+@property (nonatomic, readonly, retain) NSURLResponse *response;
 
 /*!
     @property textEncodingName
@@ -127,7 +127,7 @@
     @discussion This will be non-nil only for dataSources created by calls to the 
     WebFrame method loadAlternateHTMLString:baseURL:forUnreachableURL:.
 */
-@property (nonatomic, readonly, strong) NSURL *unreachableURL;
+@property (nonatomic, readonly, retain) NSURL *unreachableURL;
 
 /*!
     @property webArchive
@@ -136,7 +136,7 @@
     In the case of HTML, if the current state of the document is preferred, webArchive should be
     called on the DOM document instead.
 */
-@property (nonatomic, readonly, strong) WebArchive *webArchive;
+@property (nonatomic, readonly, retain) WebArchive *webArchive;
 
 /*!
     @property mainResource
@@ -145,7 +145,7 @@
     This method can be used to construct a WebArchive in case the archive returned by
     WebDataSource's webArchive isn't sufficient.
 */
-@property (nonatomic, readonly, strong) WebResource *mainResource;
+@property (nonatomic, readonly, retain) WebResource *mainResource;
 
 /*!
     @property subresources

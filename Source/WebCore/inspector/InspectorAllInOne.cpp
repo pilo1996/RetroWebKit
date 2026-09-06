@@ -31,7 +31,9 @@
 #include "DOMPatchSupport.cpp"
 #include "InspectorApplicationCacheAgent.cpp"
 #include "InspectorCSSAgent.cpp"
+#if PLATFORM(WIN)
 #include "InspectorCanvasAgent.cpp"
+#endif
 #include "InspectorClient.cpp"
 #include "InspectorController.cpp"
 #include "InspectorDOMAgent.cpp"
@@ -42,7 +44,9 @@
 #include "InspectorFrontendClientLocal.cpp"
 #include "InspectorFrontendHost.cpp"
 #include "InspectorHistory.cpp"
+#if PLATFORM(WIN)
 #include "InspectorInstrumentation.cpp"
+#endif
 #include "InspectorInstrumentationCookie.cpp"
 #include "InspectorLayerTreeAgent.cpp"
 #include "InspectorNetworkAgent.cpp"
@@ -58,7 +62,9 @@
 #include "PageDebuggerAgent.cpp"
 #include "PageHeapAgent.cpp"
 #include "PageRuntimeAgent.cpp"
+#if PLATFORM(WIN)
 #include "PageScriptDebugServer.cpp"
+#endif
 #include "TimelineRecordFactory.cpp"
 #include "WebConsoleAgent.cpp"
 #include "WebDebuggerAgent.cpp"

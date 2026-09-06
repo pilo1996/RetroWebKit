@@ -30,6 +30,15 @@
 #if CPU(X86_SSE2)
 #include <emmintrin.h>
 #endif
+#if CPU(PPC) || CPU(PPC64)
+#ifndef __VECLIBTYPES__
+#define __VECLIBTYPES__ // Hack to avoid problems with vecLibTypes.h from Accelerate framework
+#endif
+#include <altivec.h>
+#undef vector
+#undef pixel
+#undef bool
+#endif
 
 namespace WTF {
 
@@ -39,9 +48,13 @@ inline bool isAlignedTo(const void* pointer)
     return !(reinterpret_cast<uintptr_t>(pointer) & mask);
 }
 
+#if (CPU(PPC) && defined(_ARCH_PPC64))
+typedef uint64_t MachineWord;
+#else
 // Assuming that a pointer is the size of a "machine word", then
 // uintptr_t is an integer type that is also a machine word.
 typedef uintptr_t MachineWord;
+#endif
 const uintptr_t machineWordAlignmentMask = sizeof(MachineWord) - 1;
 
 inline bool isAlignedToMachineWord(const void* pointer)
@@ -67,7 +80,22 @@ template<> struct NonASCIIMask<8, UChar> {
 template<> struct NonASCIIMask<8, LChar> {
     static inline uint64_t value() { return 0x8080808080808080ULL; }
 };
+#if CPU(PPC) || CPU(PPC64)
+template<> struct NonASCIIMask<16, UChar> {
+    static inline __vector UChar value() { return (__vector UChar)vec_sll(vec_splat_u16(8), vec_splat_u16(4)); }
+};
+template<> struct NonASCIIMask<16, LChar> {
+    static inline __vector LChar value() { return (__vector LChar)vec_sll(vec_splat_u8(8), vec_splat_u8(4)); }
+};
 
+template<typename CharacterType> static inline bool anyNonASCIIVecElems(__vector unsigned int inputVec);
+template<> inline bool anyNonASCIIVecElems<UChar>(__vector unsigned int inputVec) {
+    return vec_any_ge((__vector UChar)inputVec, (NonASCIIMask<sizeof(__vector UChar), UChar>::value()));
+}
+template<> inline bool anyNonASCIIVecElems<LChar>(__vector unsigned int inputVec) {
+    return vec_any_ge((__vector LChar)inputVec, (NonASCIIMask<sizeof(__vector LChar), LChar>::value()));
+}
+#endif
 
 template<typename CharacterType>
 inline bool isAllASCII(MachineWord word)
@@ -84,11 +112,43 @@ inline bool charactersAreAllASCII(const CharacterType* characters, size_t length
     const CharacterType* end = characters + length;
 
     // Prologue: align the input.
+#if CPU(PPC) || CPU(PPC64)
+    register __vector unsigned int allCharBitsVec = (__vector unsigned int)vec_splat_u8(0);
+
+    const size_t loopIncrementVec = 2 * (sizeof(__vector unsigned int) / sizeof(CharacterType));
+    uintptr_t memoryAccessSize = sizeof(__vector unsigned int);
+    uintptr_t memoryAccessMask = memoryAccessSize - 1;
+    size_t alignLen = length - std::min(length, (size_t)(-(intptr_t)characters & memoryAccessMask) / sizeof(CharacterType));
+    const bool useVecs = length >= alignLen && length - alignLen > loopIncrementVec - 1;
+    if (!useVecs) {
+        memoryAccessSize = sizeof(MachineWord);
+        memoryAccessMask = memoryAccessSize - 1;
+        alignLen = std::min(length, (size_t)(-(intptr_t)characters & memoryAccessMask) / sizeof(CharacterType));
+    }
+
+    const CharacterType* alignStart = characters + alignLen;
+    while (characters < alignStart) {
+#else
     while (!isAlignedToMachineWord(characters) && characters != end) {
+#endif
         allCharBits |= *characters;
         ++characters;
     }
 
+#if CPU(PPC) || CPU(PPC64)
+    // Compare the values of SIMD vector size (128 bit).
+    if (useVecs) {
+        const CharacterType* vecEnd = (const CharacterType*)((uintptr_t)end & ~memoryAccessMask);
+        while (characters < vecEnd) {
+            register __vector unsigned int charactersVec = vec_ld(0, (const unsigned int*)characters);
+            register __vector unsigned int charactersVec2 = vec_ld(16, (const unsigned int*)characters);
+            allCharBitsVec = vec_or(allCharBitsVec, charactersVec);
+            allCharBitsVec = vec_or(allCharBitsVec, charactersVec2);
+            characters += loopIncrementVec;
+        }
+    }
+
+#endif
     // Compare the values of CPU word size.
     const CharacterType* wordEnd = alignToMachineWord(end);
     const size_t loopIncrement = sizeof(MachineWord) / sizeof(CharacterType);
@@ -104,7 +164,12 @@ inline bool charactersAreAllASCII(const CharacterType* characters, size_t length
     }
 
     MachineWord nonASCIIBitMask = NonASCIIMask<sizeof(MachineWord), CharacterType>::value();
+
+#if CPU(PPC) || CPU(PPC64)
+    return !((allCharBits & nonASCIIBitMask) || (useVecs && anyNonASCIIVecElems<CharacterType>(allCharBitsVec)));
+#else
     return !(allCharBits & nonASCIIBitMask);
+#endif
 }
 
 inline void copyLCharsFromUCharSource(LChar* destination, const UChar* source, size_t length)
@@ -184,6 +249,90 @@ inline void copyLCharsFromUCharSource(LChar* destination, const UChar* source, s
 
     while (destination != end)
         *destination++ = static_cast<LChar>(*source++);
+#elif CPU(PPC) || CPU(PPC64)
+    const uintptr_t memoryAccessSize = 16; // Memory accesses on 16 byte (128 bit) alignment
+    const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+    size_t alignLen = std::min(length, (size_t)(-(intptr_t)destination & memoryAccessMask) / sizeof(LChar));
+
+    size_t i = 0;
+    if (length >= alignLen && length - alignLen > 31) {
+        for (;i < alignLen; i++) {
+            ASSERT(!(source[i] & 0xff00));
+            destination[i] = static_cast<LChar>(source[i]);
+        }
+
+        const uintptr_t sourceLoadSize = 64; // Process 64 bytes (32 UChars) each iteration
+        const unsigned ucharsPerLoop = sourceLoadSize / sizeof(UChar);
+
+        // maxIndex can underflow if length < 33!!!
+        uint32_t maxIndex = length - (ucharsPerLoop + 1);
+
+        // check for underflow
+        if (maxIndex <= length && i < maxIndex) {
+            const UChar *ourSource = &source[i];
+            LChar *ourDest = &destination[i];
+            register __vector unsigned char packed1, packed2;
+            register __vector unsigned short source1, source2, source3, source4;
+            if (((uintptr_t)ourSource & memoryAccessMask) == 0) {
+                // Walk 64 bytes (four VMX registers) at a time.
+                while (1) {
+#ifndef NDEBUG
+                    for (unsigned checkIndex = 0; checkIndex < ucharsPerLoop; checkIndex++)
+                        ASSERT(!(ourSource[checkIndex] & 0xff00));
+#endif
+                    source1 = vec_ldl(0, (const unsigned short *)ourSource);
+                    source2 = vec_ldl(16, (const unsigned short *)ourSource);
+                    source3 = vec_ldl(32, (const unsigned short *)ourSource);
+                    source4 = vec_ldl(48, (const unsigned short *)ourSource);
+                    packed1 = vec_packsu(source1, source2);
+                    packed2 = vec_packsu(source3, source4);
+                    vec_st(packed1, 0, (unsigned char *)ourDest);
+                    vec_st(packed2, 16, (unsigned char *)ourDest);
+                    i += ucharsPerLoop;
+                    if(i > maxIndex)
+                        break;
+                    ourDest += ucharsPerLoop;
+                    ourSource += ucharsPerLoop;
+                }
+            } else {
+                register __vector unsigned char mask = vec_lvsl(0, (const unsigned short *)ourSource);
+                register __vector unsigned short vector1  = vec_ldl(0, (const unsigned short *)ourSource);
+                register __vector unsigned short vector2;
+                // Walk 64 bytes (four VMX registers) at a time.
+                while (1) {
+#ifndef NDEBUG
+                    for (unsigned checkIndex = 0; checkIndex < ucharsPerLoop; checkIndex++)
+                        ASSERT(!(ourSource[checkIndex] & 0xff00));
+#endif
+                    // Safe to use with aligned and unaligned addresses
+                    #define LoadUnaligned(return, index, target, MSQ, LSQ, mask) \
+                    { \
+                        LSQ = vec_ldl(index + 15, target); \
+                        return = vec_perm(MSQ, LSQ, mask); \
+                    }
+                    LoadUnaligned(source1, 0, (const unsigned short *)ourSource, vector1, vector2, mask);
+                    LoadUnaligned(source2, 16, (const unsigned short *)ourSource, vector2, vector1, mask);
+                    LoadUnaligned(source3, 32, (const unsigned short *)ourSource, vector1, vector2, mask);
+                    LoadUnaligned(source4, 48, (const unsigned short *)ourSource, vector2, vector1, mask);
+                    packed1 = vec_packsu(source1, source2);
+                    packed2 = vec_packsu(source3, source4);
+                    vec_st(packed1, 0, (unsigned char *)ourDest);
+                    vec_st(packed2, 16, (unsigned char *)ourDest);
+                    i += ucharsPerLoop;
+                    if(i > maxIndex)
+                        break;
+                    ourDest += ucharsPerLoop;
+                    ourSource += ucharsPerLoop;
+                }
+            }
+        }
+    }
+
+    for (; i < length; ++i) {
+        ASSERT(!(source[i] & 0xff00));
+        destination[i] = static_cast<LChar>(source[i]);
+    }
 #else
     for (size_t i = 0; i < length; ++i) {
         ASSERT(!(source[i] & 0xff00));

@@ -176,4 +176,9 @@ void initializeThreading()
     });
 }
 
+ThreadIdentifier currentThread()
+{
+    return Thread::currentID();
+}
+
 } // namespace WTF

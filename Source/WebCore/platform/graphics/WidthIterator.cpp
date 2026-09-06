@@ -277,6 +277,7 @@ inline unsigned WidthIterator::advanceInternal(TextIterator& textIterator, Glyph
                             m_runWidthSoFar += m_expansionPerOpportunity;
                             if (glyphBuffer) {
                                 if (glyphBuffer->isEmpty()) {
+RELEASE_ASSERT(font->getCTFont());
                                     if (m_forTextEmphasis)
                                         glyphBuffer->add(font->zeroWidthSpaceGlyph(), font, m_expansionPerOpportunity, currentCharacter);
                                     else
@@ -330,7 +331,10 @@ inline unsigned WidthIterator::advanceInternal(TextIterator& textIterator, Glyph
         widthSinceLastRounding += width;
 
         if (glyphBuffer)
+{
+RELEASE_ASSERT(font->getCTFont());
             glyphBuffer->add(glyph, font, (rtl ? oldWidth + lastRoundingWidth : width), currentCharacter);
+}
 
         lastRoundingWidth = width - oldWidth;
 
@@ -343,6 +347,7 @@ inline unsigned WidthIterator::advanceInternal(TextIterator& textIterator, Glyph
     }
 
     if (leftoverJustificationWidth) {
+RELEASE_ASSERT(lastFontData->getCTFont());
         if (m_forTextEmphasis)
             glyphBuffer->add(lastFontData->zeroWidthSpaceGlyph(), lastFontData, leftoverJustificationWidth, m_run.length() - 1);
         else

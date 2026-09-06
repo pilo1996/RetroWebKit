@@ -152,13 +152,13 @@ void ResourceRequest::doUpdatePlatformRequest()
     CFURLRequestSetHTTPRequestMethod(cfRequest, httpMethod().createCFString().get());
 
     if (httpPipeliningEnabled())
-        CFURLRequestSetShouldPipelineHTTP(cfRequest, true, true);
+        wkHTTPRequestEnablePipelining(cfRequest);
 
     if (resourcePrioritiesEnabled())
-        CFURLRequestSetRequestPriority(cfRequest, toPlatformRequestPriority(priority()));
+        wkSetHTTPRequestPriority(cfRequest, toPlatformRequestPriority(priority()));
 
 #if !PLATFORM(WIN)
-    _CFURLRequestSetProtocolProperty(cfRequest, kCFURLRequestAllowAllPOSTCaching, kCFBooleanTrue);
+    wkCFURLRequestAllowAllPostCaching(cfRequest);
 #endif
 
     setHeaderFields(cfRequest, httpHeaderFields());
@@ -267,7 +267,7 @@ void ResourceRequest::doUpdateResourceRequest()
     m_allowCookies = CFURLRequestShouldHandleHTTPCookies(m_cfRequest.get());
 
     if (resourcePrioritiesEnabled())
-        m_priority = toResourceLoadPriority(CFURLRequestGetRequestPriority(m_cfRequest.get()));
+        m_priority = toResourceLoadPriority(wkGetHTTPRequestPriority(m_cfRequest.get()));
 
     m_httpHeaderFields.clear();
     if (CFDictionaryRef headers = CFURLRequestCopyAllHTTPHeaderFields(m_cfRequest.get())) {
@@ -324,7 +324,7 @@ void ResourceRequest::setStorageSession(CFURLStorageSessionRef storageSession)
 
     auto cfRequest = CFURLRequestCreateMutableCopy(0, m_cfRequest.get());
     if (storageSession)
-        _CFURLRequestSetStorageSession(cfRequest, storageSession);
+        wkSetRequestStorageSession(storageSession, cfRequest);
     m_cfRequest = adoptCF(cfRequest);
 #if PLATFORM(COCOA)
     clearOrUpdateNSURLRequest();
@@ -367,8 +367,7 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     static const unsigned preferredConnectionCount = 6;
     static const unsigned unlimitedRequestCount = 10000;
 
-    _CFNetworkHTTPConnectionCacheSetLimit(kHTTPLoadWidth, preferredConnectionCount);
-    unsigned maximumHTTPConnectionCountPerHost = _CFNetworkHTTPConnectionCacheGetLimit(kHTTPLoadWidth);
+    unsigned maximumHTTPConnectionCountPerHost = wkInitializeMaximumHTTPConnectionCountPerHost(preferredConnectionCount);
 
     Boolean keyExistsAndHasValidFormat = false;
     Boolean prefValue = CFPreferencesGetAppBooleanValue(CFSTR("WebKitEnableHTTPPipelining"), kCFPreferencesCurrentApplication, &keyExistsAndHasValidFormat);
@@ -379,10 +378,12 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     if (!ResourceRequest::resourcePrioritiesEnabled())
         return maximumHTTPConnectionCountPerHost;
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPPriorityNumLevels, toPlatformRequestPriority(ResourceLoadPriority::Highest));
 #if !PLATFORM(WIN)
     // FIXME: <rdar://problem/9375609> Implement minimum fast lane priority setting on Windows
     _CFNetworkHTTPConnectionCacheSetLimit(kHTTPMinimumFastLanePriority, toPlatformRequestPriority(ResourceLoadPriority::Medium));
+#endif
 #endif
 
     return unlimitedRequestCount;

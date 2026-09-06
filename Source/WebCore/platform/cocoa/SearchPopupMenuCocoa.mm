@@ -97,12 +97,14 @@ static RetainPtr<NSDictionary> typeCheckedRecentSearchesRemovingRecentSearchesAd
         return nil;
 
     RetainPtr<NSMutableDictionary> recentSearchesPlist = readSearchFieldRecentSearchesPlist();
-    NSMutableDictionary *itemsDictionary = [recentSearchesPlist objectForKey:itemsKey];
+    NSMutableDictionary *itemsDictionary = [recentSearchesPlist.get() objectForKey:itemsKey];
     if (![itemsDictionary isKindOfClass:[NSDictionary class]])
         return nil;
 
     RetainPtr<NSMutableArray> keysToRemove = adoptNS([[NSMutableArray alloc] init]);
-    for (NSString *key in itemsDictionary) {
+    NSEnumerator *enumerator = [itemsDictionary keyEnumerator];
+    NSString *key;
+    while ((key = [enumerator nextObject])) {
         if (![key isKindOfClass:[NSString class]])
             return nil;
 
@@ -111,18 +113,20 @@ static RetainPtr<NSDictionary> typeCheckedRecentSearchesRemovingRecentSearchesAd
             return nil;
 
         RetainPtr<NSMutableArray> entriesToRemove = adoptNS([[NSMutableArray alloc] init]);
-        for (NSDictionary *recentSearch in recentSearches) {
+        NSEnumerator *enumerator2 = [recentSearches objectEnumerator];
+        NSDictionary *recentSearch;
+        while ((recentSearch = [enumerator2 nextObject])) {
             NSDate *dateAdded = typeCheckedDateInRecentSearch(recentSearch);
             if (!dateAdded)
                 return nil;
 
             if ([dateAdded compare:date] == NSOrderedDescending)
-                [entriesToRemove addObject:recentSearch];
+                [entriesToRemove.get() addObject:recentSearch];
         }
 
         [recentSearches removeObjectsInArray:entriesToRemove.get()];
         if (!recentSearches.count)
-            [keysToRemove addObject:key];
+            [keysToRemove.get() addObject:key];
     }
 
     [itemsDictionary removeObjectsForKeys:keysToRemove.get()];
@@ -136,7 +140,7 @@ static void writeEmptyRecentSearchesPlist()
 {
     auto emptyItemsDictionary = adoptNS([[NSDictionary alloc] init]);
     auto emptyRecentSearchesDictionary = adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:emptyItemsDictionary.get(), itemsKey, nil]);
-    [emptyRecentSearchesDictionary writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
+    [emptyRecentSearchesDictionary.get() writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
 }
 
 void saveRecentSearches(const String& name, const Vector<RecentSearch>& searchItems)
@@ -145,25 +149,25 @@ void saveRecentSearches(const String& name, const Vector<RecentSearch>& searchIt
         return;
 
     RetainPtr<NSDictionary> recentSearchesPlist = readSearchFieldRecentSearchesPlist();
-    RetainPtr<NSMutableDictionary> itemsDictionary = [recentSearchesPlist objectForKey:itemsKey];
+    RetainPtr<NSMutableDictionary> itemsDictionary = [recentSearchesPlist.get() objectForKey:itemsKey];
     // The NSMutableDictionary method we use to read the property list guarantees we get only
     // mutable containers, but it does not guarantee the file has a dictionary as expected.
-    if (![itemsDictionary isKindOfClass:[NSDictionary class]]) {
+    if (![itemsDictionary.get() isKindOfClass:[NSDictionary class]]) {
         itemsDictionary = adoptNS([[NSMutableDictionary alloc] init]);
         recentSearchesPlist = adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:itemsDictionary.get(), itemsKey, nil]);
     }
 
     if (searchItems.isEmpty())
-        [itemsDictionary removeObjectForKey:name];
+        [itemsDictionary.get() removeObjectForKey:name];
     else {
         RetainPtr<NSMutableArray> items = adoptNS([[NSMutableArray alloc] initWithCapacity:searchItems.size()]);
         for (auto& searchItem : searchItems)
-            [items addObject:adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:searchItem.string, searchStringKey, toNSDateFromSystemClock(searchItem.time), dateKey, nil]).get()];
+            [items.get() addObject:adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:searchItem.string, searchStringKey, toNSDateFromSystemClock(searchItem.time), dateKey, nil]).get()];
 
-        [itemsDictionary setObject:adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:items.get(), searchesKey, nil]).get() forKey:name];
+        [itemsDictionary.get() setObject:adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:items.get(), searchesKey, nil]).get() forKey:name];
     }
 
-    [recentSearchesPlist writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
+    [recentSearchesPlist.get() writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
 }
 
 Vector<RecentSearch> loadRecentSearches(const String& name)
@@ -177,7 +181,7 @@ Vector<RecentSearch> loadRecentSearches(const String& name)
     if (!recentSearchesPlist)
         return searchItems;
 
-    NSMutableDictionary *items = [recentSearchesPlist objectForKey:itemsKey];
+    NSMutableDictionary *items = [recentSearchesPlist.get() objectForKey:itemsKey];
     if (![items isKindOfClass:[NSDictionary class]])
         return searchItems;
 
@@ -185,7 +189,9 @@ Vector<RecentSearch> loadRecentSearches(const String& name)
     if (!recentSearches)
         return searchItems;
     
-    for (NSDictionary *item in recentSearches) {
+    NSEnumerator *enumerator = [recentSearches objectEnumerator];
+    NSDictionary *item;
+    while ((item = [enumerator nextObject])) {
         NSDate *date = typeCheckedDateInRecentSearch(item);
         if (!date)
             continue;
@@ -205,7 +211,7 @@ void removeRecentlyModifiedRecentSearches(std::chrono::system_clock::time_point 
     NSDate *date = toNSDateFromSystemClock(oldestTimeToRemove);
     auto recentSearchesPlist = typeCheckedRecentSearchesRemovingRecentSearchesAddedAfterDate(date);
     if (recentSearchesPlist)
-        [recentSearchesPlist writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
+        [recentSearchesPlist.get() writeToFile:searchFieldRecentSearchesPlistPath() atomically:YES];
     else
         writeEmptyRecentSearchesPlist();
 }

@@ -516,8 +516,10 @@ void DOMWindow::willDetachDocumentFromFrame()
     for (auto& property : properties)
         property->willDetachGlobalObjectFromFrame();
 
+#if ENABLE(WEB_TIMING)
     if (m_performance)
         m_performance->clearResourceTimings();
+#endif
 }
 
 #if ENABLE(GAMEPAD)

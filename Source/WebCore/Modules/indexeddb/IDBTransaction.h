@@ -70,7 +70,7 @@ public:
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&);
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest&);
 
-    ~IDBTransaction() final;
+    WEBCORE_EXPORT ~IDBTransaction() final;
 
     // IDBTransaction IDL
     Ref<DOMStringList> objectStoreNames() const;

@@ -36,6 +36,7 @@
 #import "WebKitNSStringExtras.h"
 #import "WebKitVersionChecks.h"
 #import "WebNSFileManagerExtras.h"
+#import "WebNSNotificationCenterExtras.h"
 #import "WebNSURLExtras.h"
 #import "WebPreferencesPrivate.h"
 #import "WebTypesInternal.h"
@@ -99,10 +100,12 @@ static WebIconDatabaseClient* defaultClient()
 + (WebIconDatabase *)sharedIconDatabase
 {
     static WebIconDatabase *database;
-    static dispatch_once_t once;
-    dispatch_once(&once, ^ {
+    static std::once_flag onceToken;
+    std::call_once(onceToken, []{
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
         if (linkedOnOrAfter(SDKVersion::FirstWithWebIconDatabaseWarning))
             NSLog(@"+[WebIconDatabase sharedIconDatabase] is not API and should not be used. WebIconDatabase no longer handles icon loading and it will be removed in a future release.");
+#endif
 
         database = [[WebIconDatabase alloc] init];
     });
@@ -267,17 +270,19 @@ static WebIconDatabaseClient* defaultClient()
 {
     ASSERT(URL);
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-        NSDictionary *userInfo = @{ WebIconNotificationUserInfoURLKey : URL };
-        [[NSNotificationCenter defaultCenter] postNotificationName:WebIconDatabaseDidAddIconNotification object:self userInfo:userInfo];
-    });
+    NSDictionary *userInfo = [NSDictionary dictionaryWithObject:URL
+                                                         forKey:WebIconNotificationUserInfoURLKey];
+                                                         
+    [[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:WebIconDatabaseDidAddIconNotification
+                                                        object:self
+                                                      userInfo:userInfo];
 }
 
 - (void)_sendDidRemoveAllIconsNotification
 {
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [[NSNotificationCenter defaultCenter] postNotificationName:WebIconDatabaseDidRemoveAllIconsNotification object:self];
-    });
+    [[NSNotificationCenter defaultCenter] postNotificationOnMainThreadWithName:WebIconDatabaseDidRemoveAllIconsNotification
+                                                        object:self
+                                                      userInfo:nil];
 }
 
 - (void)_startUpIconDatabase
@@ -436,10 +441,10 @@ static WebIconDatabaseClient* defaultClient()
     double start = CFAbsoluteTimeGetCurrent();
 #endif
     
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     [icon setScalesWhenResized:YES];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
     [icon setSize:size];
     
 #if !LOG_DISABLED
@@ -481,10 +486,10 @@ NSImage *webGetNSImage(Image* image, NSSize size)
     if (!nsImage)
         return nil;
     if (!NSEqualSizes([nsImage size], size)) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         [nsImage setScalesWhenResized:YES];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
         [nsImage setSize:size];
     }
     return nsImage;

@@ -324,6 +324,11 @@ void PlatformCAAnimationWin::setAdditive(bool value)
     CACFAnimationSetAdditive(m_animation.get(), value);
 }
 
+bool PlatformCAAnimation::supportsValueFunction()
+{
+    return true;
+}
+
 PlatformCAAnimation::ValueFunctionType PlatformCAAnimationWin::valueFunction() const
 {
     CACFValueFunctionRef func = CACFAnimationGetValueFunction(m_animation.get());

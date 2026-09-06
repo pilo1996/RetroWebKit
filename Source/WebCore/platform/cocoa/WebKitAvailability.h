@@ -31,6 +31,28 @@
 #if !TARGET_OS_IPHONE
 #import <Foundation/Foundation.h>
 
+#ifndef NS_AVAILABLE_MAC
+#define NS_AVAILABLE_MAC(_mac) __OSX_AVAILABLE_STARTING(__MAC_##_mac, __IPHONE_NA)
+#endif
+#ifndef NS_CLASS_AVAILABLE_MAC
+#define NS_CLASS_AVAILABLE_MAC(_mac)
+#endif
+#ifndef NS_ENUM_AVAILABLE_MAC
+#define NS_ENUM_AVAILABLE_MAC(_mac)
+#endif
+#ifndef NS_DEPRECATED_MAC
+#define NS_DEPRECATED_MAC(_macIntro, _macDep) __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_##_macIntro, __MAC_##_macDep, __IPHONE_NA, __IPHONE_NA)
+#endif
+#ifndef CF_DEPRECATED_MAC
+#define CF_DEPRECATED_MAC(_macIntro, _macDep) __OSX_AVAILABLE_BUT_DEPRECATED(__MAC_##_macIntro, __MAC_##_macDep, __IPHONE_NA, __IPHONE_NA)
+#endif
+#ifndef NS_UNAVAILABLE
+#define NS_UNAVAILABLE
+#endif
+#ifndef NS_RETURNS_NOT_RETAINED
+#define NS_RETURNS_NOT_RETAINED
+#endif
+
 #define WEBKIT_AVAILABLE_MAC(introduced) NS_AVAILABLE_MAC(introduced)
 #define WEBKIT_CLASS_AVAILABLE_MAC(introduced) NS_CLASS_AVAILABLE_MAC(introduced)
 #define WEBKIT_ENUM_AVAILABLE_MAC(introduced) NS_ENUM_AVAILABLE_MAC(introduced)

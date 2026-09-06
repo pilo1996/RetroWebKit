@@ -105,12 +105,20 @@ void WebCoreReportThreadViolation(const char* function, WebCore::ThreadViolation
             break;
         case LogOnFirstThreadViolation:
             if (loggedFunctions.get().add(function).isNewEntry) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
                 NSLog(@"WebKit Threading Violation - %s called from secondary thread", function);
                 NSLog(@"Additional threading violations for this function will not be logged.");
+#pragma GCC diagnostic pop
             }
             break;
         case LogOnThreadViolation:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
             NSLog(@"WebKit Threading Violation - %s called from secondary thread", function);
+#pragma GCC diagnostic pop
             break;
         case RaiseExceptionOnThreadViolation:
             [NSException raise:@"WebKitThreadingException" format:@"%s was called from a secondary thread", function];

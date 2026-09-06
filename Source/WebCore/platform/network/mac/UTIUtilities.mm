@@ -73,9 +73,11 @@ RetainPtr<CFStringRef> UTIFromMIMEType(CFStringRef mime)
     return uti;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 bool isDeclaredUTI(CFStringRef UTI)
 {
     return UTTypeIsDeclared(UTI);
 }
+#endif
 
 }

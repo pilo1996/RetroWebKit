@@ -63,6 +63,7 @@ public:
 
 #if USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE void runForDuration(double duration);
+     static void timerFired(CFRunLoopTimerRef, void*);
 #endif
 
 #if USE(GLIB_EVENT_LOOP)
@@ -74,7 +75,7 @@ public:
     WTF_EXPORT_PRIVATE static void iterate();
 #endif
 
-#if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
+#if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP) || USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE void dispatchAfter(Seconds, Function<void()>&&);
 #endif
 

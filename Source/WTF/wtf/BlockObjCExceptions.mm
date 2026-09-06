@@ -34,7 +34,10 @@ void ReportBlockedObjCException(NSException *exception)
     // will call this code as part of default locale detection.
     // https://bugs.webkit.org/show_bug.cgi?id=157804
 #if ASSERT_DISABLED
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
     NSLog(@"*** WebKit discarding exception: <%@> %@", [exception name], [exception reason]);
+#pragma GCC diagnostic pop
 #else
     ASSERT_WITH_MESSAGE(0, "Uncaught exception - %@", exception);
 #endif

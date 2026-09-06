@@ -34,7 +34,15 @@
 #if !UCONFIG_NO_COLLATION
 
 #include <mutex>
+#include <unicode/ustring.h>
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
 #include <unicode/ucol.h>
+#if COMPILER(GCC) && !COMPILER(CLANG)
+#pragma GCC diagnostic pop
+#endif
 #include <wtf/Lock.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/StringView.h>
@@ -72,7 +80,7 @@ static inline char* copyShortASCIIString(CFStringRef string)
 
 static char* copyDefaultLocale()
 {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
     return copyShortASCIIString(static_cast<CFStringRef>(CFLocaleGetValue(adoptCF(CFLocaleCopyCurrent()).get(), kCFLocaleCollatorIdentifier)));
 #else
     // FIXME: Documentation claims the code above would work on iOS 4.0 and later. After test that works, we should remove this and use that instead.

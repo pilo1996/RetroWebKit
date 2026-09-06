@@ -24,19 +24,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import <WebKitLegacy/DOMDocument.h>
-#import <WebKitLegacy/DOMNode.h>
-#import <WebKitLegacy/DOMObject.h>
-#import <WebKitLegacy/DOMViews.h>
+#import <WebKit/DOMDocument.h>
+#import <WebKit/DOMNode.h>
+#import <WebKit/DOMObject.h>
+#import <WebKit/DOMViews.h>
 
-#import <WebKitLegacy/DOMEvent.h>
-#import <WebKitLegacy/DOMEventException.h>
-#import <WebKitLegacy/DOMEventListener.h>
-#import <WebKitLegacy/DOMEventTarget.h>
-#import <WebKitLegacy/DOMKeyboardEvent.h>
-#import <WebKitLegacy/DOMMouseEvent.h>
-#import <WebKitLegacy/DOMMutationEvent.h>
-#import <WebKitLegacy/DOMOverflowEvent.h>
-#import <WebKitLegacy/DOMProgressEvent.h>
-#import <WebKitLegacy/DOMUIEvent.h>
-#import <WebKitLegacy/DOMWheelEvent.h>
+#import <WebKit/DOMEvent.h>
+#import <WebKit/DOMEventException.h>
+#import <WebKit/DOMEventListener.h>
+#import <WebKit/DOMEventTarget.h>
+#import <WebKit/DOMKeyboardEvent.h>
+#import <WebKit/DOMMouseEvent.h>
+#import <WebKit/DOMMutationEvent.h>
+#import <WebKit/DOMOverflowEvent.h>
+#import <WebKit/DOMProgressEvent.h>
+#import <WebKit/DOMUIEvent.h>
+#import <WebKit/DOMWheelEvent.h>

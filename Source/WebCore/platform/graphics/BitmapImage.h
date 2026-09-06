@@ -138,6 +138,10 @@ public:
     Vector<NativeImagePtr> framesNativeImages() override;
 #endif
 
+private:
+    void forceFrameCaching(bool);
+    bool frameCachingForced();
+
 protected:
     WEBCORE_EXPORT BitmapImage(NativeImagePtr&&, ImageObserver* = nullptr);
     WEBCORE_EXPORT BitmapImage(ImageObserver* = nullptr);

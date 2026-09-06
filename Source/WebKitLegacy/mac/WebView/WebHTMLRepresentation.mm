@@ -59,7 +59,7 @@
 #import <WebCore/Range.h>
 #import <WebCore/RenderElement.h>
 #import <WebCore/TextResourceDecoder.h>
-#import <WebKitLegacy/DOMHTMLInputElement.h>
+#import <WebKit/DOMHTMLInputElement.h>
 #import <yarr/RegularExpression.h>
 #import <wtf/Assertions.h>
 #import <wtf/NeverDestroyed.h>
@@ -145,6 +145,14 @@ static RetainPtr<NSArray> newArrayWithStrings(const HashSet<String, ASCIICaseIns
     [_private release];
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    if (_private && _private->includedInWebKitStatistics)
+        --WebHTMLRepresentationCount;
+
+    [super finalize];
 }
 
 - (void)_redirectDataToManualLoader:(id<WebPluginManualLoader>)manualLoader forPluginView:(NSView *)pluginView

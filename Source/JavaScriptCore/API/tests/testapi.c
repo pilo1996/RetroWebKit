@@ -1140,6 +1140,8 @@ static void checkConstnessInJSObjectNames()
     fun.name = "something";
     JSStaticValue val;
     val.name = "something";
+    UNUSED_PARAM(fun);
+    UNUSED_PARAM(val);
 }
 
 #ifdef __cplusplus

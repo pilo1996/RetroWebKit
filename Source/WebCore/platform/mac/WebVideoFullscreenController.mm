@@ -31,7 +31,9 @@
 
 #import "WebVideoFullscreenHUDWindowController.h"
 #import "WebWindowAnimation.h"
+#if USE(AVFOUNDATION)
 #import <AVFoundation/AVPlayerLayer.h>
+#endif
 #import <Carbon/Carbon.h>
 #import <WebCore/HTMLVideoElement.h>
 #import <WebCore/SleepDisabler.h>
@@ -49,10 +51,15 @@ SOFT_LINK_POINTER(QTKit, QTMovieRateDidChangeNotification, NSString *)
 
 using namespace WebCore;
 
+#if USE(AVFOUNDATION)
 SOFT_LINK_FRAMEWORK(AVFoundation)
 SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
+#endif
 
-@interface WebVideoFullscreenWindow : NSWindow<NSAnimationDelegate>
+@interface WebVideoFullscreenWindow : NSWindow
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+<NSAnimationDelegate>
+#endif
 {
     SEL _controllerActionOnAnimationEnd;
     WebWindowScaleAnimation *_fullscreenAnimation; // (retain)
@@ -64,6 +71,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 - (void)requestExitFullscreenWithAnimation:(BOOL)animation;
 - (void)updateMenuAndDockForFullscreen;
 - (void)updatePowerAssertions;
+- (void)rateChanged:(NSNotification *)unusedNotification;
 @end
 
 @interface NSWindow(IsOnActiveSpaceAdditionForTigerAndLeopard)
@@ -131,8 +139,7 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 #if USE(QTKIT)
         if (_videoElement->platformMedia().type == PlatformMedia::QTMovieType) {
             QTMovie *movie = _videoElement->platformMedia().media.qtMovie;
-            RetainPtr<QTMovieLayer> layer = adoptNS([allocQTMovieLayerInstance() init]);
-            [layer.get() setMovie:movie];
+            RetainPtr<QTMovieLayer> layer = adoptNS([allocQTMovieLayerInstance() initWithMovie:movie]);
             [self setupVideoOverlay:layer.get()];
 
             [[NSNotificationCenter defaultCenter] addObserver:self
@@ -140,8 +147,12 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
                                                          name:QTMovieRateDidChangeNotification
                                                        object:movie];
 
-        } else
+        }
+#if USE(AVFOUNDATION)
+        else
 #endif
+#endif
+#if USE(AVFOUNDATION)
         if (_videoElement->platformMedia().type == PlatformMedia::AVFoundationMediaPlayerType) {
             AVPlayer *player = _videoElement->platformMedia().media.avfMediaPlayer;
             RetainPtr<AVPlayerLayer> layer = adoptNS([allocAVPlayerLayerInstance() init]);
@@ -150,6 +161,9 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 
             [player addObserver:self forKeyPath:@"rate" options:0 context:nullptr];
         }
+#else
+            ASSERT_NOT_REACHED();
+#endif
     }
 }
 
@@ -175,9 +189,11 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 
 - (void)windowDidExitFullscreen
 {
+#if USE(AVFOUNDATION)
     CALayer *layer = [(NSView*)[[self window] contentView] layer];
     if ([layer isKindOfClass:getAVPlayerLayerClass()])
         [[(AVPlayerLayer*)layer player] removeObserver:self forKeyPath:@"rate"];
+#endif
 
     [self clearFadeAnimation];
     [[self window] close];
@@ -219,13 +235,16 @@ SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
 - (void)applicationDidResignActive:(NSNotification*)notification
 {   
     UNUSED_PARAM(notification);
+    // Check to see if the fullscreenWindow is on the active space; this function is available
+    // on 10.6 and later, so default to YES if the function is not available:
     NSWindow* fullscreenWindow = [self fullscreenWindow];
+    BOOL isOnActiveSpace = ([fullscreenWindow respondsToSelector:@selector(isOnActiveSpace)] ? [fullscreenWindow isOnActiveSpace] : YES);
 
     // Replicate the QuickTime Player (X) behavior when losing active application status:
     // Is the fullscreen screen the main screen? (Note: this covers the case where only a 
     // single screen is available.)  Is the fullscreen screen on the current space? IFF so, 
     // then exit fullscreen mode.    
-    if (fullscreenWindow.screen == [NSScreen screens][0] && fullscreenWindow.onActiveSpace)
+    if ([fullscreenWindow screen] == [[NSScreen screens] objectAtIndex:0] && isOnActiveSpace)
          [self requestExitFullscreenWithAnimation:NO];
 }
          
@@ -338,6 +357,7 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
 - (void)updateMenuAndDockForFullscreen
 {
     // NSApplicationPresentationOptions is available on > 10.6 only:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSApplicationPresentationOptions options = NSApplicationPresentationDefault;
     NSScreen* fullscreenScreen = [[self window] screen];
 
@@ -355,6 +375,9 @@ static NSWindow *createBackgroundFullscreenWindow(NSRect frame, int level)
     }
 
     NSApp.presentationOptions = options;
+#else
+    SetSystemUIMode(_isEndingFullscreen ? kUIModeNormal : kUIModeAllHidden, 0);
+#endif
 }
 
 - (void)updatePowerAssertions

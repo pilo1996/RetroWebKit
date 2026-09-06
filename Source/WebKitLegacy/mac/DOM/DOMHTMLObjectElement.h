@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLElement.h>
+#import <WebKit/DOMHTMLElement.h>
 
 @class DOMDocument;
 @class DOMHTMLFormElement;
@@ -32,7 +32,7 @@
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLObjectElement : DOMHTMLElement
-@property (readonly, strong) DOMHTMLFormElement *form;
+@property (readonly, retain) DOMHTMLFormElement *form;
 @property (copy) NSString *code;
 @property (copy) NSString *align;
 @property (copy) NSString *archive;
@@ -49,6 +49,6 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (copy) NSString *useMap;
 @property int vspace;
 @property (copy) NSString *width;
-@property (readonly, strong) DOMDocument *contentDocument;
+@property (readonly, retain) DOMDocument *contentDocument;
 @property (readonly, copy) NSURL *absoluteImageURL WEBKIT_AVAILABLE_MAC(10_5);
 @end

@@ -108,16 +108,23 @@ void* OSAllocator::reserveAndCommit(size_t bytes, Usage usage, bool writable, bo
     if (result == MAP_FAILED) {
         if (executable)
             result = 0;
-        else
+        else {
+            WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "mmap failed mapping %lu bytes starting at or after address 0x%p (prot: 0x%08x, flags: 0x%08x, fildes: 0x%08x)", bytes, result, protection, flags, fd);
             CRASH();
+        }
     }
     if (result && includesGuardPages) {
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        while (mprotect(result, pageSize(), PROT_NONE) == -1 && errno == EAGAIN) { };
+        while (mprotect(static_cast<char*>(result) + bytes - pageSize(), pageSize(), PROT_NONE) == -1 && errno == EAGAIN) { };
+#else
         // We use mmap to remap the guardpages rather than using mprotect as
         // mprotect results in multiple references to the code region.  This
         // breaks the madvise based mechanism we use to return physical memory
         // to the OS.
         mmap(result, pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
         mmap(static_cast<char*>(result) + bytes - pageSize(), pageSize(), PROT_NONE, MAP_FIXED | MAP_PRIVATE | MAP_ANON, fd, 0);
+#endif
     }
     return result;
 }
@@ -156,7 +163,14 @@ void OSAllocator::decommit(void* address, size_t bytes)
     while (madvise(address, bytes, MADV_FREE_REUSABLE) == -1 && errno == EAGAIN) { }
 #elif HAVE(MADV_FREE)
     while (madvise(address, bytes, MADV_FREE) == -1 && errno == EAGAIN) { }
-#elif HAVE(MADV_DONTNEED)
+// this does work but is too slow to be usable
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050 && 0
+    // mmap()'ing the same range again will throw away the old mapping, deallocating its pages
+    // internally mmap() calls vm_map() passing VM_FLAGS_OVERWRITE, but that flag isn't available for user access
+    // FIXME: we lose the VM tag here
+    RELEASE_ASSERT(mmap(address, bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_FIXED, -1, 0) == address);
+// on 10.5 calling madvise is just a waste of time; additionally despite of being defined in the system headers the kernel doesn't know MADV_FREE and returns an error when being called with this value
+#elif HAVE(MADV_DONTNEED) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     while (madvise(address, bytes, MADV_DONTNEED) == -1 && errno == EAGAIN) { }
 #else
     UNUSED_PARAM(address);
@@ -166,7 +180,8 @@ void OSAllocator::decommit(void* address, size_t bytes)
 
 void OSAllocator::hintMemoryNotNeededSoon(void* address, size_t bytes)
 {
-#if HAVE(MADV_DONTNEED)
+// on 10.5 calling madvise is just a waste of time
+#if HAVE(MADV_DONTNEED) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     while (madvise(address, bytes, MADV_DONTNEED) == -1 && errno == EAGAIN) { }
 #else
     UNUSED_PARAM(address);
@@ -177,8 +192,10 @@ void OSAllocator::hintMemoryNotNeededSoon(void* address, size_t bytes)
 void OSAllocator::releaseDecommitted(void* address, size_t bytes)
 {
     int result = munmap(address, bytes);
-    if (result == -1)
+    if (result == -1) {
+        WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "munmap failed unmapping %lu bytes at address 0x%p", bytes, address);
         CRASH();
+    }
 }
 
 } // namespace WTF

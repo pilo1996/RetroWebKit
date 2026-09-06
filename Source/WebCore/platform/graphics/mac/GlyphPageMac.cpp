@@ -60,7 +60,7 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
     unsigned glyphStep = bufferLength / GlyphPage::size;
 
     if (shouldFillWithVerticalGlyphs(buffer, bufferLength, font))
-        CTFontGetVerticalGlyphsForCharacters(font.platformData().ctFont(), buffer, glyphs.data(), bufferLength);
+        wkGetVerticalGlyphsForCharacters(font.platformData().ctFont(), buffer, glyphs.data(), bufferLength);
     else
         CTFontGetGlyphsForCharacters(font.platformData().ctFont(), buffer, glyphs.data(), bufferLength);
 

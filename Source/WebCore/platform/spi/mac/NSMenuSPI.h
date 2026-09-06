@@ -33,10 +33,11 @@
 
 #else
 
-typedef NS_ENUM(NSInteger, NSMenuType) {
+enum {
     NSMenuTypeNone = 0,
     NSMenuTypeContextMenu,
 };
+typedef NSInteger NSMenuType;
 
 @interface NSMenu ()
 + (NSMenuType)menuTypeForEvent:(NSEvent *)event;
@@ -44,9 +45,9 @@ typedef NS_ENUM(NSInteger, NSMenuType) {
 
 @class QLPreviewMenuItem;
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED < 101200
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 101200 && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 @interface NSMenuItem () <NSUserInterfaceItemIdentification>
-#else 
+#else
 @interface NSMenuItem ()
 #endif
 

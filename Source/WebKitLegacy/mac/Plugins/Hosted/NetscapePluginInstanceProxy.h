@@ -32,7 +32,7 @@
 #include <JavaScriptCore/VM.h>
 #include <JavaScriptCore/Strong.h>
 #include <WebCore/Timer.h>
-#include <WebKitLegacy/npapi.h>
+#include <WebKit/npapi.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>

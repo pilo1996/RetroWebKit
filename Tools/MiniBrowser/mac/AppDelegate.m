@@ -28,6 +28,7 @@
 #import "ExtensionManagerWindowController.h"
 #import "SettingsController.h"
 #import "WK1BrowserWindowController.h"
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 #import "WK2BrowserWindowController.h"
 #import <WebKit/WKPreferencesPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
@@ -37,6 +38,7 @@
 #import <WebKit/WebKit.h>
 #import <WebKit/_WKProcessPoolConfiguration.h>
 #import <WebKit/_WKUserContentExtensionStore.h>
+#endif
 
 #if WK_API_ENABLED
 #import <WebKit/_WKExperimentalFeature.h>
@@ -242,6 +244,7 @@ WKPreferences *defaultPreferences()
 
     if (browserWindowController) {
         NSOpenPanel *openPanel = [[NSOpenPanel openPanel] retain];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         [openPanel beginSheetModalForWindow:browserWindowController.window completionHandler:^(NSInteger result) {
             if (result != NSModalResponseOK)
                 return;
@@ -249,9 +252,27 @@ WKPreferences *defaultPreferences()
             NSURL *url = [openPanel.URLs objectAtIndex:0];
             [browserWindowController loadURLString:[url absoluteString]];
         }];
+#else
+        [openPanel beginSheetForDirectory:nil
+            file:nil
+            modalForWindow:browserWindowController.window
+            modalDelegate:self
+            didEndSelector:@selector(openPanelDidEnd:returnCode:contextInfo:)
+            contextInfo:[^(NSInteger returnCode) {
+                [openPanel autorelease];
+                if (returnCode != NSOKButton || ![[openPanel filenames] count])
+                    return;
+
+                NSString* filePath = [[openPanel filenames] objectAtIndex:0];
+
+                [browserWindowController loadURLString:[[NSURL fileURLWithPath:filePath] absoluteString]];
+            } copy]
+        ];
+#endif
         return;
     }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSOpenPanel *openPanel = [NSOpenPanel openPanel];
     [openPanel beginWithCompletionHandler:^(NSInteger result) {
         if (result != NSModalResponseOK)
@@ -263,7 +284,18 @@ WKPreferences *defaultPreferences()
         NSURL *url = [openPanel.URLs objectAtIndex:0];
         [controller loadURLString:[url absoluteString]];
     }];
+#endif
 }
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)openPanelDidEnd:(NSOpenPanel *)sheet returnCode:(int)returnCode contextInfo:(void (^)(NSInteger))contextInfo
+{
+    assert(contextInfo);
+
+    contextInfo(returnCode);
+    [contextInfo release];
+}
+#endif
 
 - (void)didChangeSettings
 {

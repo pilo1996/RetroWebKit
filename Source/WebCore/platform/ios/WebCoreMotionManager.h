@@ -26,12 +26,12 @@
 #ifndef WebCoreMotionManager_h
 #define WebCoreMotionManager_h
 
+#if PLATFORM(IOS)
 #import "DeviceMotionClientIOS.h"
 #import "DeviceOrientationClientIOS.h"
 #import <CoreLocation/CoreLocation.h>
 #import <wtf/HashCountedSet.h>
 
-#if PLATFORM(IOS)
 
 #import <CoreMotion/CoreMotion.h>
 

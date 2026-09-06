@@ -26,6 +26,8 @@
 #import "config.h"
 #import "FileMonitor.h"
 
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050)
+
 #import "FileSystem.h"
 #import "Logging.h"
 #import <wtf/BlockPtr.h>
@@ -88,3 +90,5 @@ FileMonitor::~FileMonitor()
 }
 
 } // namespace WebCore
+
+#endif

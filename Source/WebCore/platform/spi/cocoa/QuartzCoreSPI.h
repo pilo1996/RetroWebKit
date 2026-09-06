@@ -58,6 +58,7 @@
 - (uint32_t)createImageSlot:(CGSize)size hasAlpha:(BOOL)flag;
 - (void)deleteSlot:(uint32_t)name;
 - (void)invalidate;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 - (void)invalidateFences;
 - (mach_port_t)createFencePort;
 - (void)setFencePort:(mach_port_t)port;
@@ -65,11 +66,12 @@
 #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 @property uint32_t commitPriority;
 #endif
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
 @property BOOL colorMatchUntaggedContent;
 #endif
+#endif
 @property (readonly) uint32_t contextId;
-@property (strong) CALayer *layer;
+@property (retain) CALayer *layer;
 @property CGColorSpaceRef colorSpace;
 @end
 
@@ -77,7 +79,13 @@
 - (CAContext *)context;
 - (CGSize)size;
 - (void *)regionBeingDrawn;
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)reloadValueForKeyPath:(NSString *)keyPath;
+#else
+- (void)setContentsChanged;
+#endif
+- (CGAffineTransform)contentsTransform;
+- (void)setContentsTransform:(CGAffineTransform)t;
 @property BOOL allowsGroupBlending;
 @property BOOL canDrawConcurrently;
 @property BOOL contentsOpaque;
@@ -121,6 +129,7 @@ typedef struct CAColorMatrix CAColorMatrix;
 @property (copy) NSString *name;
 @end
 
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100)
 typedef enum {
     kCATransactionPhasePreLayout,
     kCATransactionPhasePreCommit,
@@ -136,15 +145,26 @@ typedef enum {
 #endif
 
 @end
+#endif
 
 @interface CALayerHost : CALayer
 @property uint32_t contextId;
 @property BOOL inheritsSecurity;
 @end
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+@interface CASpringAnimation : CABasicAnimation
+@property CGFloat mass;
+@property CGFloat stiffness;
+@property CGFloat damping;
+@property CGFloat velocity;
+@property CGFloat initialVelocity;
+@end
+#else
 @interface CASpringAnimation (Private)
 @property CGFloat velocity;
 @end
+#endif
 
 #endif // __OBJC__
 
@@ -187,6 +207,9 @@ extern NSString * const kCAFilterColorMatrix;
 extern NSString * const kCAFilterColorMonochrome;
 extern NSString * const kCAFilterColorHueRotate;
 extern NSString * const kCAFilterColorSaturate;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+extern NSString * const kCAFilterTrilinear;
+#endif
 extern NSString * const kCAFilterGaussianBlur;
 extern NSString * const kCAFilterPlusD;
 extern NSString * const kCAFilterPlusL;

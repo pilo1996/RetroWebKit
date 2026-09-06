@@ -26,13 +26,14 @@
 #include "config.h"
 #include "CryptoAlgorithmRSASSA_PKCS1_v1_5.h"
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(SUBTLE_CRYPTO) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 #include "CommonCryptoUtilities.h"
 #include "CryptoAlgorithmRsaSsaParamsDeprecated.h"
 #include "CryptoDigestAlgorithm.h"
 #include "CryptoKeyRSA.h"
 #include "ExceptionCode.h"
+#include "NotImplemented.h"
 #include "ScriptExecutionContext.h"
 
 namespace WebCore {

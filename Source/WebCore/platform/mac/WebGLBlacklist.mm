@@ -26,7 +26,7 @@
 #import "config.h"
 #import "WebGLBlacklist.h"
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 
 #import "BlacklistUpdater.h"
 #import "CFUtilitiesSPI.h"

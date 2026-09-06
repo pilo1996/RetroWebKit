@@ -68,7 +68,11 @@ static int WebKitLinkTimeVersion(void)
 #endif
 }
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070)
+
 bool linkedOnOrAfter(SDKVersion sdkVersion)
 {
     return dyld_get_program_sdk_version() >= static_cast<uint32_t>(sdkVersion);
 }
+
+#endif

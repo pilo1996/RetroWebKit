@@ -23,18 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
+#import <WebKit/DOMObject.h>
 
 @class DOMNode;
 @protocol DOMNodeFilter;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMTreeWalker : DOMObject
-@property (readonly, strong) DOMNode *root;
+@property (readonly, retain) DOMNode *root;
 @property (readonly) unsigned whatToShow;
-@property (readonly, strong) id <DOMNodeFilter> filter;
+@property (readonly, retain) id <DOMNodeFilter> filter;
 @property (readonly) BOOL expandEntityReferences;
-@property (strong) DOMNode *currentNode;
+@property (retain) DOMNode *currentNode;
 
 - (DOMNode *)parentNode;
 - (DOMNode *)firstChild;

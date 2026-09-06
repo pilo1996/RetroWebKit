@@ -315,6 +315,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
     // elapsedTime will evaluate to false as the currentTime will be a lot
     // greater than the current->m_lastDecodedAccessTime.
     // For more details see: https://bugs.webkit.org/show_bug.cgi?id=30209
+#if 1
     auto it = m_liveDecodedResources.begin();
     while (it != m_liveDecodedResources.end()) {
         auto* current = *it;
@@ -327,6 +328,14 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
         // by a given iterator.
         ++it;
 
+#else
+    // Make a copy of m_liveDecodedResources first (and ref the resources) as calling
+    // destroyDecodedData() can alter m_liveDecodedResources.
+    Vector<CachedResourceHandle<CachedResource>> liveDecodedResources;
+    copyToVector(m_liveDecodedResources, liveDecodedResources);
+
+    for (auto& current : liveDecodedResources) {
+#endif
         ASSERT(current->hasClients());
         if (current->isLoaded() && current->decodedSize()) {
             // Check to see if the remaining resources are too new to prune.

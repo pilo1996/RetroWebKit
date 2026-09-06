@@ -31,6 +31,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <wtf/Assertions.h>
+#include <wtf/FlipBytes.h>
 
 extern "C" void JSSynchronousGarbageCollectForDebugging(JSContextRef);
 
@@ -237,16 +238,26 @@ int testTypedArrayCAPI()
     ASSERT(JSObjectGetTypedArrayLength(context, typedArray, nullptr) == 10);
 
     // Test buffer is connected to typedArray.
+#if CPU(BIG_ENDIAN)
+    buffer[1] = WTF::flipBytes((unsigned)1);
+#else
     buffer[1] = 1;
+#endif
     JSValueRef v = JSObjectGetPropertyAtIndex(context, typedArray, 1, nullptr);
     failed = failed || assertEqualsAsNumber(context, v, 1);
 
     // Test passing a buffer from a new array to an old array
     typedArray = JSObjectMakeTypedArrayWithBytesNoCopy(context, kJSTypedArrayTypeUint32Array, buffer, 40, id, nullptr, nullptr);
     buffer = static_cast<unsigned*>(JSObjectGetTypedArrayBytesPtr(context, typedArray, nullptr));
+#if CPU(BIG_ENDIAN)
+    ASSERT(buffer[1] == WTF::flipBytes((unsigned)1));
+    buffer[1] = WTF::flipBytes((unsigned)20);
+    ASSERT(((unsigned*)JSObjectGetArrayBufferBytesPtr(context, data, nullptr))[1] == WTF::flipBytes((unsigned)20));
+#else
     ASSERT(buffer[1] == 1);
     buffer[1] = 20;
     ASSERT(((unsigned*)JSObjectGetArrayBufferBytesPtr(context, data, nullptr))[1] == 20);
+#endif
 
     // Test constructing with data and the data returned are the same even with an offset.
     typedArray = JSObjectMakeTypedArrayWithArrayBufferAndOffset(context, kJSTypedArrayTypeUint32Array, data, 4, 9, nullptr);

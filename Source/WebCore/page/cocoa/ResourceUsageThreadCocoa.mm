@@ -77,25 +77,35 @@ const char* displayNameForVMTag(unsigned tag)
     switch (tag) {
     case VM_MEMORY_IOKIT: return "IOKit";
     case VM_MEMORY_LAYERKIT: return "CoreAnimation";
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_IMAGEIO: return "ImageIO";
+#endif
     case VM_MEMORY_CGIMAGE: return "CG image";
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_JAVASCRIPT_JIT_EXECUTABLE_ALLOCATOR: return "JSC JIT";
     case VM_MEMORY_JAVASCRIPT_CORE: return "WebAssembly";
+#endif
     case VM_MEMORY_MALLOC: return "malloc";
     case VM_MEMORY_MALLOC_HUGE: return "malloc (huge)";
     case VM_MEMORY_MALLOC_LARGE: return "malloc (large)";
     case VM_MEMORY_MALLOC_SMALL: return "malloc (small)";
     case VM_MEMORY_MALLOC_TINY: return "malloc (tiny)";
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_MALLOC_NANO: return "malloc (nano)";
+#endif
     case VM_MEMORY_TCMALLOC: return "bmalloc";
     case VM_MEMORY_FOUNDATION: return "Foundation";
     case VM_MEMORY_STACK: return "Stack";
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_SQLITE: return "SQLite";
     case VM_MEMORY_UNSHARED_PMAP: return "pmap (unshared)";
+#endif
     case VM_MEMORY_DYLIB: return "dylib";
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_CORESERVICES: return "CoreServices";
     case VM_MEMORY_OS_ALLOC_ONCE: return "os_alloc_once";
     case VM_MEMORY_LIBDISPATCH: return "libdispatch";
+#endif
     default: return nullptr;
     }
 }
@@ -129,8 +139,12 @@ std::array<TagInfo, 256> pagesPerVMTag()
 
         bool anonymous = !info.external_pager;
         if (anonymous) {
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
             tags[info.user_tag].dirty += info.pages_resident - info.pages_reusable;
             tags[info.user_tag].reclaimable += info.pages_reusable;
+#else
+            tags[info.user_tag].dirty += info.pages_resident;
+#endif
         } else
             tags[info.user_tag].dirty += info.pages_dirtied;
     }
@@ -177,20 +191,26 @@ static unsigned categoryForVMTag(unsigned tag)
     case VM_MEMORY_IOKIT:
     case VM_MEMORY_LAYERKIT:
         return MemoryCategory::Layers;
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_IMAGEIO:
+#endif
     case VM_MEMORY_CGIMAGE:
         return MemoryCategory::Images;
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_JAVASCRIPT_JIT_EXECUTABLE_ALLOCATOR:
         return MemoryCategory::JSJIT;
     case VM_MEMORY_JAVASCRIPT_CORE:
         return MemoryCategory::WebAssembly;
+#endif
     case VM_MEMORY_MALLOC:
     case VM_MEMORY_MALLOC_HUGE:
     case VM_MEMORY_MALLOC_LARGE:
     case VM_MEMORY_MALLOC_SMALL:
     case VM_MEMORY_MALLOC_TINY:
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1080)
     case VM_MEMORY_MALLOC_NANO:
         return MemoryCategory::LibcMalloc;
+#endif
     case VM_MEMORY_TCMALLOC:
         return MemoryCategory::bmalloc;
     default:

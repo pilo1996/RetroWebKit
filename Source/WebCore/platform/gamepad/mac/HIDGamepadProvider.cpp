@@ -45,7 +45,7 @@ static RetainPtr<CFDictionaryRef> deviceMatchingDictionary(uint32_t usagePage, u
     RetainPtr<CFNumberRef> pageNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usagePage));
     RetainPtr<CFNumberRef> usageNumber = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &usage));
 
-    CFStringRef keys[] = { CFSTR(kIOHIDDeviceUsagePageKey), CFSTR(kIOHIDDeviceUsageKey) };
+    static CFStringRef keys[] = { CFSTR(kIOHIDDeviceUsagePageKey), CFSTR(kIOHIDDeviceUsageKey) };
     CFNumberRef values[] = { pageNumber.get(), usageNumber.get() };
 
     return adoptCF(CFDictionaryCreate(kCFAllocatorDefault, (const void**)keys, (const void**)values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
@@ -102,10 +102,10 @@ HIDGamepadProvider::HIDGamepadProvider()
 
 void HIDGamepadProvider::stopMonitoringInput()
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonnull"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wnonnull")
     IOHIDManagerRegisterInputValueCallback(m_manager.get(), nullptr, nullptr);
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
 
 void HIDGamepadProvider::startMonitoringInput()

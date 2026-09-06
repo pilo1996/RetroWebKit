@@ -92,6 +92,10 @@ NSString *WebHistoryItemChangedNotification = @"WebHistoryItemChangedNotificatio
 
 using namespace WebCore;
 
+@interface WebHistoryItem (WebHistoryItemPrivate)
+- (void)_recordVisitAtTime:(NSTimeInterval)time increaseVisitCount:(BOOL)increaseVisitCount;
+@end
+
 @implementation WebHistoryItemPrivate
 
 @end
@@ -128,14 +132,15 @@ void WKNotifyHistoryItemChanged(HistoryItem*)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
-- (instancetype)init
+- (id)init
 {
     return [self initWithWebCoreHistoryItem:HistoryItem::create()];
 }
 
-- (instancetype)initWithURLString:(NSString *)URLString title:(NSString *)title lastVisitedTimeInterval:(NSTimeInterval)time
+- (id)initWithURLString:(NSString *)URLString title:(NSString *)title lastVisitedTimeInterval:(NSTimeInterval)time
 {
     WebCoreThreadViolationCheckRoundOne();
 
@@ -154,6 +159,18 @@ void WKNotifyHistoryItemChanged(HistoryItem*)
     [_private release];
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    WebCoreThreadViolationCheckRoundOne();
+
+    // FIXME: ~HistoryItem is what releases the history item's icon from the icon database
+    // It's probably not good to release icons from the database only when the object is garbage-collected. 
+    // Need to change design so this happens at a predictable time.
+    historyItemWrappers().remove(_private->_historyItem.get());
+
+    [super finalize];
 }
 
 - (id)copyWithZone:(NSZone *)zone
@@ -349,7 +366,9 @@ WebHistoryItem *kit(HistoryItem* item)
         auto redirectURLsVector = std::make_unique<Vector<String>>();
         redirectURLsVector->reserveInitialCapacity([redirectURLs count]);
 
-        for (id redirectURL in redirectURLs) {
+        NSEnumerator *enumerator = [redirectURLs objectEnumerator];
+        id redirectURL;
+        while ((redirectURL = [enumerator nextObject]) != nil) {
             if (![redirectURL isKindOfClass:[NSString class]])
                 continue;
 
@@ -515,6 +534,11 @@ WebHistoryItem *kit(HistoryItem* item)
     if (url.isEmpty())
         return nil;
     return url;
+}
+
+- (WebHistoryItem *)targetItem
+{    
+    return kit(core(_private)->targetItem());
 }
 
 #if !PLATFORM(IOS)

@@ -66,10 +66,14 @@
 #include "CSSMediaRule.cpp"
 #include "CSSNamedImageValue.cpp"
 #include "CSSPageRule.cpp"
-#include "CSSParser.cpp"
-#include "CSSParserSelector.cpp"
+#if PLATFORM(WIN)
+#include "parser/CSSParser.cpp"
+#endif
+#include "parser/CSSParserSelector.cpp"
 #include "CSSProperty.cpp"
+#if PLATFORM(WIN)
 #include "CSSPropertySourceData.cpp"
+#endif
 #include "CSSReflectValue.cpp"
 #include "CSSRevertValue.cpp"
 #include "CSSRule.cpp"
@@ -110,11 +114,12 @@
 #include "SVGCSSComputedStyleDeclaration.cpp"
 #include "SelectorChecker.cpp"
 #include "SelectorFilter.cpp"
-#include "StyleInvalidator.cpp"
 #include "StyleMedia.cpp"
 #include "StyleProperties.cpp"
 #include "StylePropertyShorthand.cpp"
+#if PLATFORM(WIN)
 #include "StyleResolver.cpp"
+#endif
 #include "StyleRule.cpp"
 #include "StyleRuleImport.cpp"
 #include "StyleSheet.cpp"

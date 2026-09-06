@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
-#import "WKUtilities.h"
+#include "config.h"
+#include "WKUtilities.h"
 
 #if PLATFORM(IOS)
 

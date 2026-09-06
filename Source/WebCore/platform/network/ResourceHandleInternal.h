@@ -83,7 +83,7 @@ public:
         , m_defersLoading(defersLoading)
         , m_shouldContentSniff(shouldContentSniff)
         , m_usesAsyncCallbacks(client && client->usesAsyncCallbacks())
-#if USE(CFURLCONNECTION)
+#if USE(CFURLCONNECTION) || PLATFORM(COCOA)
         , m_currentRequest(request)
 #endif
 #if USE(CURL)
@@ -128,6 +128,7 @@ public:
 #endif
 #if PLATFORM(COCOA) && !USE(CFURLCONNECTION)
     RetainPtr<NSURLConnection> m_connection;
+    ResourceRequest m_currentRequest;
     RetainPtr<id> m_delegate;
 #endif
 #if PLATFORM(COCOA)

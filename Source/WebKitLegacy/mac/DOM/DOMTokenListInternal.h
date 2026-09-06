@@ -24,7 +24,7 @@
  */
 
 
-#import <WebKitLegacy/DOMTokenList.h>
+#import <WebKit/DOMTokenList.h>
 
 namespace WebCore {
 class DOMTokenList;

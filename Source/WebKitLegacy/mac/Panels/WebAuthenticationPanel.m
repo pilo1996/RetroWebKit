@@ -28,17 +28,17 @@
 
 #if !PLATFORM(IOS)
 
-#import <WebKitLegacy/WebAuthenticationPanel.h>
+#import <WebKit/WebAuthenticationPanel.h>
 
 #import "WebLocalizableStringsInternal.h"
 #import <Foundation/NSURLAuthenticationChallenge.h>
 #import <Foundation/NSURLProtectionSpace.h>
 #import <Foundation/NSURLCredential.h>
-#import <WebKitLegacy/WebKitNSStringExtras.h>
-#import <WebKitLegacy/WebNSURLExtras.h>
+#import <WebKit/WebKitNSStringExtras.h>
+#import <WebKit/WebNSURLExtras.h>
 #import <wtf/Assertions.h>
 
-#import <WebKitLegacy/WebNSControlExtras.h>
+#import <WebKit/WebNSControlExtras.h>
 
 #define WebAuthenticationPanelNibName @"WebAuthenticationPanel"
 
@@ -78,7 +78,12 @@
     [[self retain] autorelease];
 
     if (usingSheet) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
         [panel.sheetParent endSheet:panel returnCode:NSModalResponseCancel];
+#else
+        [panel orderOut:sender];
+        [[NSApplication sharedApplication] endSheet:panel returnCode:1];
+#endif
     } else {
         [panel orderOut:sender];
         [[NSApplication sharedApplication] stopModalWithCode:1];
@@ -94,7 +99,12 @@
     [[panel retain] autorelease];
 
     if (usingSheet) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
         [panel.sheetParent endSheet:panel returnCode:NSModalResponseOK];
+#else
+        [panel orderOut:sender];
+        [[NSApplication sharedApplication] endSheet:panel returnCode:0];
+#endif
     } else {
         [panel orderOut:sender];
         [[NSApplication sharedApplication] stopModalWithCode:0];
@@ -104,10 +114,10 @@
 - (BOOL)loadNib
 {
     if (!nibLoaded) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
         if ([NSBundle loadNibNamed:WebAuthenticationPanelNibName owner:self]) {
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
             nibLoaded = YES;
             [imageView setImage:[NSImage imageNamed:@"NSApplicationIcon"]];
         } else {
@@ -248,10 +258,14 @@
     usingSheet = TRUE;
     challenge = [chall retain];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     [window beginSheet:panel completionHandler:^(NSModalResponse modalResponse) {
         int returnCode = (modalResponse == NSModalResponseCancel) ? 1 : 0;
         [self sheetDidEnd:panel returnCode:returnCode contextInfo:NULL];
     }];
+#else
+    [[NSApplication sharedApplication] beginSheet:panel modalForWindow:window modalDelegate:self didEndSelector:@selector(sheetDidEnd:returnCode:contextInfo:) contextInfo:NULL];
+#endif
 }
 
 - (void)sheetDidEnd:(NSWindow *)sheet returnCode:(int)returnCode contextInfo:(void  *)contextInfo

@@ -49,7 +49,9 @@
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/RefPtr.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 SOFT_LINK_CONSTANT_MAY_FAIL(Lookup, LUTermOptionDisableSearchTermIndicator, NSString *)
+#endif
 
 namespace WebCore {
 
@@ -71,6 +73,7 @@ RefPtr<Range> DictionaryLookup::rangeForSelection(const VisibleSelection& select
     if (!selectedRange)
         return nullptr;
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     VisiblePosition selectionStart = selection.visibleStart();
     VisiblePosition selectionEnd = selection.visibleEnd();
 
@@ -89,6 +92,9 @@ RefPtr<Range> DictionaryLookup::rangeForSelection(const VisibleSelection& select
     if (Class luLookupDefinitionModule = getLULookupDefinitionModuleClass())
         [luLookupDefinitionModule tokenRangeForString:fullPlainTextString range:rangeToPass options:options];
     END_BLOCK_OBJC_EXCEPTIONS;
+#else
+    UNUSED_PARAM(options);
+#endif
 
     return selectedRange;
 }
@@ -121,6 +127,7 @@ RefPtr<Range> DictionaryLookup::rangeAtHitTestResult(const HitTestResult& hitTes
     if (selectionContainsPosition(position, selection))
         return DictionaryLookup::rangeForSelection(selection, options);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     VisibleSelection selectionAccountingForLineRules = VisibleSelection(position);
     selectionAccountingForLineRules.expandUsingGranularity(WordGranularity);
     position = selectionAccountingForLineRules.start();
@@ -148,9 +155,11 @@ RefPtr<Range> DictionaryLookup::rangeAtHitTestResult(const HitTestResult& hitTes
     return TextIterator::subrange(*fullCharacterRange, extractedRange.location, extractedRange.length);
 
     END_BLOCK_OBJC_EXCEPTIONS;
+#endif
     return nullptr;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static void expandSelectionByCharacters(PDFSelection *selection, NSInteger numberOfCharactersToExpand, NSInteger& charactersAddedBeforeStart, NSInteger& charactersAddedAfterEnd)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -165,6 +174,7 @@ static void expandSelectionByCharacters(PDFSelection *selection, NSInteger numbe
 
     END_BLOCK_OBJC_EXCEPTIONS;
 }
+#endif
 
 NSString *DictionaryLookup::stringForPDFSelection(PDFSelection *selection, NSDictionary **options)
 {
@@ -174,15 +184,16 @@ NSString *DictionaryLookup::stringForPDFSelection(PDFSelection *selection, NSDic
     if (!selection || !selection.string.length)
         return @"";
     
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<PDFSelection> selectionForLookup = adoptNS([selection copy]);
     
     // As context, we are going to use 250 characters of text before and after the point.
-    NSInteger originalLength = [selectionForLookup string].length;
+    NSInteger originalLength = [selectionForLookup.get() string].length;
     NSInteger charactersAddedBeforeStart = 0;
     NSInteger charactersAddedAfterEnd = 0;
     expandSelectionByCharacters(selectionForLookup.get(), 250, charactersAddedBeforeStart, charactersAddedAfterEnd);
     
-    NSString *fullPlainTextString = [selectionForLookup string];
+    NSString *fullPlainTextString = [selectionForLookup.get() string];
     NSRange rangeToPass = NSMakeRange(charactersAddedBeforeStart, 0);
     
     NSRange extractedRange = NSMakeRange(rangeToPass.location, 0);
@@ -200,12 +211,32 @@ NSString *DictionaryLookup::stringForPDFSelection(PDFSelection *selection, NSDic
     [selection extendSelectionAtEnd:lookupAddedAfter];
     
     ASSERT([selection.string isEqualToString:[fullPlainTextString substringWithRange:extractedRange]]);
+#else
+    UNUSED_PARAM(options);
+#endif
     return selection.string;
 
     END_BLOCK_OBJC_EXCEPTIONS;
     return nil;
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+static CGPoint coreGraphicsScreenPointForAppKitScreenPoint(NSPoint point)
+{
+    NSArray *screens = [NSScreen screens];
+
+    if ([screens count] == 0) {
+        // You could theoretically get here if running with no monitor, in which case it doesn't matter
+        // much where the "on-screen" point is.
+        return CGPointMake(point.x, point.y);
+    }
+
+    // Flip the y coordinate from the top of the menu bar screen -- see 4636390
+    return CGPointMake(point.x, NSMaxY([(NSScreen *)[screens objectAtIndex:0] frame]) - point.y);
+}
+#endif
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static PlatformAnimationController showPopupOrCreateAnimationController(bool createAnimationController, const DictionaryPopupInfo& dictionaryPopupInfo, NSView *view, const WTF::Function<void(TextIndicator&)>& textIndicatorInstallationCallback, const WTF::Function<FloatRect(FloatRect)>& rootViewToViewConversionCallback)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -248,14 +279,61 @@ static PlatformAnimationController showPopupOrCreateAnimationController(bool cre
     END_BLOCK_OBJC_EXCEPTIONS;
     return nil;
 }
+#endif
 
 void DictionaryLookup::showPopup(const DictionaryPopupInfo& dictionaryPopupInfo, NSView *view, const WTF::Function<void(TextIndicator&)>& textIndicatorInstallationCallback, const WTF::Function<FloatRect(FloatRect)>& rootViewToViewConversionCallback)
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     showPopupOrCreateAnimationController(false, dictionaryPopupInfo, view, textIndicatorInstallationCallback, rootViewToViewConversionCallback);
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    UNUSED_PARAM(textIndicatorInstallationCallback);
+    UNUSED_PARAM(rootViewToViewConversionCallback);
+    [view showDefinitionForAttributedString:dictionaryPopupInfo.attributedString.get() atPoint:dictionaryPopupInfo.origin];
+#else
+    UNUSED_PARAM(textIndicatorInstallationCallback);
+    UNUSED_PARAM(rootViewToViewConversionCallback);
+    // We soft link to get the function that displays the dictionary (either pop-up window or app) to avoid the performance
+    // penalty of linking to another framework. This function changed signature as well as framework between Tiger and Leopard,
+    // so the two cases are handled separately.
+
+    typedef void (*ServiceWindowShowFunction)(id unusedDictionaryRef, id inWordString, CFRange selectionRange, id unusedFont, CGPoint textOrigin, Boolean verticalText, id unusedTransform);
+    const char *frameworkPath = "/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox";
+    const char *functionName = "HIDictionaryWindowShow";
+ 
+    static bool lookedForFunction = false;
+    static ServiceWindowShowFunction dictionaryServiceWindowShow = NULL;
+ 
+    if (!lookedForFunction) {
+        void* langAnalysisFramework = dlopen(frameworkPath, RTLD_LAZY);
+        ASSERT(langAnalysisFramework);
+        if (langAnalysisFramework)
+            dictionaryServiceWindowShow = (ServiceWindowShowFunction)dlsym(langAnalysisFramework, functionName);
+        lookedForFunction = true;
+    }
+
+    ASSERT(dictionaryServiceWindowShow);
+    if (!dictionaryServiceWindowShow) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+        NSLog(@"Couldn't find the %s function in %s", functionName, frameworkPath);
+#pragma GCC diagnostic pop
+        return;
+    }
+
+    // The HIDictionaryWindowShow function requires the origin, in CG screen coordinates, of the first character of text in the selection.
+    // FIXME 4945808: We approximate this in a way that works well when a single word is selected, and less well in some other cases
+    // (but no worse than we did in Tiger)
+    NSPoint windowPoint = [view convertPoint:dictionaryPopupInfo.origin toView:nil];
+    NSPoint screenPoint = [[view window] convertBaseToScreen:windowPoint];
+
+    dictionaryServiceWindowShow(nil, dictionaryPopupInfo.attributedString.get(), CFRangeMake(0, [dictionaryPopupInfo.attributedString.get() length]), nil,
+                                coreGraphicsScreenPointForAppKitScreenPoint(screenPoint), false, nil);
+#endif
 }
 
 void DictionaryLookup::hidePopup()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 
     if (!getLULookupDefinitionModuleClass())
@@ -263,12 +341,15 @@ void DictionaryLookup::hidePopup()
     [getLULookupDefinitionModuleClass() hideDefinition];
 
     END_BLOCK_OBJC_EXCEPTIONS;
+#endif
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 PlatformAnimationController DictionaryLookup::animationControllerForPopup(const DictionaryPopupInfo& dictionaryPopupInfo, NSView *view, const WTF::Function<void(TextIndicator&)>& textIndicatorInstallationCallback, const WTF::Function<FloatRect(FloatRect)>& rootViewToViewConversionCallback)
 {
     return showPopupOrCreateAnimationController(true, dictionaryPopupInfo, view, textIndicatorInstallationCallback, rootViewToViewConversionCallback);
 }
+#endif
 
 } // namespace WebCore
 

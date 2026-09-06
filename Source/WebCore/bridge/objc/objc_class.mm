@@ -33,10 +33,13 @@
 namespace JSC {
 namespace Bindings {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 ObjcClass::ObjcClass(ClassStructPtr aClass)
     : _isa(aClass)
 {
 }
+#pragma GCC diagnostic pop
 
 static CFMutableDictionaryRef classesByIsA = 0;
 
@@ -46,11 +49,14 @@ static void _createClassesByIsAIfNecessary()
         classesByIsA = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 ObjcClass* ObjcClass::classForIsA(ClassStructPtr isa)
 {
+#pragma GCC diagnostic pop
     _createClassesByIsAIfNecessary();
 
-    ObjcClass* aClass = (ObjcClass*)CFDictionaryGetValue(classesByIsA, isa);
+    ObjcClass* aClass = reinterpret_cast<ObjcClass*>(const_cast<void*>(CFDictionaryGetValue(classesByIsA, isa)));
     if (!aClass) {
         aClass = new ObjcClass(isa);
         CFDictionaryAddValue(classesByIsA, isa, aClass);
@@ -133,7 +139,7 @@ Method* ObjcClass::methodNamed(PropertyName propertyName, Instance*) const
             if ([thisClass respondsToSelector:@selector(webScriptNameForSelector:)])
                 mappedName = [thisClass webScriptNameForSelector:objcMethodSelector];
 
-            if ((mappedName && [mappedName isEqual:(NSString*)methodName.get()]) || strcmp(objcMethodSelectorName, buffer.data()) == 0) {
+            if ((mappedName && [mappedName isEqual:(const NSString*)methodName.get()]) || strcmp(objcMethodSelectorName, buffer.data()) == 0) {
                 auto method = std::make_unique<ObjcMethod>(thisClass, objcMethodSelector);
                 methodPtr = method.get();
                 m_methodCache.add(name.impl(), WTFMove(method));
@@ -189,7 +195,7 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
             if ([thisClass respondsToSelector:@selector(webScriptNameForKey:)])
                 mappedName = [thisClass webScriptNameForKey:UTF8KeyName];
 
-            if ((mappedName && [mappedName isEqual:(NSString*)fieldName.get()]) || [keyName isEqual:(NSString*)fieldName.get()]) {
+            if ((mappedName && [mappedName isEqual:(const NSString*)fieldName.get()]) || [keyName isEqual:(const NSString*)fieldName.get()]) {
                 auto newField = std::make_unique<ObjcField>((CFStringRef)keyName);
                 field = newField.get();
                 m_fieldCache.add(name.impl(), WTFMove(newField));
@@ -220,7 +226,7 @@ Field* ObjcClass::fieldNamed(PropertyName propertyName, Instance* instance) cons
                 if ([thisClass respondsToSelector:@selector(webScriptNameForKey:)])
                     mappedName = [thisClass webScriptNameForKey:objcIvarName];
 
-                if ((mappedName && [mappedName isEqual:(NSString*)fieldName.get()]) || strcmp(objcIvarName, jsName.data()) == 0) {
+                if ((mappedName && [mappedName isEqual:(const NSString*)fieldName.get()]) || strcmp(objcIvarName, jsName.data()) == 0) {
                     auto newField = std::make_unique<ObjcField>(objcIVar);
                     field = newField.get();
                     m_fieldCache.add(name.impl(), WTFMove(newField));

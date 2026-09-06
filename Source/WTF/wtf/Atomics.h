@@ -36,6 +36,8 @@ extern "C" void _ReadWriteBarrier(void);
 #endif
 #include <windows.h>
 #include <intrin.h>
+#elif OS(DARWIN)
+#include <libkern/OSAtomic.h>
 #endif
 
 namespace WTF {
@@ -326,6 +328,16 @@ inline void storeStoreFence() { compilerFence(); }
 inline void memoryBarrierAfterLock() { compilerFence(); }
 inline void memoryBarrierBeforeUnlock() { compilerFence(); }
 inline void crossModifyingCodeFence() { x86_cpuid(); }
+
+#elif OS(DARWIN) && (CPU(PPC) || CPU(PPC64))
+
+inline void loadLoadFence() { compilerFence(); OSMemoryBarrier(); }
+inline void loadStoreFence() { compilerFence(); OSMemoryBarrier(); }
+inline void storeLoadFence() { compilerFence(); OSMemoryBarrier(); }
+inline void storeStoreFence() { compilerFence(); OSMemoryBarrier(); }
+inline void memoryBarrierAfterLock() { compilerFence(); OSMemoryBarrier(); }
+inline void memoryBarrierBeforeUnlock() { compilerFence(); OSMemoryBarrier(); }
+inline void crossModifyingCodeFence() { compilerFence(); OSMemoryBarrier(); }
 
 #else
 

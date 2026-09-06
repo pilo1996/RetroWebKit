@@ -42,7 +42,10 @@ class ObjcInstance;
 
 class ObjcField : public Field {
 public:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ObjcField(IvarStructPtr);
+#pragma GCC diagnostic pop
     ObjcField(CFStringRef name);
     
     virtual JSValue valueFromInstance(ExecState*, const Instance*) const;
@@ -56,7 +59,10 @@ private:
 class ObjcMethod : public Method {
 public:
     ObjcMethod() : _objcClass(0), _selector(0), _javaScriptName(0) {}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     ObjcMethod(ClassStructPtr aClass, SEL _selector);
+#pragma GCC diagnostic pop
 
     virtual int numParameters() const;
 

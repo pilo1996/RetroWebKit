@@ -23,21 +23,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMDocument.h>
+#import <WebKit/DOMDocument.h>
 
 @class DOMHTMLCollection;
 @class NSString;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMHTMLDocument : DOMDocument
-@property (readonly, strong) DOMHTMLCollection *embeds WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMHTMLCollection *plugins WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMHTMLCollection *scripts WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMHTMLCollection *embeds WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMHTMLCollection *plugins WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMHTMLCollection *scripts WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int width WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) int height WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *dir WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *designMode WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, copy) NSString *compatMode WEBKIT_AVAILABLE_MAC(10_6);
+@property (readonly, copy) NSString *compatMode WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *bgColor WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *fgColor WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *alinkColor WEBKIT_AVAILABLE_MAC(10_5);
@@ -48,7 +48,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (void)close;
 - (void)write:(NSString *)text;
 - (void)writeln:(NSString *)text;
-- (void)clear WEBKIT_AVAILABLE_MAC(10_6);
+- (void)clear WEBKIT_AVAILABLE_MAC(10_5);
 - (void)captureEvents WEBKIT_AVAILABLE_MAC(10_5);
 - (void)releaseEvents WEBKIT_AVAILABLE_MAC(10_5);
 @end

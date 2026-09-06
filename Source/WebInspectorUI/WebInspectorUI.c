@@ -24,3 +24,4 @@
  */
 
 // Intentionally empty. This file is needed to create a linkable framework binary.
+int dummy;

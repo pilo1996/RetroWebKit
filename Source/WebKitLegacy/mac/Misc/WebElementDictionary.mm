@@ -41,8 +41,8 @@
 #import <WebCore/HitTestResult.h>
 #import <WebCore/Image.h>
 #import <WebCore/WebCoreObjCExtras.h>
-#import <WebKitLegacy/DOMCore.h>
-#import <WebKitLegacy/DOMExtensions.h>
+#import <WebKit/DOMCore.h>
+#import <WebKit/DOMExtensions.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
 #import <wtf/RunLoop.h>
@@ -71,6 +71,7 @@ static void cacheValueForKey(const void *key, const void *value, void *self)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
+    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 + (void)initializeLookupTable
@@ -120,6 +121,12 @@ static void cacheValueForKey(const void *key, const void *value, void *self)
     [_cache release];
     [_nilValues release];
     [super dealloc];
+}
+
+- (void)finalize
+{
+    delete _result;
+    [super finalize];
 }
 
 - (void)_fillCache

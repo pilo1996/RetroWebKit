@@ -38,20 +38,26 @@
 
 typedef uint32_t IOPMAssertionID;
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
 WTF_EXTERN_C_BEGIN
 
 const CFStringRef kIOPMAssertionTypePreventUserIdleDisplaySleep = CFSTR("PreventUserIdleDisplaySleep");
 const CFStringRef kIOPMAssertionTypePreventUserIdleSystemSleep = CFSTR("PreventUserIdleSystemSleep");
 
 WTF_EXTERN_C_END
+#endif
 
 #endif
 
 WTF_EXTERN_C_BEGIN
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+IOReturn IOPMAssertionCreateWithName(CFStringRef assertionType, IOPMAssertionLevel assertionLevel, CFStringRef name, IOPMAssertionID *assertionID);
+#else
 IOReturn IOPMAssertionCreateWithDescription(CFStringRef assertionType, CFStringRef name, CFStringRef details, CFStringRef humanReadableReason,
                                                      CFStringRef localizationBundlePath, CFTimeInterval timeout, CFStringRef timeoutAction, IOPMAssertionID *);
 IOReturn IOPMAssertionRelease(IOPMAssertionID);
+#endif
 
 WTF_EXTERN_C_END
 

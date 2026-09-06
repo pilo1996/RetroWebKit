@@ -188,7 +188,7 @@ protected:
 
     // FIXME: use templates to reduce the amount of duplicated get*() methods.
     bool getBoolean(const String& name, bool& output) const;
-    template<class T> bool getDouble(const String& name, T& output) const
+    template<class T> ALWAYS_INLINE bool getDouble(const String& name, T& output) const
     {
         RefPtr<InspectorValue> value;
         if (!getValue(name, value))
@@ -196,7 +196,7 @@ protected:
 
         return value->asDouble(output);
     }
-    template<class T> bool getInteger(const String& name, T& output) const
+    template<class T> ALWAYS_INLINE bool getInteger(const String& name, T& output) const
     {
         RefPtr<InspectorValue> value;
         if (!getValue(name, value))
@@ -318,90 +318,90 @@ public:
 };
 
 
-inline InspectorObjectBase::iterator InspectorObjectBase::find(const String& name)
+ALWAYS_INLINE InspectorObjectBase::iterator InspectorObjectBase::find(const String& name)
 {
     return m_map.find(name);
 }
 
-inline InspectorObjectBase::const_iterator InspectorObjectBase::find(const String& name) const
+ALWAYS_INLINE InspectorObjectBase::const_iterator InspectorObjectBase::find(const String& name) const
 {
     return m_map.find(name);
 }
 
-inline void InspectorObjectBase::setBoolean(const String& name, bool value)
+ALWAYS_INLINE void InspectorObjectBase::setBoolean(const String& name, bool value)
 {
     setValue(name, InspectorValue::create(value));
 }
 
-inline void InspectorObjectBase::setInteger(const String& name, int value)
+ALWAYS_INLINE void InspectorObjectBase::setInteger(const String& name, int value)
 {
     setValue(name, InspectorValue::create(value));
 }
 
-inline void InspectorObjectBase::setDouble(const String& name, double value)
+ALWAYS_INLINE void InspectorObjectBase::setDouble(const String& name, double value)
 {
     setValue(name, InspectorValue::create(value));
 }
 
-inline void InspectorObjectBase::setString(const String& name, const String& value)
+ALWAYS_INLINE void InspectorObjectBase::setString(const String& name, const String& value)
 {
     setValue(name, InspectorValue::create(value));
 }
 
-inline void InspectorObjectBase::setValue(const String& name, RefPtr<InspectorValue>&& value)
+ALWAYS_INLINE void InspectorObjectBase::setValue(const String& name, RefPtr<InspectorValue>&& value)
 {
     ASSERT(value);
     if (m_map.set(name, WTFMove(value)).isNewEntry)
         m_order.append(name);
 }
 
-inline void InspectorObjectBase::setObject(const String& name, RefPtr<InspectorObjectBase>&& value)
+ALWAYS_INLINE void InspectorObjectBase::setObject(const String& name, RefPtr<InspectorObjectBase>&& value)
 {
     ASSERT(value);
     if (m_map.set(name, WTFMove(value)).isNewEntry)
         m_order.append(name);
 }
 
-inline void InspectorObjectBase::setArray(const String& name, RefPtr<InspectorArrayBase>&& value)
+ALWAYS_INLINE void InspectorObjectBase::setArray(const String& name, RefPtr<InspectorArrayBase>&& value)
 {
     ASSERT(value);
     if (m_map.set(name, WTFMove(value)).isNewEntry)
         m_order.append(name);
 }
 
-inline void InspectorArrayBase::pushBoolean(bool value)
+ALWAYS_INLINE void InspectorArrayBase::pushBoolean(bool value)
 {
     m_map.append(InspectorValue::create(value));
 }
 
-inline void InspectorArrayBase::pushInteger(int value)
+ALWAYS_INLINE void InspectorArrayBase::pushInteger(int value)
 {
     m_map.append(InspectorValue::create(value));
 }
 
-inline void InspectorArrayBase::pushDouble(double value)
+ALWAYS_INLINE void InspectorArrayBase::pushDouble(double value)
 {
     m_map.append(InspectorValue::create(value));
 }
 
-inline void InspectorArrayBase::pushString(const String& value)
+ALWAYS_INLINE void InspectorArrayBase::pushString(const String& value)
 {
     m_map.append(InspectorValue::create(value));
 }
 
-inline void InspectorArrayBase::pushValue(RefPtr<InspectorValue>&& value)
+ALWAYS_INLINE void InspectorArrayBase::pushValue(RefPtr<InspectorValue>&& value)
 {
     ASSERT(value);
     m_map.append(WTFMove(value));
 }
 
-inline void InspectorArrayBase::pushObject(RefPtr<InspectorObjectBase>&& value)
+ALWAYS_INLINE void InspectorArrayBase::pushObject(RefPtr<InspectorObjectBase>&& value)
 {
     ASSERT(value);
     m_map.append(WTFMove(value));
 }
 
-inline void InspectorArrayBase::pushArray(RefPtr<InspectorArrayBase>&& value)
+ALWAYS_INLINE void InspectorArrayBase::pushArray(RefPtr<InspectorArrayBase>&& value)
 {
     ASSERT(value);
     m_map.append(WTFMove(value));

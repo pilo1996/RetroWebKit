@@ -103,7 +103,7 @@ inline double percentAvailableMemoryInUse()
 }
 #endif
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 10100
 inline void setScavengerThreadQOSClass(qos_class_t overrideClass)
 {
     std::unique_lock<StaticMutex> lock(PerProcess<Heap>::mutex());

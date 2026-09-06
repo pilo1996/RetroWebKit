@@ -31,8 +31,8 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKitLegacy/WAKAppKitStubs.h>
-#import <WebKitLegacy/WAKView.h>
+#import <WebKit/WAKAppKitStubs.h>
+#import <WebKit/WAKView.h>
 #if !defined(IBAction)
 #define IBAction void
 #endif
@@ -204,7 +204,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @param groupName The name of the webView set to which this webView will be added.  May be nil.
     @result Returns an initialized WebView.
 */
-- (instancetype)initWithFrame:(NSRect)frame frameName:(NSString *)frameName groupName:(NSString *)groupName;
+- (id)initWithFrame:(NSRect)frame frameName:(NSString *)frameName groupName:(NSString *)groupName;
 
 /*!
     @method close
@@ -260,7 +260,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @abstract The top level frame.
     @discussion Note that even documents that are not framesets will have a mainFrame.
 */
-@property (nonatomic, readonly, strong) WebFrame *mainFrame;
+@property (nonatomic, readonly, retain) WebFrame *mainFrame;
 
 /*!
     @property selectedFrame
@@ -268,13 +268,13 @@ extern NSString *WebViewProgressFinishedNotification;
     @discussion Returns the frame that contains the first responder, if any. Otherwise returns the
     frame that contains a non-zero-length selection, if any. Returns nil if no frame meets these criteria.
 */
-@property (nonatomic, readonly, strong) WebFrame *selectedFrame;
+@property (nonatomic, readonly, retain) WebFrame *selectedFrame;
 
 /*!
     @property backForwardList
     @abstract The backforward list for this WebView.
 */    
-@property (nonatomic, readonly, strong) WebBackForwardList *backForwardList;
+@property (nonatomic, readonly, retain) WebBackForwardList *backForwardList;
 
 /*!
     @method setMaintainsBackForwardList:
@@ -381,7 +381,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @abstract A WebScriptObject that represents the
     window object from the script environment.
 */
-@property (nonatomic, readonly, strong) WebScriptObject *windowScriptObject;
+@property (nonatomic, readonly, retain) WebScriptObject *windowScriptObject;
 
 /*!
     @property preferences
@@ -389,7 +389,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @discussion This method will return [WebPreferences standardPreferences] if no
     other instance of WebPreferences has been set.
 */
-@property (nonatomic, strong) WebPreferences *preferences;
+@property (nonatomic, retain) WebPreferences *preferences;
 
 /*!
     @property preferencesIdentifier
@@ -405,7 +405,7 @@ extern NSString *WebViewProgressFinishedNotification;
     properly. Set a host window so these parts continue to function even when the web view is
     not in an actual window.
 */
-@property (nonatomic, strong) NSWindow *hostWindow;
+@property (nonatomic, retain) NSWindow *hostWindow;
 
 /*!
     @method searchFor:direction:caseSensitive:
@@ -534,7 +534,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @property mainFrameDocument
     @abstract The main frame's DOMDocument.
 */
-@property (nonatomic, readonly, strong) DOMDocument *mainFrameDocument;
+@property (nonatomic, readonly, retain) DOMDocument *mainFrameDocument;
 
 /*!
     @property mainFrameTitle
@@ -554,7 +554,7 @@ extern NSString *WebViewProgressFinishedNotification;
     @property mainFrameIcon
     @abstract The site icon for the current page loaded in the mainFrame, or nil.
 */
-@property (nonatomic, readonly, strong) NSImage *mainFrameIcon;
+@property (nonatomic, readonly, retain) NSImage *mainFrameIcon;
 #endif
 
 @end
@@ -603,17 +603,17 @@ extern NSString * const WebViewDidChangeSelectionNotification;
 @interface WebView (WebViewEditing)
 - (DOMRange *)editableDOMRangeForPoint:(NSPoint)point;
 - (void)setSelectedDOMRange:(DOMRange *)range affinity:(NSSelectionAffinity)selectionAffinity;
-@property (nonatomic, readonly, strong) DOMRange *selectedDOMRange;
+@property (nonatomic, readonly, retain) DOMRange *selectedDOMRange;
 @property (nonatomic, readonly) NSSelectionAffinity selectionAffinity;
 @property (nonatomic, readonly) BOOL maintainsInactiveSelection;
 @property (nonatomic, getter=isEditable) BOOL editable;
-@property (nonatomic, strong) DOMCSSStyleDeclaration *typingStyle;
+@property (nonatomic, retain) DOMCSSStyleDeclaration *typingStyle;
 @property (nonatomic) BOOL smartInsertDeleteEnabled;
 @property (nonatomic, getter=isContinuousSpellCheckingEnabled) BOOL continuousSpellCheckingEnabled;
 #if !TARGET_OS_IPHONE
 @property (nonatomic, readonly) NSInteger spellCheckerDocumentTag;
 #endif
-@property (nonatomic, readonly, strong) NSUndoManager *undoManager;
+@property (nonatomic, readonly, retain) NSUndoManager *undoManager;
 @property (nonatomic, assign) id <WebEditingDelegate> editingDelegate;
 - (DOMCSSStyleDeclaration *)styleDeclarationWithText:(NSString *)text;
 @end

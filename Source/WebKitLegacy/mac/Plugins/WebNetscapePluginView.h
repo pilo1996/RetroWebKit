@@ -29,8 +29,8 @@
 #if ENABLE(NETSCAPE_PLUGIN_API)
 
 #import "WebBaseNetscapePluginView.h"
-#import <WebKitLegacy/npfunctions.h>
-#import <WebKitLegacy/npapi.h>
+#import <WebKit/npfunctions.h>
+#import <WebKit/npapi.h>
 #import <wtf/HashMap.h>
 #import <wtf/HashSet.h>
 

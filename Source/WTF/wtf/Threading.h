@@ -52,12 +52,34 @@ class ThreadMessageData;
 using ThreadIdentifier = uint32_t;
 typedef void (*ThreadFunction)(void* argument);
 
+#if PLATFORM(MAC)
+typedef void* (*ThreadFunctionWithReturnValue)(void* argument);
+
+struct ThreadFunctionWithReturnValueInvocation {
+    ThreadFunctionWithReturnValueInvocation(ThreadFunctionWithReturnValue function, void* data)
+        : function(function)
+        , data(data)
+    {
+    }
+
+    ThreadFunctionWithReturnValue function;
+    void* data;
+};
+
+WTF_EXPORT_PRIVATE ThreadIdentifier createThread(ThreadFunctionWithReturnValue, void*, const char*);
+WTF_EXPORT_PRIVATE ThreadIdentifier createThread(ThreadFunctionWithReturnValue, void*);
+#endif
+
 class ThreadHolder;
 class PrintStream;
 
 class Thread : public ThreadSafeRefCounted<Thread> {
 public:
     friend class ThreadHolder;
+#if PLATFORM(MAC)
+    friend ThreadIdentifier createThread(ThreadFunctionWithReturnValue, void*, const char*);
+    friend ThreadIdentifier createThread(ThreadFunctionWithReturnValue, void*);
+#endif
 
     WTF_EXPORT_PRIVATE ~Thread();
 
@@ -115,12 +137,12 @@ public:
 
     bool operator==(const Thread& thread)
     {
-        return id() == thread.id();
+        return this->id() == thread.id();
     }
 
     bool operator!=(const Thread& thread)
     {
-        return id() != thread.id();
+        return this->id() != thread.id();
     }
 
     static void initializePlatformThreading();
@@ -195,10 +217,7 @@ protected:
 // requirement is that the calls are not reentrant.
 WTF_EXPORT_PRIVATE void initializeThreading();
 
-inline ThreadIdentifier currentThread()
-{
-    return Thread::currentID();
-}
+WTF_EXPORT_PRIVATE ThreadIdentifier currentThread();
 
 
 // FIXME: The following functions remain because they are used from WebKit Windows support library,

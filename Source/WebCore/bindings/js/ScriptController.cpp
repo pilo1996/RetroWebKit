@@ -712,7 +712,7 @@ bool ScriptController::executeIfJavaScriptURL(const URL& url, ShouldReplaceDocum
     if (!protocolIsJavaScript(url))
         return false;
 
-    if (!m_frame.page() || !m_frame.document()->contentSecurityPolicy()->allowJavaScriptURLs(m_frame.document()->url(), eventHandlerPosition().m_line))
+    if (!m_frame.page() || !m_frame.page()->javaScriptURLsAreAllowed() || !m_frame.document()->contentSecurityPolicy()->allowJavaScriptURLs(m_frame.document()->url(), eventHandlerPosition().m_line))
         return true;
 
     // We need to hold onto the Frame here because executing script can

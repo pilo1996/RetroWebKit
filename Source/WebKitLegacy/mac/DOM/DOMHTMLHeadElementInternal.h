@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLHeadElement.h>
+#import <WebKit/DOMHTMLHeadElement.h>
 
 namespace WebCore {
 class HTMLHeadElement;

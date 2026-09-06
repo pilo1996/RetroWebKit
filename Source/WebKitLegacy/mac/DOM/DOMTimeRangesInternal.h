@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMTimeRanges.h>
+#import <WebKit/DOMTimeRanges.h>
 
 namespace WebCore {
 class TimeRanges;

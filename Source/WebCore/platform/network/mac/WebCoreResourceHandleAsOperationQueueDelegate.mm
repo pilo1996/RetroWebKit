@@ -51,7 +51,11 @@ using namespace WebCore;
         return nil;
 
     m_handle = handle;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     m_semaphore = dispatch_semaphore_create(0);
+#else
+    ASSERT_NOT_REACHED();
+#endif
 
     return self;
 }
@@ -63,36 +67,60 @@ using namespace WebCore;
     m_requestResult = nullptr;
     m_cachedResponseResult = nullptr;
     m_boolResult = NO;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_signal(m_semaphore); // OK to signal even if we are not waiting.
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)dealloc
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_release(m_semaphore);
+#else
+    ASSERT_NOT_REACHED();
+#endif
     [super dealloc];
 }
 
 - (void)continueWillSendRequest:(NSURLRequest *)newRequest
 {
     m_requestResult = newRequest;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_signal(m_semaphore);
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)continueDidReceiveResponse
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_signal(m_semaphore);
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)continueCanAuthenticateAgainstProtectionSpace:(BOOL)canAuthenticate
 {
     m_boolResult = canAuthenticate;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_signal(m_semaphore);
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)continueWillCacheResponse:(NSCachedURLResponse *)response
 {
     m_cachedResponseResult = response;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_semaphore_signal(m_semaphore);
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (NSURLRequest *)connection:(NSURLConnection *)connection willSendRequest:(NSURLRequest *)newRequest redirectResponse:(NSURLResponse *)redirectResponse
@@ -100,7 +128,11 @@ using namespace WebCore;
     ASSERT(!isMainThread());
     UNUSED_PARAM(connection);
 
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1070
+    redirectResponse = synthesizeRedirectResponseIfNecessary(m_handle, newRequest, redirectResponse);
+#else
     redirectResponse = synthesizeRedirectResponseIfNecessary([connection currentRequest], newRequest, redirectResponse);
+#endif
 
     // See <rdar://problem/5380697>. This is a workaround for a behavior change in CFNetwork where willSendRequest gets called more often.
     if (!redirectResponse)
@@ -113,6 +145,7 @@ using namespace WebCore;
         LOG(Network, "Handle %p delegate connection:%p willSendRequest:%@ redirectResponse:non-HTTP", m_handle, connection, [newRequest description]); 
 #endif
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<id> protector(self);
 
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -126,6 +159,9 @@ using namespace WebCore;
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
+#else
+    ASSERT_NOT_REACHED();
+#endif
     return m_requestResult.autorelease();
 }
 
@@ -136,6 +172,7 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p didReceiveAuthenticationChallenge:%p", m_handle, connection, challenge);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle) {
             [[challenge sender] cancelAuthenticationChallenge:challenge];
@@ -143,6 +180,10 @@ using namespace WebCore;
         }
         m_handle->didReceiveAuthenticationChallenge(core(challenge));
     });
+#else
+    UNUSED_PARAM(challenge);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
@@ -155,6 +196,7 @@ using namespace WebCore;
 
     RetainPtr<id> protector(self);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle) {
             m_boolResult = NO;
@@ -165,6 +207,9 @@ using namespace WebCore;
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
+#else
+    ASSERT_NOT_REACHED();
+#endif
     return m_boolResult;
 }
 #endif
@@ -175,6 +220,7 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p didReceiveResponse:%p (HTTP status %d, reported MIMEType '%s')", m_handle, connection, r, [r respondsToSelector:@selector(statusCode)] ? [(id)r statusCode] : 0, [[r MIMEType] UTF8String]);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<id> protector(self);
 
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -203,6 +249,12 @@ using namespace WebCore;
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
+#else
+    ASSERT_NOT_REACHED();
+    UNUSED_PARAM(r);
+    UNUSED_PARAM(connection);
+#endif
+
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data lengthReceived:(long long)lengthReceived
@@ -213,6 +265,7 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p didReceiveData:%p lengthReceived:%lld", m_handle, connection, data, lengthReceived);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle || !m_handle->client())
             return;
@@ -225,6 +278,10 @@ using namespace WebCore;
         // Content-Length headers or content size to show transfer size.
         m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::create(data), -1);
     });
+#else
+    UNUSED_PARAM(data);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
@@ -235,11 +292,17 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p didSendBodyData:%d totalBytesWritten:%d totalBytesExpectedToWrite:%d", m_handle, connection, bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle || !m_handle->client())
             return;
         m_handle->client()->didSendData(m_handle, totalBytesWritten, totalBytesExpectedToWrite);
     });
+#else
+    UNUSED_PARAM(totalBytesWritten);
+    UNUSED_PARAM(totalBytesExpectedToWrite);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
@@ -249,12 +312,16 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connectionDidFinishLoading:%p", m_handle, connection);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle || !m_handle->client())
             return;
 
         m_handle->client()->didFinishLoading(m_handle);
     });
+#else
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
@@ -264,12 +331,17 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p didFailWithError:%@", m_handle, connection, error);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     dispatch_async(dispatch_get_main_queue(), ^{
         if (!m_handle || !m_handle->client())
             return;
 
         m_handle->client()->didFail(m_handle, error);
     });
+#else
+    UNUSED_PARAM(error);
+    ASSERT_NOT_REACHED();
+#endif
 }
 
 
@@ -280,6 +352,7 @@ using namespace WebCore;
 
     LOG(Network, "Handle %p delegate connection:%p willCacheResponse:%p", m_handle, connection, cachedResponse);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RetainPtr<id> protector(self);
 
     dispatch_async(dispatch_get_main_queue(), ^{
@@ -289,10 +362,23 @@ using namespace WebCore;
             return;
         }
 
+        // Workaround for <rdar://problem/6300990> Caching does not respect Vary HTTP header.
+        // FIXME: WebCore cache has issues with Vary, too (bug 58797, bug 71509).
+        if ([[cachedResponse response] isKindOfClass:[NSHTTPURLResponse class]]
+            && [[(NSHTTPURLResponse *)[cachedResponse response] allHeaderFields] objectForKey:@"Vary"]) {
+            m_cachedResponseResult = nullptr;
+            dispatch_semaphore_signal(m_semaphore);
+            return;
+        }
+
         m_handle->client()->willCacheResponseAsync(m_handle, cachedResponse);
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
+#else
+    UNUSED_PARAM(cachedResponse);
+    ASSERT_NOT_REACHED();
+#endif
     return m_cachedResponseResult.autorelease();
 }
 

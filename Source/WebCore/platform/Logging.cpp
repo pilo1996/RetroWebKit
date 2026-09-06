@@ -82,7 +82,7 @@ void initializeLogChannelsIfNecessary()
 #ifndef NDEBUG
 void registerNotifyCallback(const String& notifyID, WTF::Function<void()>&& callback)
 {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     int token;
     notify_register_dispatch(notifyID.utf8().data(), &token, dispatch_get_main_queue(), BlockPtr<void (int)>::fromCallable([callback = WTFMove(callback)] (int) {
         callback();

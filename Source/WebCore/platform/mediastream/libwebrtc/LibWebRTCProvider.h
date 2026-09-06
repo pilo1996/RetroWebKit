@@ -51,7 +51,7 @@ class VideoToolboxVideoEncoderFactory;
 class WEBCORE_EXPORT LibWebRTCProvider {
 public:
     LibWebRTCProvider() = default;
-    virtual ~LibWebRTCProvider() = default;
+    virtual ~LibWebRTCProvider();
 
     static bool webRTCAvailable();
 

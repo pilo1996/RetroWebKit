@@ -95,6 +95,26 @@ bool PlatformMediaSessionManager::canProduceAudio() const
     });
 }
 
+bool PlatformMediaSessionManager::hasActiveNowPlayingSession() const
+{
+    return false;
+}
+
+String PlatformMediaSessionManager::lastUpdatedNowPlayingTitle() const
+{
+    return emptyString();
+}
+
+double PlatformMediaSessionManager::lastUpdatedNowPlayingDuration() const
+{
+    return NAN;
+}
+
+double PlatformMediaSessionManager::lastUpdatedNowPlayingElapsedTime() const
+{
+    return NAN;
+}
+
 int PlatformMediaSessionManager::count(PlatformMediaSession::MediaType type) const
 {
     ASSERT(type >= PlatformMediaSession::None && type <= PlatformMediaSession::MediaStreamCapturingAudio);

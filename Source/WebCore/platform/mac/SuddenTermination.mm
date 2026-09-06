@@ -32,12 +32,16 @@ namespace WebCore {
 
 void disableSuddenTermination()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[NSProcessInfo processInfo] disableSuddenTermination];
+#endif
 }
 
 void enableSuddenTermination()
 {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [[NSProcessInfo processInfo] enableSuddenTermination];
+#endif
 }
 
 } // namespace WebCore

@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if !OS(DARWIN) && OS(UNIX)
+#if !(OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) && OS(UNIX)
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -41,13 +41,13 @@
 #include <wincrypt.h> // windows.h must be included before wincrypt.h.
 #endif
 
-#if OS(DARWIN)
+#if OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include "CommonCryptoSPI.h"
 #endif
 
 namespace WTF {
 
-#if !OS(DARWIN) && OS(UNIX)
+#if !(OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) && OS(UNIX)
 NEVER_INLINE NO_RETURN_DUE_TO_CRASH static void crashUnableToOpenURandom()
 {
     CRASH();
@@ -59,7 +59,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH static void crashUnableToReadFromURandom()
 }
 #endif
 
-#if !OS(DARWIN) && !OS(WINDOWS)
+#if !(OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) && !OS(WINDOWS)
 RandomDevice::RandomDevice()
 {
     int ret = 0;
@@ -72,7 +72,7 @@ RandomDevice::RandomDevice()
 }
 #endif
 
-#if !OS(DARWIN) && !OS(WINDOWS)
+#if !(OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) && !OS(WINDOWS)
 RandomDevice::~RandomDevice()
 {
     close(m_fd);
@@ -83,7 +83,7 @@ RandomDevice::~RandomDevice()
 // https://bugs.webkit.org/show_bug.cgi?id=170190
 void RandomDevice::cryptographicallyRandomValues(unsigned char* buffer, size_t length)
 {
-#if OS(DARWIN)
+#if OS(DARWIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     RELEASE_ASSERT(!CCRandomCopyBytes(kCCRandomDefault, buffer, length));
 #elif OS(UNIX)
     ssize_t amountRead = 0;

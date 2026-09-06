@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLScriptElement.h>
+#import <WebKit/DOMHTMLScriptElement.h>
 
 namespace WebCore {
 class HTMLScriptElement;

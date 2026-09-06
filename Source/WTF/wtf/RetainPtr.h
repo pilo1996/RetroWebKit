@@ -35,6 +35,7 @@
 
 #ifdef __OBJC__
 #import <Foundation/Foundation.h>
+#import <wtf/ObjcRuntimeExtras.h>
 #endif
 
 #ifndef CF_RELEASES_ARGUMENT
@@ -130,8 +131,24 @@ private:
     StorageType toStorageType(id ptr) const { return (__bridge StorageType)ptr; }
     StorageType toStorageType(CFTypeRef ptr) const { return (StorageType)ptr; }
 #else
-    PtrType fromStorageType(StorageType ptr) const { return (PtrType)ptr; }
+    PtrType fromStorageType(StorageType ptr) const { return bitwise_cast<PtrType>(ptr); }
+#if defined (__OBJC__)
+    template<typename U>
+    typename std::enable_if<std::is_convertible<U, CFTypeRef>::value, StorageType>::type
+    toStorageType(U ptr) const
+    {
+        return bitwise_cast<id>(ptr);
+    }
+
+    template<typename U>
+    typename std::enable_if<!std::is_convertible<U, CFTypeRef>::value, StorageType>::type
+    toStorageType(U ptr) const
+    {
+        return bitwise_cast<CFTypeRef>(ptr);
+    }
+#else
     StorageType toStorageType(PtrType ptr) const { return (StorageType)ptr; }
+#endif
 #endif
 
     StorageType m_ptr;

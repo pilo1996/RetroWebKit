@@ -28,6 +28,8 @@
 #include "ScrollingMomentumCalculator.h"
 #include <wtf/RetainPtr.h>
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
+
 @class _NSScrollingMomentumCalculator;
 
 namespace WebCore {
@@ -50,3 +52,5 @@ private:
 };
 
 } // namespace WebCore
+
+#endif

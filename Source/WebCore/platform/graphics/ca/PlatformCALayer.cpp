@@ -30,6 +30,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreText/CoreText.h>
+#include "CoreTextSPI.h"
 #include "GraphicsContextCG.h"
 #include "LayerPool.h"
 #include "PlatformCALayerClient.h"
@@ -84,6 +85,14 @@ void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer
     indicatorBox.setSize(FloatSize(12 + 10 * strlen(text), 27));
 
     CGContextStateSaver stateSaver(context);
+    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
+    if (platformCALayer->owner()->platformCALayerContentsOrientation() == WebCore::GraphicsLayer::CompositingCoordinatesBottomUp) {
+        FloatRect layerBounds = platformCALayer->bounds();
+        CGContextScaleCTM(context, 1, -1);
+        CGContextTranslateCTM(context, 0, -layerBounds.height());
+    }
+#endif
     
     CGContextSetAlpha(context, 0.5f);
     CGContextBeginTransparencyLayerWithRect(context, indicatorBox, 0);
@@ -149,15 +158,22 @@ void PlatformCALayer::drawTextAtPoint(CGContextRef context, CGFloat x, CGFloat y
     CFTypeRef keys[] = {
         kCTFontAttributeName,
         kCTForegroundColorFromContextAttributeName,
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         kCTStrokeWidthAttributeName,
         kCTStrokeColorAttributeName,
+#endif
     };
     CFTypeRef values[] = {
         font.get(),
         kCFBooleanTrue,
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         strokeWidthNumber.get(),
         cachedCGColor(strokeColor),
     };
+#else
+    };
+    UNUSED_PARAM(strokeColor);
+#endif
 
     auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
     auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(text), length, kCFStringEncodingUTF8, false, kCFAllocatorNull));

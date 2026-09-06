@@ -49,6 +49,7 @@
 #import "WebUIDelegatePrivate.h"
 #import "WebView.h"
 #import "WebViewInternal.h"
+#import <WebCore/CoreGraphicsSPI.h>
 #import <WebCore/DataTransfer.h>
 #import <WebCore/EventNames.h>
 #import <WebCore/FormState.h>
@@ -977,7 +978,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
     NSAttributedString *attributedString = [self selectedAttributedString];
     
     if ([types containsObject:NSRTFDPboardType]) {
-        NSData *RTFDData = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:@{ }];
+        NSData *RTFDData = [attributedString RTFDFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:[NSDictionary dictionary]];
         [pasteboard setData:RTFDData forType:NSRTFDPboardType];
     }        
     
@@ -985,7 +986,7 @@ static BOOL isFrameInRange(WebFrame *frame, DOMRange *range)
         if ([attributedString containsAttachments])
             attributedString = attributedStringByStrippingAttachmentCharacters(attributedString);
 
-        NSData *RTFData = [attributedString RTFFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:@{ }];
+        NSData *RTFData = [attributedString RTFFromRange:NSMakeRange(0, [attributedString length]) documentAttributes:[NSDictionary dictionary]];
         [pasteboard setData:RTFData forType:NSRTFPboardType];
     }
     
@@ -1307,8 +1308,8 @@ static void removeUselessMenuItemSeparators(NSMutableArray *menuItems)
         foundSelection = [document findString:string fromSelection:initialSelection withOptions:options];
 
     if (!foundSelection && wrapFlag) {
-        auto emptySelection = adoptNS([[[[self class] _PDFViewClass] alloc] initWithDocument:document]);
-        foundSelection = [document findString:string fromSelection:emptySelection.get() withOptions:options];
+        auto emptySelection = adoptNS([[[[self class] _PDFSelectionClass] alloc] initWithDocument:document]);
+        foundSelection = [document findString:string fromSelection:(PDFSelection *)emptySelection.get() withOptions:options];
     }
     
     return foundSelection;

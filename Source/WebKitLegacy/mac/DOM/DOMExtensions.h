@@ -25,9 +25,9 @@
  */
 
 #import <CoreGraphics/CoreGraphics.h>
-#import <WebKitLegacy/DOMCSS.h>
-#import <WebKitLegacy/DOMHTML.h>
-#import <WebKitLegacy/DOMRange.h>
+#import <WebKit/DOMCSS.h>
+#import <WebKit/DOMHTML.h>
+#import <WebKit/DOMRange.h>
 
 @class NSArray;
 @class NSImage;

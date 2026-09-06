@@ -129,6 +129,7 @@ public:
 
 #if PLATFORM(COCOA) && !USE(CFURLCONNECTION)
     WEBCORE_EXPORT NSURLConnection *connection() const;
+    const ResourceRequest& currentRequest() const;
     id makeDelegate(bool);
     id delegate();
     void releaseDelegate();
@@ -277,11 +278,11 @@ private:
 #endif
 
 #if USE(CFURLCONNECTION)
-    void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior, CFDictionaryRef clientProperties);
+    void createCFURLConnection(bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff, SchedulingBehavior, CFDictionaryRef clientProperties);
 #endif
 
 #if PLATFORM(MAC) && !USE(CFURLCONNECTION)
-    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior);
+    void createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff, SchedulingBehavior);
 #endif
 
 #if PLATFORM(IOS) && !USE(CFURLCONNECTION)

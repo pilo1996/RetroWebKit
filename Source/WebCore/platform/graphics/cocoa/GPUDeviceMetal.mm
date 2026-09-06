@@ -26,6 +26,8 @@
 #import "config.h"
 #import "GPUDevice.h"
 
+#if ENABLE(WEBGPU)
+
 #import "Logging.h"
 #import "WebGPULayer.h"
 
@@ -33,7 +35,6 @@
 #import <runtime/ArrayBuffer.h>
 #import <wtf/BlockObjCExceptions.h>
 
-#if ENABLE(WEBGPU)
 
 namespace WebCore {
 

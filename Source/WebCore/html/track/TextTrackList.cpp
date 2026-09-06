@@ -192,9 +192,15 @@ void TextTrackList::append(Ref<TextTrack>&& track)
         size_t index = downcast<LoadableTextTrack>(track.get()).trackElementIndex();
         m_elementTracks.insert(index, track.ptr());
     } else if (track->trackType() == TextTrack::InBand) {
-        // Insert tracks added for in-band in the media file order.
+        // Insert tracks in the media file order.
         size_t index = downcast<InbandTextTrack>(track.get()).inbandTrackIndex();
-        m_inbandTracks.insert(index, track.ptr());
+        size_t insertionIndex;
+        for (insertionIndex = 0; insertionIndex < m_inbandTracks.size(); ++insertionIndex) {
+            auto& otherTrack = downcast<InbandTextTrack>(downcast<TextTrack>(*m_inbandTracks[insertionIndex]));
+            if (otherTrack.inbandTrackIndex() > index)
+                break;
+        }
+        m_inbandTracks.insert(insertionIndex, track.ptr());
     } else
         ASSERT_NOT_REACHED();
 

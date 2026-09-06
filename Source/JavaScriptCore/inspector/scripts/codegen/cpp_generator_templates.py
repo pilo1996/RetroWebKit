@@ -230,7 +230,7 @@ private:
             COMPILE_ASSERT(sizeof(${objectType}) == sizeof(InspectorObject), cannot_cast);
 
             Ref<InspectorObject> result = m_result.releaseNonNull();
-            return WTFMove(*reinterpret_cast<Ref<${objectType}>*>(&result));
+            return WTFMove(*bitwise_cast<Ref<${objectType}>*>(&result));
         }
     };
 

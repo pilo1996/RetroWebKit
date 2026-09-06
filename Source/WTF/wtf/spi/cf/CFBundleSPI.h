@@ -36,7 +36,9 @@
 
 WTF_EXTERN_C_BEGIN
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 void _CFBundleSetupXPCBootstrap(xpc_object_t bootstrap);
+#endif
 
 CFBundleRef _CFBundleCreateUnique(CFAllocatorRef, CFURLRef bundleURL);
 Boolean CFBundleGetLocalizationInfoForLocalization(CFStringRef localizationName, SInt32 *languageCode, SInt32 *regionCode, SInt32 *scriptCode, CFStringEncoding *stringEncoding);

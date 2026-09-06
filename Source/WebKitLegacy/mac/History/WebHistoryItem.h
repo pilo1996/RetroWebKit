@@ -67,7 +67,7 @@ extern NSString *WebHistoryItemChangedNotification;
     'artificial' items to add to a WebBackForwardList.  When first initialized
     the URLString and originalURLString will be the same.
 */
-- (instancetype)initWithURLString:(NSString *)URLString title:(NSString *)title lastVisitedTimeInterval:(NSTimeInterval)time;
+- (id)initWithURLString:(NSString *)URLString title:(NSString *)title lastVisitedTimeInterval:(NSTimeInterval)time;
 
 /*!
     @property originalURLString
@@ -113,7 +113,7 @@ extern NSString *WebHistoryItemChangedNotification;
     @abstract The favorite icon of the page represented by this item.
     @discussion This icon returned will be determined by the WebKit.
 */
-@property (nonatomic, readonly, strong) NSImage *icon;
+@property (nonatomic, readonly, retain) NSImage *icon;
 #endif
 
 @end

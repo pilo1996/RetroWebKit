@@ -26,7 +26,7 @@
 #include "config.h"
 #include "CryptoAlgorithmECDSA.h"
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(SUBTLE_CRYPTO) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 #include "CryptoAlgorithmEcKeyParams.h"
 #include "CryptoKeyEC.h"

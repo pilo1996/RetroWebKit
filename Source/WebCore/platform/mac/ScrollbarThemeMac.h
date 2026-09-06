@@ -56,8 +56,10 @@ public:
     void registerScrollbar(Scrollbar&) override;
     void unregisterScrollbar(Scrollbar&) override;
 
+#if ENABLE(SMOOTH_SCROLLING)
     void setNewPainterForScrollbar(Scrollbar&, NSScrollerImp *);
     NSScrollerImp *painterForScrollbar(Scrollbar&);
+#endif
 
     void setPaintCharacteristicsForScrollbar(Scrollbar&);
 

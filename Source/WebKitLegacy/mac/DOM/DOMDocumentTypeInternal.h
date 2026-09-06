@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMDocumentType.h>
+#import <WebKit/DOMDocumentType.h>
 
 namespace WebCore {
 class DocumentType;

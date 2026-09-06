@@ -42,7 +42,7 @@ CFDictionaryRef Font::getCFStringAttributes(bool enableKerning, FontOrientation 
         return attributesDictionary.get();
 
     attributesDictionary = adoptCF(CFDictionaryCreateMutable(kCFAllocatorDefault, 4, &kCFCopyStringDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
-    CFMutableDictionaryRef mutableAttributes = (CFMutableDictionaryRef)attributesDictionary.get();
+    CFMutableDictionaryRef mutableAttributes = const_cast<CFMutableDictionaryRef>(attributesDictionary.get());
 
     CFDictionarySetValue(mutableAttributes, kCTFontAttributeName, platformData().ctFont());
 

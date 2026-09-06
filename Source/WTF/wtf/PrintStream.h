@@ -90,8 +90,8 @@ protected:
         printImpl(remainingValues...);
     }
     
-    virtual PrintStream& begin();
-    virtual void end();
+    WTF_EXPORT_PRIVATE virtual PrintStream& begin();
+    WTF_EXPORT_PRIVATE virtual void end();
 };
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const char*);

@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+#if COMPILER_SUPPORTS(BLOCKS)
+
 #include <Block.h>
 #include <utility>
 #include <wtf/Assertions.h>
@@ -168,3 +172,4 @@ inline BlockPtr<R (Args...)> makeBlockPtr(R (^block)(Args...))
 using WTF::BlockPtr;
 using WTF::makeBlockPtr;
 
+#endif

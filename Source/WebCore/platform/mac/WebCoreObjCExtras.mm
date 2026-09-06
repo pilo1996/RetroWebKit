@@ -35,14 +35,17 @@
 #include <wtf/ObjcRuntimeExtras.h>
 #include <wtf/Threading.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 bool WebCoreObjCScheduleDeallocateOnMainThread(Class cls, id object)
 {
+#pragma GCC diagnostic pop
     ASSERT([object isKindOfClass:cls]);
 
     if (isMainThread())
         return false;
 
-    callOnMainThread([cls, object] {
+    callOnMainThread([=] {
         Method method = class_getInstanceMethod(cls, @selector(dealloc));
         IMP imp = method_getImplementation(method);
         wtfCallIMP<void>(imp, object, @selector(dealloc));

@@ -31,6 +31,7 @@
 #include <CoreText/CoreText.h>
 
 #include "CommonVM.h"
+#include "CoreTextSPI.h"
 #include "JSDOMWindow.h"
 #include "PlatformCALayer.h"
 #include "ResourceUsageThread.h"
@@ -223,7 +224,9 @@ void ResourceUsageOverlay::platformInitialize()
     [m_containerLayer.get() setBounds:CGRectMake(0, 0, normalWidth, normalHeight)];
 
     [m_layer.get() setAnchorPoint:CGPointZero];
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [m_layer.get() setContentsScale:2.0];
+#endif
     [m_layer.get() setBackgroundColor:adoptCF(createColor(0, 0, 0, 0.8)).get()];
     [m_layer.get() setBounds:CGRectMake(0, 0, normalWidth, normalHeight)];
 
@@ -235,11 +238,11 @@ void ResourceUsageOverlay::platformInitialize()
         // FIXME: It shouldn't be necessary to update the bounds on every single thread loop iteration,
         // but something is causing them to become 0x0.
         [CATransaction begin];
-        CALayer *containerLayer = [m_layer superlayer];
+        CALayer *containerLayer = [m_layer.get() superlayer];
         CGRect rect = CGRectMake(0, 0, ResourceUsageOverlay::normalWidth, ResourceUsageOverlay::normalHeight);
-        [m_layer setBounds:rect];
+        [m_layer.get() setBounds:rect];
         [containerLayer setBounds:rect];
-        [m_layer setNeedsDisplay];
+        [m_layer.get() setNeedsDisplay];
         [CATransaction commit];
     });
 }
@@ -445,10 +448,14 @@ void ResourceUsageOverlay::platformDraw(CGContextRef context)
 {
     auto& data = historicUsageData();
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     if (![m_layer.get() contentsAreFlipped]) {
+#endif
         CGContextScaleCTM(context, 1, -1);
         CGContextTranslateCTM(context, 0, -normalHeight);
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
     }
+#endif
 
     CGContextSetShouldAntialias(context, false);
     CGContextSetShouldSmoothFonts(context, false);

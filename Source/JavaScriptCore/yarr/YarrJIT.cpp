@@ -124,6 +124,17 @@ class YarrGenerator : private MacroAssembler {
 
     static const RegisterID returnRegister = X86Registers::eax;
     static const RegisterID returnRegister2 = X86Registers::edx;
+#elif CPU(PPC) && OS(DARWIN)
+    static const RegisterID input = PPCRegisters::r3;
+    static const RegisterID index = PPCRegisters::r4;
+    static const RegisterID length = PPCRegisters::r5;
+    static const RegisterID output = PPCRegisters::r6;
+
+    static const RegisterID regT0 = PPCRegisters::r7;
+    static const RegisterID regT1 = PPCRegisters::r8;
+
+    static const RegisterID returnRegister = PPCRegisters::r3;
+    static const RegisterID returnRegister2 = PPCRegisters::r4;
 #endif
 
     void optimizeAlternative(PatternAlternative* alternative)
@@ -884,14 +895,27 @@ class YarrGenerator : private MacroAssembler {
                 return;
             case 2: {
                 load16Unaligned(negativeOffsetIndexedAddress(m_checkedOffset - startTermPosition, character), character);
+#if CPU(BIG_ENDIAN)
+                if (ignoreCaseMask)
+                    or32(Imm32(ignoreCaseMask >> 16), character);
+                op.m_jumps.append(branch32(NotEqual, character, Imm32((allCharacters | ignoreCaseMask) >> 16)));
+                return;
+#else
                 break;
+#endif
             }
             case 3: {
                 load16Unaligned(negativeOffsetIndexedAddress(m_checkedOffset - startTermPosition, character), character);
                 if (ignoreCaseMask)
+#if CPU(BIG_ENDIAN)
+                    or32(Imm32(ignoreCaseMask >> 16), character);
+                op.m_jumps.append(branch32(NotEqual, character, Imm32((allCharacters | ignoreCaseMask) >> 16)));
+                op.m_jumps.append(jumpIfCharNotEquals((allCharacters >> 8) & 0xff, m_checkedOffset - startTermPosition - 2, character));
+#else
                     or32(Imm32(ignoreCaseMask), character);
                 op.m_jumps.append(branch32(NotEqual, character, Imm32((allCharacters & 0xffff) | ignoreCaseMask)));
                 op.m_jumps.append(jumpIfCharNotEquals(allCharacters >> 16, m_checkedOffset - startTermPosition - 2, character));
+#endif
                 return;
             }
             case 4: {
@@ -2631,7 +2655,7 @@ class YarrGenerator : private MacroAssembler {
         push(ARMRegisters::r4);
         push(ARMRegisters::r5);
         push(ARMRegisters::r6);
-#elif CPU(MIPS)
+#elif CPU(MIPS) || CPU(PPC)
         // Do nothing.
 #endif
 
@@ -2661,7 +2685,7 @@ class YarrGenerator : private MacroAssembler {
         pop(ARMRegisters::r6);
         pop(ARMRegisters::r5);
         pop(ARMRegisters::r4);
-#elif CPU(MIPS)
+#elif CPU(MIPS) || CPU(PPC)
         // Do nothing
 #endif
         ret();

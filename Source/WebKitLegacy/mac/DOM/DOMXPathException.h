@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebKitAvailability.h>
+#import <WebKit/WebKitAvailability.h>
 
 @class NSString;
 

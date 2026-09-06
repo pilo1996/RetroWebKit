@@ -55,12 +55,12 @@ Ref<StaticRange> StaticRange::createFromRange(const Range& range)
 
 Node* StaticRange::startContainer() const
 {
-    return (Node*)m_startContainer.ptr();
+    return const_cast<Node*>(m_startContainer.ptr());
 }
 
 Node* StaticRange::endContainer() const
 {
-    return (Node*)m_endContainer.ptr();
+    return const_cast<Node*>(m_endContainer.ptr());
 }
 
 bool StaticRange::collapsed() const

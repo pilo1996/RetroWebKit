@@ -37,7 +37,7 @@ class PlatformGamepad;
 
 class WEBCORE_EXPORT GamepadProvider {
 public:
-    virtual ~GamepadProvider() { }
+    virtual ~GamepadProvider();
 
     WEBCORE_EXPORT static GamepadProvider& singleton();
     WEBCORE_EXPORT static void setSharedProvider(GamepadProvider&);

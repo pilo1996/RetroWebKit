@@ -41,7 +41,13 @@ DebugHeap::DebugHeap(std::lock_guard<StaticMutex>&)
 
 void* DebugHeap::malloc(size_t size)
 {
+#if defined(malloc_zone_memalign)
     void* result = malloc_zone_malloc(m_zone, size);
+#else
+#define SYSTEM_ALIGNMENT 16
+    void* result = memalign(SYSTEM_ALIGNMENT, size, false);
+#undef SYSTEM_ALIGNMENT
+#endif
     if (!result)
         BCRASH();
     return result;
@@ -49,7 +55,33 @@ void* DebugHeap::malloc(size_t size)
 
 void* DebugHeap::memalign(size_t alignment, size_t size, bool crashOnFailure)
 {
+#if defined(malloc_zone_memalign)
     void* result = malloc_zone_memalign(m_zone, alignment, size);
+#else
+#define SYSTEM_ALIGNMENT 16
+    void* result = nullptr;
+    // malloc'ed memory is always (at least) {SYSTEM_ALIGNMENT} byte aligned
+    // minimum alignment required is {SYSTEM_ALIGNMENT}
+    if (alignment < SYSTEM_ALIGNMENT)
+        alignment = SYSTEM_ALIGNMENT;
+    // always allocate at least {alignment} bytes more than needed
+    // the allocation base address must fit into that extra space
+    BASSERT(alignment >= sizeof(void*));
+    const uintptr_t allocationBaseAddress = (uintptr_t)malloc_zone_malloc(m_zone, size + alignment);
+    if (allocationBaseAddress) {
+        BASSERT(allocationBaseAddress % SYSTEM_ALIGNMENT == 0);
+        // reserve at least {SYSTEM_ALIGNMENT} bytes of memory _before_ the returned address
+        uintptr_t alignedAddress = (allocationBaseAddress + (alignment - 1)) & ~(alignment - 1);
+        if (alignedAddress == allocationBaseAddress)
+            alignedAddress += alignment;
+        BASSERT(alignedAddress % alignment == 0 && alignedAddress + size <= allocationBaseAddress + size + alignment);
+        // store the allocation base address immediately before the returned address
+        BASSERT(&(((uintptr_t*)alignedAddress)[-1]) >= (void*)allocationBaseAddress);
+        ((uintptr_t*)alignedAddress)[-1] = allocationBaseAddress;
+        result = (void*)alignedAddress;
+    }
+#undef SYSTEM_ALIGNMENT
+#endif
     if (!result && crashOnFailure)
         BCRASH();
     return result;
@@ -57,14 +89,39 @@ void* DebugHeap::memalign(size_t alignment, size_t size, bool crashOnFailure)
 
 void* DebugHeap::realloc(void* object, size_t size)
 {
+#if !defined(malloc_zone_memalign)
+#define SYSTEM_ALIGNMENT 16
+    // read the allocation base address from immediately before the returned address
+    object = ((void**)object)[-1];
+    size += SYSTEM_ALIGNMENT;
+#endif
     void* result = malloc_zone_realloc(m_zone, object, size);
     if (!result)
         BCRASH();
+#if !defined(malloc_zone_memalign)
+    const uintptr_t allocationBaseAddress = (uintptr_t)result;
+    // reserve at least {SYSTEM_ALIGNMENT} bytes of memory _before_ the returned address
+    uintptr_t alignedAddress = (allocationBaseAddress + (SYSTEM_ALIGNMENT - 1)) & ~(SYSTEM_ALIGNMENT - 1);
+    if (alignedAddress == allocationBaseAddress)
+        alignedAddress += SYSTEM_ALIGNMENT;
+    BASSERT(alignedAddress + size <= allocationBaseAddress + size + SYSTEM_ALIGNMENT);
+    // store the allocation base address immediately before the returned address
+    BASSERT(&(((uintptr_t*)alignedAddress)[-1]) >= (void*)allocationBaseAddress);
+    ((uintptr_t*)alignedAddress)[-1] = allocationBaseAddress;
+    result = (void*)alignedAddress;
+#undef SYSTEM_ALIGNMENT
+#endif
     return result;
 }
 
 void DebugHeap::free(void* object)
 {
+#if !defined(malloc_zone_memalign)
+    if (!object)
+        return; // trying to free memory at address 0; this should in fact BCRASH()
+    // read the allocation base address from immediately before the returned address
+    object = ((void**)object)[-1];
+#endif
     malloc_zone_free(m_zone, object);
 }
 

@@ -90,7 +90,7 @@ RefPtr<FilterOperation> BasicColorMatrixFilterOperation::blend(const FilterOpera
     return BasicColorMatrixFilterOperation::create(WebCore::blend(fromAmount, m_amount, progress), m_type);
 }
 
-inline bool BasicColorMatrixFilterOperation::operator==(const FilterOperation& operation) const
+bool BasicColorMatrixFilterOperation::operator==(const FilterOperation& operation) const
 {
     if (!isSameType(operation))
         return false;
@@ -126,7 +126,7 @@ RefPtr<FilterOperation> BasicComponentTransferFilterOperation::blend(const Filte
     return BasicComponentTransferFilterOperation::create(WebCore::blend(fromAmount, m_amount, progress), m_type);
 }
 
-inline bool BasicComponentTransferFilterOperation::operator==(const FilterOperation& operation) const
+bool BasicComponentTransferFilterOperation::operator==(const FilterOperation& operation) const
 {
     if (!isSameType(operation))
         return false;

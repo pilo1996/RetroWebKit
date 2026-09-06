@@ -108,6 +108,7 @@ bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
 bool Settings::gLowPowerVideoAudioBufferSizeEnabled = false;
 bool Settings::gResourceLoadStatisticsEnabledEnabled = false;
 bool Settings::gAllowsAnySSLCertificate = false;
+bool Settings::gLargeAnimatedImageFrameCachingEnabled = false;
 
 #if PLATFORM(IOS)
 bool Settings::gNetworkDataUsageTrackingEnabled = false;
@@ -728,6 +729,11 @@ void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
 void Settings::setResourceLoadStatisticsEnabled(bool flag)
 {
     gResourceLoadStatisticsEnabledEnabled = flag;
+}
+
+void Settings::setLargeAnimatedImageFrameCachingEnabled(bool flag)
+{
+    gLargeAnimatedImageFrameCachingEnabled = flag;
 }
 
 #if PLATFORM(IOS)

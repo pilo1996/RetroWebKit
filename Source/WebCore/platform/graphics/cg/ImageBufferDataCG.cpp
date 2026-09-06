@@ -52,7 +52,19 @@
 namespace WebCore {
 
 #if USE(ACCELERATE)
-#if USE_ARGB32 || USE(IOSURFACE_CANVAS_BACKING_STORE)
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070 || !(CPU(X86) || CPU(X86_64))
+static bool haveVImageRoundingErrorFix() { return true; }
+#else
+// The vImage unpremultiply routine had a rounding bug before 10.6.7 <rdar://problem/8631548>
+static bool haveVImageRoundingErrorFix()
+{
+    SInt32 version;
+    static bool result = (Gestalt(gestaltSystemVersion, &version) == noErr && version > 0x1066);
+    return result;
+}
+#endif // __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+
+#if USE_ARGB32 || USE(IOSURFACE_CANVAS_BACKING_STORE) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED <= 1060)
 static void unpremultiplyBufferData(const vImage_Buffer& src, const vImage_Buffer& dest)
 {
     ASSERT(src.data);
@@ -65,7 +77,9 @@ static void unpremultiplyBufferData(const vImage_Buffer& src, const vImage_Buffe
     const uint8_t map[4] = { 2, 1, 0, 3 };
     vImagePermuteChannels_ARGB8888(&dest, &dest, map, kvImageNoFlags);
 }
+#endif
 
+#if USE_ARGB32 || USE(IOSURFACE_CANVAS_BACKING_STORE)
 static void premultiplyBufferData(const vImage_Buffer& src, const vImage_Buffer& dest)
 {
     ASSERT(src.data);
@@ -111,7 +125,11 @@ static inline void transferData(void* output, void* input, int width, int height
     dest.rowBytes = width * 4;
     dest.data = output;
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED <= 1060)
     vImageUnpremultiplyData_BGRA8888(&src, &dest, kvImageNoFlags);
+#else
+    unpremultiplyBufferData(src, dest);
+#endif
 #else
     UNUSED_PARAM(output);
     UNUSED_PARAM(input);
@@ -207,7 +225,7 @@ RefPtr<Uint8ClampedArray> ImageBufferData::getData(const IntRect& rect, const In
         srcRows = reinterpret_cast<unsigned char*>(data) + originy * srcBytesPerRow + originx * 4;
 
 #if USE(ACCELERATE)
-        if (unmultiplied) {
+        if (unmultiplied && haveVImageRoundingErrorFix()) {
 
             vImage_Buffer src;
             src.width = width.unsafeGet();
@@ -453,7 +471,7 @@ void ImageBufferData::putData(Uint8ClampedArray*& source, const IntSize& sourceS
         destRows = reinterpret_cast<unsigned char*>(data) + (desty * destBytesPerRow + destx * 4).unsafeGet();
 
 #if USE(ACCELERATE)
-        if (unmultiplied) {
+        if (haveVImageRoundingErrorFix() && unmultiplied) {
 
             vImage_Buffer src;
             src.width = width.unsafeGet();

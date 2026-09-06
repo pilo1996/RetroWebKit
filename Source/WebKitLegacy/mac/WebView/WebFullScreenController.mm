@@ -47,6 +47,41 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/SoftLinking.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+#import <CoreGraphics/CoreGraphics.h>
+
+CG_EXTERN CGError CGSNewRegionWithRect(const CGRect *rect, CGSRegionObj *outRegion);
+CG_EXTERN CGError CGSReleaseRegion(CGSRegionObj region);
+CG_EXTERN CGError CGSSetWindowClipShape(CGSConnectionID cid, CGWindowID wid, CGSRegionObj shape);
+
+void WKWindowSetClipRect(NSWindow* window, NSRect rect)
+{
+    CGWindowID wid = [window windowNumber];
+    CGRect cgrect = NSRectToCGRect(rect);
+    CGSRegionObj region;
+    CGSNewRegionWithRect(&cgrect, &region);
+    CGSSetWindowClipShape(CGSMainConnectionID(), wid, region);
+    CGSReleaseRegion(region);
+}
+
+@interface CATransaction(SnowLeopardConvenienceFunctions)
++ (void)setDisableActions:(BOOL)flag;
++ (void)setAnimationDuration:(CFTimeInterval)dur;
+@end
+
+@implementation CATransaction(SnowLeopardConvenienceFunctions)
++ (void)setDisableActions:(BOOL)flag
+{
+    [self setValue:[NSNumber numberWithBool:flag] forKey:kCATransactionDisableActions];
+}
+
++ (void)setAnimationDuration:(CFTimeInterval)dur
+{
+    [self setValue:[NSNumber numberWithDouble:dur] forKey:kCATransactionAnimationDuration];
+}
+@end
+#endif
+
 using namespace WebCore;
 
 static const CFTimeInterval defaultAnimationDuration = 0.5;
@@ -70,10 +105,24 @@ static IntRect screenRectOfContents(Element* element)
 - (void)_startExitFullScreenAnimationWithDuration:(NSTimeInterval)duration;
 @end
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 {
     return [window convertRectToScreen:rect];
 }
+#else
+static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
+{
+    NSRect frame = [window frame];
+    rect.origin.x += frame.origin.x;
+    rect.origin.y += frame.origin.y;
+    return rect;
+}
+
+@interface NSWindow(IsOnActiveSpaceAdditionForTigerAndLeopard)
+- (BOOL)isOnActiveSpace;
+@end
+#endif
 
 @implementation WebFullScreenController
 
@@ -161,13 +210,16 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 
 - (void)applicationDidResignActive:(NSNotification*)notification
 {   
+    // Check to see if the fullscreenWindow is on the active space; this function is available
+    // on 10.6 and later, so default to YES if the function is not available:
     NSWindow* fullscreenWindow = [self window];
+    BOOL isOnActiveSpace = ([fullscreenWindow respondsToSelector:@selector(isOnActiveSpace)] ? [fullscreenWindow isOnActiveSpace] : YES);
 
     // Replicate the QuickTime Player (X) behavior when losing active application status:
     // Is the fullscreen screen the main screen? (Note: this covers the case where only a 
     // single screen is available.)  Is the fullscreen screen on the current space? IFF so, 
     // then exit fullscreen mode. 
-    if (fullscreenWindow.screen == [NSScreen screens][0] && fullscreenWindow.onActiveSpace)
+    if ([fullscreenWindow screen] == [[NSScreen screens] objectAtIndex:0] && isOnActiveSpace)
          [self cancelOperation:self];
 }
 
@@ -224,6 +276,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
     }
     [[_webViewPlaceholder.get() layer] setContents:(id)webViewContents.get()];
     _scrollPosition = [_webView _mainCoreFrame]->view()->scrollPosition();
+    [_webView _mainCoreFrame]->view()->setScrollPosition(IntPoint::zero());
     [self _swapView:_webView with:_webViewPlaceholder.get()];
     
     // Then insert the WebView into the full screen window
@@ -266,12 +319,16 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
         WKWindowSetClipRect([self window], windowBounds);
         
         NSWindow *webWindow = [_webViewPlaceholder.get() window];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         // In Lion, NSWindow will animate into and out of orderOut operations. Suppress that
         // behavior here, making sure to reset the animation behavior afterward.
         NSWindowAnimationBehavior animationBehavior = [webWindow animationBehavior];
         [webWindow setAnimationBehavior:NSWindowAnimationBehaviorNone];
+#endif
         [webWindow orderOut:self];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         [webWindow setAnimationBehavior:animationBehavior];
+#endif
         
         [_fadeAnimation.get() stopAnimation];
         [_fadeAnimation.get() setWindow:nil];
@@ -312,20 +369,24 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
     [self _updateMenuAndDockForFullScreen];
     
     NSWindow* webWindow = [_webViewPlaceholder.get() window];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     // In Lion, NSWindow will animate into and out of orderOut operations. Suppress that
     // behavior here, making sure to reset the animation behavior afterward.
     NSWindowAnimationBehavior animationBehavior = [webWindow animationBehavior];
     [webWindow setAnimationBehavior:NSWindowAnimationBehaviorNone];
+#endif
     // If the user has moved the fullScreen window into a new space, temporarily change
     // the collectionBehavior of the webView's window so that it is pulled into the active space:
-    if (!webWindow.onActiveSpace) {
+    if (!([webWindow respondsToSelector:@selector(isOnActiveSpace)] ? [webWindow isOnActiveSpace] : YES)) {
         NSWindowCollectionBehavior behavior = [webWindow collectionBehavior];
         [webWindow setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces];
         [webWindow orderWindow:NSWindowBelow relativeTo:[[self window] windowNumber]];
         [webWindow setCollectionBehavior:behavior];
     } else
         [webWindow orderWindow:NSWindowBelow relativeTo:[[self window] windowNumber]];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [webWindow setAnimationBehavior:animationBehavior];
+#endif
 
     [self _startExitFullScreenAnimationWithDuration:defaultAnimationDuration];
     _isExitingFullScreen = YES;    
@@ -407,6 +468,8 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 
 - (void)_updateMenuAndDockForFullScreen
 {
+    // NSApplicationPresentationOptions is available on > 10.6 only:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     NSApplicationPresentationOptions options = NSApplicationPresentationDefault;
     NSScreen* fullscreenScreen = [[self window] screen];
     
@@ -423,7 +486,11 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
             options |= NSApplicationPresentationAutoHideDock;
     }
     
-    NSApp.presentationOptions = options;
+    if ([NSApp respondsToSelector:@selector(setPresentationOptions:)])
+        [NSApp setPresentationOptions:options];
+    else
+#endif
+        SetSystemUIMode(_isFullScreen ? kUIModeAllHidden : kUIModeNormal, 0);
 }
 
 #pragma mark -
@@ -486,10 +553,10 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
     
     // WKWindowSetClipRect takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
     WKWindowSetClipRect([self window], finalBounds);
     
     [[self window] makeKeyAndOrderFront:self];
@@ -558,10 +625,10 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
     
     // WKWindowSetClipRect takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA("diagnostic push")
+CLANG_PRAGMA("diagnostic ignored \"-Wdeprecated-declarations\"")
     finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
-#pragma clang diagnostic pop
+CLANG_PRAGMA("diagnostic pop")
     WKWindowSetClipRect([self window], finalBounds);
     
     [[self window] setAutodisplay:YES];

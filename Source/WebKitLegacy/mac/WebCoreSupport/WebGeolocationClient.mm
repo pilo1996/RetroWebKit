@@ -40,7 +40,7 @@
 
 #if PLATFORM(IOS)
 #import <WebCore/WAKResponder.h>
-#import <WebKitLegacy/WebCoreThreadRun.h>
+#import <WebKit/WebCoreThreadRun.h>
 #endif
 
 using namespace WebCore;

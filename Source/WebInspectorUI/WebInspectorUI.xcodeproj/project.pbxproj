@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 45;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -108,8 +108,7 @@
 				ORGANIZATIONNAME = Apple;
 			};
 			buildConfigurationList = A54C2250148B23DE00373FA3 /* Build configuration list for PBXProject "WebInspectorUI" */;
-			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
@@ -139,6 +138,8 @@
 		1C60FF1214E6D9AF006CD77D /* Copy User Interface Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
+			files = (
+			);
 			name = "Copy User Interface Resources";
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

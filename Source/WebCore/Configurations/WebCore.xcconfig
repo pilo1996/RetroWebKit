@@ -41,13 +41,13 @@ FRAMEWORK_SEARCH_PATHS_ios_Production = $(PRODUCTION_FRAMEWORKS_DIR);
 FRAMEWORK_SEARCH_PATHS[sdk=macosx*] = $(WK_QUOTED_OVERRIDE_FRAMEWORKS_DIR) $(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks;
 
 LIBRARY_SEARCH_PATHS = $(inherited) "$(LIBWEBRTC_LIBRARY_DIR)";
-ADDITIONAL_CFLAGS = -iframework $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Frameworks -iframework $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/ApplicationServices.framework/Frameworks -iframework $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks -iframework $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/Quartz.framework/Frameworks -iframework $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks;
+ADDITIONAL_CFLAGS = -iframework$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Frameworks -iframework$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/ApplicationServices.framework/Frameworks -iframework$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks -iframework$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks/Quartz.framework/Frameworks -iframework$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks;
 OTHER_CFLAGS = $(inherited) $(ADDITIONAL_CFLAGS);
 OTHER_CPLUSPLUSFLAGS = $(inherited) $(ADDITIONAL_CFLAGS);
 
-WEBKITADDITIONS_HEADER_SEARCH_PATHS = $(BUILT_PRODUCTS_DIR)/usr/local/include/WebKitAdditions $(SDKROOT)/usr/local/include/WebKitAdditions;
+WEBKITADDITIONS_HEADER_SEARCH_PATHS = ${BUILT_PRODUCTS_DIR}/usr/local/include/WebKitAdditions $(SDKROOT)/usr/local/include/WebKitAdditions;
 
-HEADER_SEARCH_PATHS = PAL ForwardingHeaders /usr/include/libxslt /usr/include/libxml2 "$(BUILT_PRODUCTS_DIR)/DerivedSources/WebCore" "$(BUILT_PRODUCTS_DIR)/usr/local/include" $(WEBKITADDITIONS_HEADER_SEARCH_PATHS) $(HEADER_SEARCH_PATHS);
+HEADER_SEARCH_PATHS = PAL ForwardingHeaders "${BUILT_PRODUCTS_DIR}/DerivedSources/WebCore" "${BUILT_PRODUCTS_DIR}/usr/local/include" $(WEBKITADDITIONS_HEADER_SEARCH_PATHS) $(HEADER_SEARCH_PATHS);
 INFOPLIST_FILE = Info.plist;
 INSTALL_PATH = $(SYSTEM_LIBRARY_DIR)/PrivateFrameworks;
 INSTALL_PATH[sdk=macosx*] = $(WEBCORE_FRAMEWORKS_DIR);
@@ -77,12 +77,13 @@ LIBWEBRTC_LIBRARY_DIR_USE_OVERRIDE_FRAMEWORKS_DIR_NO = $(WEBCORE_FRAMEWORKS_DIR)
 LIBWEBRTC_LIBRARY_DIR_USE_OVERRIDE_FRAMEWORKS_DIR_YES = $(WK_OVERRIDE_FRAMEWORKS_DIR);
 
 OTHER_LDFLAGS = $(inherited) $(WK_RELOCATABLE_FRAMEWORK_LDFLAGS) $(WK_UNDEFINED_SYMBOLS_LDFLAGS) $(OTHER_LDFLAGS_PLATFORM);
-OTHER_LDFLAGS_BASE = -lsqlite3 -lobjc -lANGLE -framework CoreAudio -framework Metal -allowable_client WebCoreTestSupport -allowable_client WebKitLegacy;
+OTHER_LDFLAGS_BASE = -lsqlite3 -lobjc -lANGLE -lbrotli -lwoff2 -llz4 -lots -framework CoreAudio -allowable_client WebCoreTestSupport -allowable_client WebKitLegacy -allowable_client WebKit;
 // FIXME: Reduce the number of allowable_client <rdar://problem/31823969>
-OTHER_LDFLAGS_BASE_ios = $(OTHER_LDFLAGS_BASE) -framework CFNetwork -framework CoreGraphics -framework CoreText -framework Foundation -framework ImageIO -framework MobileCoreServices -framework OpenGLES -lMobileGestalt $(WK_IOS_BINCOMPAT_LDFLAGS) -allowable_client WebKit -allowable_client iTunesU -allowable_client Casablanca -allowable_client Remote -allowable_client TVBooks -allowable_client DumpRenderTree -allowable_client WebKitTestRunner -allowable_client TestWebKitAPI;
+OTHER_LDFLAGS_BASE_ios = $(OTHER_LDFLAGS_BASE) -framework Metal -framework CFNetwork -framework CoreGraphics -framework CoreText -framework Foundation -framework ImageIO -framework MobileCoreServices -framework OpenGLES -lMobileGestalt $(WK_IOS_BINCOMPAT_LDFLAGS) -allowable_client WebKit -allowable_client iTunesU -allowable_client Casablanca -allowable_client Remote -allowable_client TVBooks -allowable_client DumpRenderTree -allowable_client WebKitTestRunner -allowable_client TestWebKitAPI;
 OTHER_LDFLAGS_PLATFORM[sdk=iphoneos*] = $(OTHER_LDFLAGS_BASE_ios) -framework IOSurface -framework GraphicsServices $(LIBWEBRTC_LDFLAGS);
 OTHER_LDFLAGS_PLATFORM[sdk=iphonesimulator*] = $(OTHER_LDFLAGS_BASE_ios) $(LIBWEBRTC_LDFLAGS);
-OTHER_LDFLAGS_PLATFORM[sdk=macosx*] = $(OTHER_LDFLAGS_BASE) -sub_library libobjc -umbrella WebKit -framework ApplicationServices -framework AudioUnit -framework Carbon -framework Cocoa -framework DataDetectorsCore -framework IOSurface -framework OpenGL -framework SystemConfiguration $(LIBWEBRTC_LDFLAGS);
+OTHER_LDFLAGS_PLATFORM[sdk=macosx*] = $(OTHER_LDFLAGS_BASE) -sub_library libobjc -umbrella WebKit -framework ApplicationServices -framework AudioUnit -framework Carbon -framework Cocoa -framework OpenGL -framework SystemConfiguration $(LIBWEBRTC_LDFLAGS);
+//-framework DataDetectorsCore -framework IOSurface;
 
 WK_UNDEFINED_SYMBOLS_LDFLAGS = $(WK_UNDEFINED_SYMBOLS_LDFLAGS_$(TARGET_MAC_OS_X_VERSION_LESS_THAN_1013000));
 WK_UNDEFINED_SYMBOLS_LDFLAGS_YES = -Wl,-U,_CTFontCreatePhysicalFontForCharactersWithLanguage;

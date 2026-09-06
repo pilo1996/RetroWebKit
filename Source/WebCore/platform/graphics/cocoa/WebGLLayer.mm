@@ -46,14 +46,22 @@ using namespace WebCore;
 
 @implementation WebGLLayer
 
-@synthesize context=_context;
+-(GraphicsContext3D*)context
+{
+    return _context;
+}
+
+-(void)setContext:(GraphicsContext3D*)context
+{
+    _context = context;
+}
 
 -(id)initWithGraphicsContext3D:(GraphicsContext3D*)context
 {
     _context = context;
     self = [super init];
     _devicePixelRatio = context->getContextAttributes().devicePixelRatio;
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
     if (!context->getContextAttributes().alpha)
         self.opaque = YES;
     self.transform = CATransform3DIdentity;
@@ -63,6 +71,7 @@ using namespace WebCore;
 }
 
 #if PLATFORM(MAC)
+#if USE(IOSURFACE)
 // On Mac, we need to flip the layer to take into account
 // that the IOSurface provides content in Y-up. This
 // means that any incoming transform (unlikely, since this
@@ -79,6 +88,97 @@ using namespace WebCore;
 {
     [super setAnchorPoint:CGPointMake(p.x, 1.0 - p.y)];
 }
+
+#else
+-(CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
+{
+    // We're basically copying the pixel format object from the existing
+    // WebGL context, so we don't need to use the display mask.
+    UNUSED_PARAM(mask);
+
+    CGLPixelFormatObj webglPixelFormat = CGLGetPixelFormat(_context->platformGraphicsContext3D());
+
+    Vector<CGLPixelFormatAttribute> attribs;
+    GLint value;
+
+    CGLDescribePixelFormat(webglPixelFormat, 0, kCGLPFAColorSize, &value);
+    attribs.append(kCGLPFAColorSize);
+    attribs.append(static_cast<CGLPixelFormatAttribute>(value));
+
+    // We don't need to specify a depth size since we're only
+    // using this context as a 2d blit destination for the WebGL FBO.
+    attribs.append(kCGLPFADepthSize);
+    attribs.append(static_cast<CGLPixelFormatAttribute>(0));
+
+    CGLDescribePixelFormat(webglPixelFormat, 0, kCGLPFAAllowOfflineRenderers, &value);
+    if (value)
+        attribs.append(kCGLPFAAllowOfflineRenderers);
+
+    CGLDescribePixelFormat(webglPixelFormat, 0, kCGLPFAAccelerated, &value);
+    if (value)
+        attribs.append(kCGLPFAAccelerated);
+
+    attribs.append(static_cast<CGLPixelFormatAttribute>(0));
+
+    CGLPixelFormatObj pixelFormat;
+    GLint numPixelFormats = 0;
+    CGLChoosePixelFormat(attribs.data(), &pixelFormat, &numPixelFormats);
+
+    ASSERT(pixelFormat);
+    ASSERT(numPixelFormats);
+
+    return pixelFormat;
+}
+
+-(CGLContextObj)copyCGLContextForPixelFormat:(CGLPixelFormatObj)pixelFormat
+{
+    CGLContextObj contextObj;
+    CGLCreateContext(pixelFormat, _context->platformGraphicsContext3D(), &contextObj);
+    return contextObj;
+}
+
+-(void)drawInCGLContext:(CGLContextObj)glContext pixelFormat:(CGLPixelFormatObj)pixelFormat forLayerTime:(CFTimeInterval)timeInterval displayTime:(const CVTimeStamp *)timeStamp
+{
+    if (!_context)
+        return;
+
+    _context->prepareTexture();
+
+    CGLSetCurrentContext(glContext);
+
+    CGRect frame = [self frame];
+    frame.size.width *= _devicePixelRatio;
+    frame.size.height *= _devicePixelRatio;
+
+    // draw the FBO into the layer
+    glViewport(0, 0, frame.size.width, frame.size.height);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-1, 1, -1, 1, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, _context->platformTexture());
+
+    glBegin(GL_TRIANGLE_FAN);
+        glTexCoord2f(0, 0);
+        glVertex2f(-1, -1);
+        glTexCoord2f(1, 0);
+        glVertex2f(1, -1);
+        glTexCoord2f(1, 1);
+        glVertex2f(1, 1);
+        glTexCoord2f(0, 1);
+        glVertex2f(-1, 1);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+
+    // Call super to finalize the drawing. By default all it does is call glFlush().
+    [super drawInCGLContext:glContext pixelFormat:pixelFormat forLayerTime:timeInterval displayTime:timeStamp];
+}
+#endif
 
 static void freeData(void *, const void *data, size_t /* size */)
 {
@@ -129,6 +229,7 @@ static void freeData(void *, const void *data, size_t /* size */)
         return;
 
 #if PLATFORM(MAC)
+#if USE(IOSURFACE)
     _context->prepareTexture();
     if (_drawingBuffer) {
         std::swap(_contentsBuffer, _drawingBuffer);
@@ -136,6 +237,9 @@ static void freeData(void *, const void *data, size_t /* size */)
         [self reloadValueForKeyPath:@"contents"];
         [self bindFramebufferToNextAvailableSurface];
     }
+#else
+    [super display];
+#endif
 #else
     _context->presentRenderbuffer();
 #endif
@@ -146,7 +250,7 @@ static void freeData(void *, const void *data, size_t /* size */)
         layer->owner()->platformCALayerLayerDidDisplay(layer);
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && USE(IOSURFACE)
 - (void)allocateIOSurfaceBackingStoreWithSize:(IntSize)size usingAlpha:(BOOL)usingAlpha
 {
     _bufferSize = size;

@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMDocumentFragment.h>
+#import <WebKit/DOMDocumentFragment.h>
 
 @class DOMElement;
 @class DOMHTMLCollection;
@@ -31,9 +31,9 @@
 @class NSString;
 
 @interface DOMDocumentFragment (DOMDocumentFragmentPrivate)
-@property (readonly, strong) DOMHTMLCollection *children;
-@property (readonly, strong) DOMElement *firstElementChild;
-@property (readonly, strong) DOMElement *lastElementChild;
+@property (readonly, retain) DOMHTMLCollection *children;
+@property (readonly, retain) DOMElement *firstElementChild;
+@property (readonly, retain) DOMElement *lastElementChild;
 @property (readonly) unsigned childElementCount;
 
 - (DOMElement *)getElementById:(NSString *)elementId;

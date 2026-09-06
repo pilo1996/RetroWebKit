@@ -27,7 +27,7 @@
 
 #import <AppKit/NSScrollingMomentumCalculator_Private.h>
 
-#else
+#elif !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101100)
 
 @interface _NSScrollingMomentumCalculator : NSObject
 

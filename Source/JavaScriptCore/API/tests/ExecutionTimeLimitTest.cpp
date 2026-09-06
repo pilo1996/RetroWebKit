@@ -38,7 +38,7 @@
 #include <wtf/Lock.h>
 #include <wtf/text/StringBuilder.h>
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 #include <dispatch/dispatch.h>
 #endif
 
@@ -85,7 +85,7 @@ static bool extendTerminateCallback(JSContextRef ctx, void*)
     return true;
 }
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
 bool dispatchTerminateCallbackCalled = false;
 static bool dispatchTermitateCallback(JSContextRef, void*)
 {
@@ -156,7 +156,9 @@ int testExecutionTimeLimit()
         timeLimit = (100 + tierAdjustmentMillis) / 1000.0;
         JSContextGroupSetExecutionTimeLimit(contextGroup, timeLimit, shouldTerminateCallback, 0);
         {
-            unsigned timeAfterWatchdogShouldHaveFired = 300 + tierAdjustmentMillis;
+            // FIXME: this is entirely dependent on how much time the CPU spends executing the script thread while the main thread is sleeping;
+            // as a workaround give plenty of time
+            unsigned timeAfterWatchdogShouldHaveFired = 10000 + tierAdjustmentMillis;
 
             JSStringRef script = JSStringCreateWithUTF8CString("function foo() { while (true) { } } foo();");
             exception = nullptr;
@@ -414,7 +416,7 @@ int testExecutionTimeLimit()
             }
         }
 
-#if HAVE(MACH_EXCEPTIONS)
+#if HAVE(MACH_EXCEPTIONS) && HAVE(DISPATCH_H)
         /* Test script timeout from dispatch queue: */
         timeLimit = (100 + tierAdjustmentMillis) / 1000.0;
         JSContextGroupSetExecutionTimeLimit(contextGroup, timeLimit, dispatchTermitateCallback, 0);

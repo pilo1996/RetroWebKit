@@ -30,6 +30,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
+#ifdef check
+#undef check
+#endif
+
 namespace WebCore {
 
 class CSSPrimitiveValue;

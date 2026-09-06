@@ -31,6 +31,7 @@
 // #include "PlugInsResourcesData.cpp"
 // #include "UserAgentStyleSheetsData.cpp"
 
+#if PLATFORM(WIN) || (PLATFORM(MAC) && defined(DERIVEDSOURCES_FIRST))
 #include "HTMLElementFactory.cpp"
 #if ENABLE(WEBGL)
 #include "JSANGLEInstancedArrays.cpp"
@@ -63,7 +64,7 @@
 #include "JSCryptoKey.cpp"
 #include "JSCryptoKeyPair.cpp"
 #endif
-#if ENABLE(WEBGL)
+#if PLATFORM(WIN) && ENABLE(WEBGL)
 #include "JSEXTBlendMinMax.cpp"
 #include "JSEXTFragDepth.cpp"
 #include "JSEXTShaderTextureLOD.cpp"
@@ -131,9 +132,11 @@
 #include "JSCustomEvent.cpp"
 #include "JSDatabase.cpp"
 #include "JSDatabaseCallback.cpp"
+#if PLATFORM(WIN)
 #include "JSDataTransfer.cpp"
 #include "JSDataTransferItem.cpp"
 #include "JSDataTransferItemList.cpp"
+#endif
 #include "JSDedicatedWorkerGlobalScope.cpp"
 #if ENABLE(WEB_AUDIO)
 #include "JSDelayNode.cpp"
@@ -173,7 +176,9 @@
 #include "JSDOMTokenList.cpp"
 #include "JSDOMURL.cpp"
 #include "JSDOMURLMediaSource.cpp"
+#if PLATFORM(WIN)
 #include "JSDOMWindow.cpp"
+#endif
 #include "JSDOMWindowFetch.cpp"
 #include "JSDOMWindowIndexedDatabase.cpp"
 #include "JSDOMWindowSpeechSynthesis.cpp"
@@ -207,6 +212,8 @@
 #include "JSGlobalEventHandlers.cpp"
 #include "JSHashChangeEvent.cpp"
 #include "JSHistory.cpp"
+#endif
+#if PLATFORM(WIN) || (PLATFORM(MAC) && defined(DERIVEDSOURCES_SECOND))
 #include "JSHTMLAllCollection.cpp"
 #include "JSHTMLAnchorElement.cpp"
 #include "JSHTMLAppletElement.cpp"
@@ -289,6 +296,8 @@
 #include "JSHTMLUnknownElement.cpp"
 #include "JSHTMLUListElement.cpp"
 #include "JSHTMLVideoElement.cpp"
+#endif
+#if PLATFORM(WIN) || (PLATFORM(MAC) && defined(DERIVEDSOURCES_THIRD))
 #include "JSImageData.cpp"
 #include "JSInputEvent.cpp"
 #include "JSInspectorFrontendHost.cpp"
@@ -337,7 +346,6 @@
 #include "JSMutationRecord.cpp"
 #include "JSNamedNodeMap.cpp"
 #include "JSNavigator.cpp"
-#include "JSNavigatorContentUtils.cpp"
 #include "JSNavigatorGeolocation.cpp"
 #include "JSNavigatorMediaDevices.cpp"
 #include "JSNavigatorUserMedia.cpp"
@@ -358,8 +366,6 @@
 #include "JSParentNode.cpp"
 #include "JSPerformance.cpp"
 #include "JSPerformanceEntry.cpp"
-#include "JSPerformanceMark.cpp"
-#include "JSPerformanceMeasure.cpp"
 #include "JSPerformanceNavigation.cpp"
 #include "JSPerformanceResourceTiming.cpp"
 #include "JSPerformanceTiming.cpp"
@@ -414,6 +420,8 @@
 #include "JSSQLTransaction.cpp"
 #include "JSSQLTransactionCallback.cpp"
 #include "JSSQLTransactionErrorCallback.cpp"
+#endif
+#if PLATFORM(WIN) || (PLATFORM(MAC) && defined(DERIVEDSOURCES_FOURTH))
 #include "JSSVGAElement.cpp"
 #include "JSSVGAltGlyphDefElement.cpp"
 #include "JSSVGAltGlyphElement.cpp"
@@ -577,6 +585,8 @@
 #include "JSStyleSheet.cpp"
 #include "JSStyleSheetList.cpp"
 #include "JSSubtleCrypto.cpp"
+#endif
+#if PLATFORM(WIN) || (PLATFORM(MAC) && defined(DERIVEDSOURCES_FIFTH))
 #include "JSText.cpp"
 #include "JSTextEvent.cpp"
 #include "JSTextMetrics.cpp"
@@ -593,15 +603,15 @@
 #include "JSVTTCue.cpp"
 #include "JSVideoTrack.cpp"
 #include "JSVideoTrackList.cpp"
-#if ENABLE(WEBVTT_REGIONS)
 #include "JSVTTRegion.cpp"
 #include "JSVTTRegionList.cpp"
 #endif
-#endif
 #include "JSTimeRanges.cpp"
+#if PLATFORM(WIN)
 #include "JSTouch.cpp"
 #include "JSTouchEvent.cpp"
 #include "JSTouchList.cpp"
+#endif
 #include "JSTransitionEvent.cpp"
 #include "JSTreeWalker.cpp"
 #include "JSUIEvent.cpp"
@@ -654,6 +664,7 @@
 #include "JSXPathNSResolver.cpp"
 #include "JSXPathResult.cpp"
 #include "JSXSLTProcessor.cpp"
+#endif
 
 // On MSVC, including StaticConstructors.h causes all global objects not to be
 // automatically initialized by the C runtime. This is useful in some specific

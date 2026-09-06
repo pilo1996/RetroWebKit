@@ -54,6 +54,10 @@ NSString *textLayerKey = @"TextLayer";
 NSString *dropShadowLayerKey = @"DropShadowLayer";
 NSString *rimShadowLayerKey = @"RimShadowLayer";
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#define kAnimationCompletionBlock @"animationCompletionBlock"
+#endif
+
 using namespace WebCore;
 
 @interface WebTextIndicatorView : NSView {
@@ -64,10 +68,16 @@ using namespace WebCore;
     BOOL _fadingOut;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame textIndicator:(TextIndicator&)textIndicator margin:(NSSize)margin offset:(NSPoint)offset;
+- (id)initWithFrame:(NSRect)frame textIndicator:(TextIndicator&)textIndicator margin:(NSSize)margin offset:(NSPoint)offset;
 
 - (void)present;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)hideWithCompletionHandler:(void(^)(void))completionHandler;
+#else
+- (void)hideWithCompletionHandler:(std::function<void (void)> *)completionHandler;
+- (void)animationDidStop:(CAAnimation *)theAnimation finished:(BOOL)flag;
+#endif
+- (CGColorRef)NSColorToCGColor:(NSColor *)color;
 
 - (void)setAnimationProgress:(float)progress;
 - (BOOL)hasCompletedAnimation;
@@ -78,7 +88,15 @@ using namespace WebCore;
 
 @implementation WebTextIndicatorView
 
-@synthesize fadingOut = _fadingOut;
+- (BOOL)isFadingOut
+{
+    return _fadingOut;
+}
+
+- (void)setFadingOut:(BOOL)fadingOut
+{
+    _fadingOut = fadingOut;
+}
 
 static bool indicatorWantsBounce(const TextIndicator& indicator)
 {
@@ -147,7 +165,30 @@ static bool indicatorWantsManualAnimation(const TextIndicator& indicator)
     return false;
 }
 
-- (instancetype)initWithFrame:(NSRect)frame textIndicator:(TextIndicator&)textIndicator margin:(NSSize)margin offset:(NSPoint)offset
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+- (void)animationDidStop:(CAAnimation *)theAnimation finished:(BOOL)flag
+{
+    UNUSED_PARAM(flag);
+    std::function<void (void)> *animationCompletionBlock = static_cast<std::function<void (void)> *>([[theAnimation valueForKey:kAnimationCompletionBlock] pointerValue]);
+    if (animationCompletionBlock) {
+        (*animationCompletionBlock)();
+        delete animationCompletionBlock;
+    }
+}
+#endif
+
+- (CGColorRef)NSColorToCGColor:(NSColor *)color
+{
+    NSInteger numberOfComponents = [color numberOfComponents];
+    CGFloat components[numberOfComponents];
+    CGColorSpaceRef colorSpace = [[color colorSpace] CGColorSpace];
+    [color getComponents:(CGFloat *)&components];
+    CGColorRef cgColor = CGColorCreate(colorSpace, components);
+
+    return cgColor;
+}
+
+- (id)initWithFrame:(NSRect)frame textIndicator:(TextIndicator&)textIndicator margin:(NSSize)margin offset:(NSPoint)offset
 {
     if (!(self = [super initWithFrame:frame]))
         return nil;
@@ -168,11 +209,11 @@ static bool indicatorWantsManualAnimation(const TextIndicator& indicator)
 
     RetainPtr<NSMutableArray> bounceLayers = adoptNS([[NSMutableArray alloc] init]);
 
-    RetainPtr<CGColorRef> highlightColor = [NSColor colorWithDeviceRed:1 green:1 blue:0 alpha:1].CGColor;
-    RetainPtr<CGColorRef> rimShadowColor = [NSColor colorWithDeviceWhite:0 alpha:0.35].CGColor;
-    RetainPtr<CGColorRef> dropShadowColor = [NSColor colorWithDeviceWhite:0 alpha:0.2].CGColor;
+    RetainPtr<CGColorRef> highlightColor = [self NSColorToCGColor:[NSColor colorWithDeviceRed:1 green:1 blue:0 alpha:1]];
+    RetainPtr<CGColorRef> rimShadowColor = [self NSColorToCGColor:[NSColor colorWithDeviceWhite:0 alpha:0.35]];
+    RetainPtr<CGColorRef> dropShadowColor = [self NSColorToCGColor:[NSColor colorWithDeviceWhite:0 alpha:0.2]];
 
-    RetainPtr<CGColorRef> borderColor = [NSColor colorWithDeviceRed:.96 green:.90 blue:0 alpha:1].CGColor;
+    RetainPtr<CGColorRef> borderColor = [self NSColorToCGColor:[NSColor colorWithDeviceRed:.96 green:.90 blue:0 alpha:1]];
 
     Vector<FloatRect> textRectsInBoundingRectCoordinates = _textIndicator->textRectsInBoundingRectCoordinates();
 
@@ -193,54 +234,62 @@ static bool indicatorWantsManualAnimation(const TextIndicator& indicator)
         bounceLayerRect.move(_margin.width, _margin.height);
 
         RetainPtr<CALayer> bounceLayer = adoptNS([[CALayer alloc] init]);
-        [bounceLayer setDelegate:[WebActionDisablingCALayerDelegate shared]];
-        [bounceLayer setFrame:bounceLayerRect];
-        [bounceLayer setOpacity:0];
-        [bounceLayers addObject:bounceLayer.get()];
+        [bounceLayer.get() setDelegate:[WebActionDisablingCALayerDelegate shared]];
+        [bounceLayer.get() setFrame:bounceLayerRect];
+        [bounceLayer.get() setOpacity:0];
+        [bounceLayers.get() addObject:bounceLayer.get()];
 
         FloatRect yellowHighlightRect(FloatPoint(), bounceLayerRect.size());
 
         RetainPtr<CALayer> dropShadowLayer = adoptNS([[CALayer alloc] init]);
-        [dropShadowLayer setDelegate:[WebActionDisablingCALayerDelegate shared]];
-        [dropShadowLayer setShadowColor:dropShadowColor.get()];
-        [dropShadowLayer setShadowRadius:dropShadowBlurRadius];
-        [dropShadowLayer setShadowOffset:CGSizeMake(dropShadowOffsetX, dropShadowOffsetY)];
-        [dropShadowLayer setShadowPath:translatedPath.platformPath()];
-        [dropShadowLayer setShadowOpacity:1];
-        [dropShadowLayer setFrame:yellowHighlightRect];
-        [bounceLayer addSublayer:dropShadowLayer.get()];
-        [bounceLayer setValue:dropShadowLayer.get() forKey:dropShadowLayerKey];
+        [dropShadowLayer.get() setDelegate:[WebActionDisablingCALayerDelegate shared]];
+        [dropShadowLayer.get() setShadowColor:dropShadowColor.get()];
+        [dropShadowLayer.get() setShadowRadius:dropShadowBlurRadius];
+        [dropShadowLayer.get() setShadowOffset:CGSizeMake(dropShadowOffsetX, dropShadowOffsetY)];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+        [dropShadowLayer.get() setShadowPath:translatedPath.platformPath()];
+#endif
+        [dropShadowLayer.get() setShadowOpacity:1];
+        [dropShadowLayer.get() setFrame:yellowHighlightRect];
+        [bounceLayer.get() addSublayer:dropShadowLayer.get()];
+        [bounceLayer.get() setValue:dropShadowLayer.get() forKey:dropShadowLayerKey];
 
         RetainPtr<CALayer> rimShadowLayer = adoptNS([[CALayer alloc] init]);
-        [rimShadowLayer setDelegate:[WebActionDisablingCALayerDelegate shared]];
-        [rimShadowLayer setFrame:yellowHighlightRect];
-        [rimShadowLayer setShadowColor:rimShadowColor.get()];
-        [rimShadowLayer setShadowRadius:rimShadowBlurRadius];
-        [rimShadowLayer setShadowPath:translatedPath.platformPath()];
-        [rimShadowLayer setShadowOffset:CGSizeZero];
-        [rimShadowLayer setShadowOpacity:1];
-        [rimShadowLayer setFrame:yellowHighlightRect];
-        [bounceLayer addSublayer:rimShadowLayer.get()];
-        [bounceLayer setValue:rimShadowLayer.get() forKey:rimShadowLayerKey];
+        [rimShadowLayer.get() setDelegate:[WebActionDisablingCALayerDelegate shared]];
+        [rimShadowLayer.get() setFrame:yellowHighlightRect];
+        [rimShadowLayer.get() setShadowColor:rimShadowColor.get()];
+        [rimShadowLayer.get() setShadowRadius:rimShadowBlurRadius];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+        [rimShadowLayer.get() setShadowPath:translatedPath.platformPath()];
+#endif
+        [rimShadowLayer.get() setShadowOffset:CGSizeZero];
+        [rimShadowLayer.get() setShadowOpacity:1];
+        [rimShadowLayer.get() setFrame:yellowHighlightRect];
+        [bounceLayer.get() addSublayer:rimShadowLayer.get()];
+        [bounceLayer.get() setValue:rimShadowLayer.get() forKey:rimShadowLayerKey];
 
         RetainPtr<CALayer> textLayer = adoptNS([[CALayer alloc] init]);
-        [textLayer setBackgroundColor:highlightColor.get()];
-        [textLayer setBorderColor:borderColor.get()];
-        [textLayer setBorderWidth:borderWidth];
-        [textLayer setDelegate:[WebActionDisablingCALayerDelegate shared]];
-        [textLayer setContents:(id)contentsImage.get()];
+        [textLayer.get() setBackgroundColor:highlightColor.get()];
+        [textLayer.get() setBorderColor:borderColor.get()];
+        [textLayer.get() setBorderWidth:borderWidth];
+        [textLayer.get() setDelegate:[WebActionDisablingCALayerDelegate shared]];
+        [textLayer.get() setContents:(id)contentsImage.get()];
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
         RetainPtr<CAShapeLayer> maskLayer = adoptNS([[CAShapeLayer alloc] init]);
         [maskLayer setPath:translatedPath.platformPath()];
         [textLayer setMask:maskLayer.get()];
+#endif
 
         FloatRect imageRect = pathBoundingRect;
-        [textLayer setContentsRect:CGRectMake(imageRect.x() / contentsImageLogicalSize.width(), imageRect.y() / contentsImageLogicalSize.height(), imageRect.width() / contentsImageLogicalSize.width(), imageRect.height() / contentsImageLogicalSize.height())];
-        [textLayer setContentsGravity:kCAGravityCenter];
-        [textLayer setContentsScale:_textIndicator->contentImageScaleFactor()];
-        [textLayer setFrame:yellowHighlightRect];
-        [bounceLayer setValue:textLayer.get() forKey:textLayerKey];
-        [bounceLayer addSublayer:textLayer.get()];
+        [textLayer.get() setContentsRect:CGRectMake(imageRect.x() / contentsImageLogicalSize.width(), imageRect.y() / contentsImageLogicalSize.height(), imageRect.width() / contentsImageLogicalSize.width(), imageRect.height() / contentsImageLogicalSize.height())];
+        [textLayer.get() setContentsGravity:kCAGravityCenter];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+        [textLayer.get() setContentsScale:_textIndicator->contentImageScaleFactor()];
+#endif
+        [textLayer.get() setFrame:yellowHighlightRect];
+        [bounceLayer.get() setValue:textLayer.get() forKey:textLayerKey];
+        [bounceLayer.get() addSublayer:textLayer.get()];
     }
 
     self.layer.sublayers = bounceLayers.get();
@@ -252,12 +301,12 @@ static bool indicatorWantsManualAnimation(const TextIndicator& indicator)
 static RetainPtr<CAKeyframeAnimation> createBounceAnimation(CFTimeInterval duration)
 {
     RetainPtr<CAKeyframeAnimation> bounceAnimation = [CAKeyframeAnimation animationWithKeyPath:@"transform"];
-    [bounceAnimation setValues:@[
+    [bounceAnimation.get() setValues:[NSArray arrayWithObjects:
         [NSValue valueWithCATransform3D:CATransform3DIdentity],
         [NSValue valueWithCATransform3D:CATransform3DMakeScale(midBounceScale, midBounceScale, 1)],
-        [NSValue valueWithCATransform3D:CATransform3DIdentity]
-        ]];
-    [bounceAnimation setDuration:duration];
+        [NSValue valueWithCATransform3D:CATransform3DIdentity],
+        nil]];
+    [bounceAnimation.get() setDuration:duration];
 
     return bounceAnimation;
 }
@@ -266,10 +315,10 @@ static RetainPtr<CABasicAnimation> createContentCrossfadeAnimation(CFTimeInterva
 {
     RetainPtr<CABasicAnimation> crossfadeAnimation = [CABasicAnimation animationWithKeyPath:@"contents"];
     RetainPtr<CGImageRef> contentsImage = textIndicator.contentImage()->nativeImage();
-    [crossfadeAnimation setToValue:(id)contentsImage.get()];
-    [crossfadeAnimation setFillMode:kCAFillModeForwards];
-    [crossfadeAnimation setRemovedOnCompletion:NO];
-    [crossfadeAnimation setDuration:duration];
+    [crossfadeAnimation.get() setToValue:(id)contentsImage.get()];
+    [crossfadeAnimation.get() setFillMode:kCAFillModeForwards];
+    [crossfadeAnimation.get() setRemovedOnCompletion:NO];
+    [crossfadeAnimation.get() setDuration:duration];
 
     return crossfadeAnimation;
 }
@@ -277,11 +326,11 @@ static RetainPtr<CABasicAnimation> createContentCrossfadeAnimation(CFTimeInterva
 static RetainPtr<CABasicAnimation> createShadowFadeAnimation(CFTimeInterval duration)
 {
     RetainPtr<CABasicAnimation> fadeShadowInAnimation = [CABasicAnimation animationWithKeyPath:@"shadowOpacity"];
-    [fadeShadowInAnimation setFromValue:@0];
-    [fadeShadowInAnimation setToValue:@1];
-    [fadeShadowInAnimation setFillMode:kCAFillModeForwards];
-    [fadeShadowInAnimation setRemovedOnCompletion:NO];
-    [fadeShadowInAnimation setDuration:duration];
+    [fadeShadowInAnimation.get() setFromValue:[NSNumber numberWithInteger:0]];
+    [fadeShadowInAnimation.get() setToValue:[NSNumber numberWithInteger:1]];
+    [fadeShadowInAnimation.get() setFillMode:kCAFillModeForwards];
+    [fadeShadowInAnimation.get() setRemovedOnCompletion:NO];
+    [fadeShadowInAnimation.get() setDuration:duration];
 
     return fadeShadowInAnimation;
 }
@@ -289,11 +338,11 @@ static RetainPtr<CABasicAnimation> createShadowFadeAnimation(CFTimeInterval dura
 static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration)
 {
     RetainPtr<CABasicAnimation> fadeInAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
-    [fadeInAnimation setFromValue:@0];
-    [fadeInAnimation setToValue:@1];
-    [fadeInAnimation setFillMode:kCAFillModeForwards];
-    [fadeInAnimation setRemovedOnCompletion:NO];
-    [fadeInAnimation setDuration:duration];
+    [fadeInAnimation.get() setFromValue:[NSNumber numberWithInteger:0]];
+    [fadeInAnimation.get() setToValue:[NSNumber numberWithInteger:1]];
+    [fadeInAnimation.get() setFillMode:kCAFillModeForwards];
+    [fadeInAnimation.get() setRemovedOnCompletion:NO];
+    [fadeInAnimation.get() setDuration:duration];
 
     return fadeInAnimation;
 }
@@ -337,7 +386,9 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
     }
 
     [CATransaction begin];
-    for (CALayer *bounceLayer in _bounceLayers.get()) {
+    NSEnumerator *enumerator = [_bounceLayers.get() objectEnumerator];
+    CALayer *bounceLayer;
+    while ((bounceLayer = [enumerator nextObject])) {
         if (indicatorWantsManualAnimation(*_textIndicator))
             bounceLayer.speed = 0;
 
@@ -356,17 +407,27 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
     [CATransaction commit];
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 - (void)hideWithCompletionHandler:(void(^)(void))completionHandler
+#else
+- (void)hideWithCompletionHandler:(std::function<void (void)> *)completionHandler
+#endif
 {
     RetainPtr<CABasicAnimation> fadeAnimation = [CABasicAnimation animationWithKeyPath:@"opacity"];
-    [fadeAnimation setFromValue:@1];
-    [fadeAnimation setToValue:@0];
-    [fadeAnimation setFillMode:kCAFillModeForwards];
-    [fadeAnimation setRemovedOnCompletion:NO];
-    [fadeAnimation setDuration:fadeOutAnimationDuration];
+    [fadeAnimation.get() setFromValue:[NSNumber numberWithInteger:1]];
+    [fadeAnimation.get() setToValue:[NSNumber numberWithInteger:0]];
+    [fadeAnimation.get() setFillMode:kCAFillModeForwards];
+    [fadeAnimation.get() setRemovedOnCompletion:NO];
+    [fadeAnimation.get() setDuration:fadeOutAnimationDuration];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    [fadeAnimation.get() setDelegate:self];
+    [fadeAnimation.get() setValue:[NSValue valueWithPointer:completionHandler] forKey:kAnimationCompletionBlock];
+#endif
 
     [CATransaction begin];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     [CATransaction setCompletionBlock:completionHandler];
+#endif
     [self.layer addAnimation:fadeAnimation.get() forKey:@"fadeOut"];
     [CATransaction commit];
 }
@@ -379,7 +440,9 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
     if (progress == 1) {
         _hasCompletedAnimation = true;
 
-        for (CALayer *bounceLayer in _bounceLayers.get()) {
+        NSEnumerator *enumerator = [_bounceLayers.get() objectEnumerator];
+        CALayer *bounceLayer;
+        while ((bounceLayer = [enumerator nextObject])) {
             // Continue the animation from wherever it had manually progressed to.
             CFTimeInterval beginTime = bounceLayer.timeOffset;
             bounceLayer.speed = 1;
@@ -388,7 +451,9 @@ static RetainPtr<CABasicAnimation> createFadeInAnimation(CFTimeInterval duration
         }
     } else {
         CFTimeInterval animationDuration = [self _animationDuration];
-        for (CALayer *bounceLayer in _bounceLayers.get())
+        NSEnumerator *enumerator = [_bounceLayers.get() objectEnumerator];
+        CALayer *bounceLayer;
+        while ((bounceLayer = [enumerator nextObject]))
             bounceLayer.timeOffset = progress * animationDuration;
     }
 }
@@ -418,17 +483,17 @@ void TextIndicatorWindow::setAnimationProgress(float progress)
     if (!m_textIndicator)
         return;
 
-    [m_textIndicatorView setAnimationProgress:progress];
+    [m_textIndicatorView.get() setAnimationProgress:progress];
 }
 
 void TextIndicatorWindow::clearTextIndicator(TextIndicatorWindowDismissalAnimation animation)
 {
     RefPtr<TextIndicator> textIndicator = WTFMove(m_textIndicator);
 
-    if ([m_textIndicatorView isFadingOut])
+    if ([m_textIndicatorView.get() isFadingOut])
         return;
 
-    if (textIndicator && indicatorWantsManualAnimation(*textIndicator) && [m_textIndicatorView hasCompletedAnimation] && animation == TextIndicatorWindowDismissalAnimation::FadeOut) {
+    if (textIndicator && indicatorWantsManualAnimation(*textIndicator) && [m_textIndicatorView.get() hasCompletedAnimation] && animation == TextIndicatorWindowDismissalAnimation::FadeOut) {
         startFadeOut();
         return;
     }
@@ -461,19 +526,19 @@ void TextIndicatorWindow::setTextIndicator(Ref<TextIndicator> textIndicator, CGR
     NSRect integralWindowContentRect = NSIntegralRect(windowContentRect);
     NSPoint fractionalTextOffset = NSMakePoint(windowContentRect.origin.x - integralWindowContentRect.origin.x, windowContentRect.origin.y - integralWindowContentRect.origin.y);
     m_textIndicatorWindow = adoptNS([[NSWindow alloc] initWithContentRect:integralWindowContentRect styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:NO]);
-    [m_textIndicatorWindow setBackgroundColor:[NSColor clearColor]];
-    [m_textIndicatorWindow setOpaque:NO];
-    [m_textIndicatorWindow setIgnoresMouseEvents:YES];
+    [m_textIndicatorWindow.get() setBackgroundColor:[NSColor clearColor]];
+    [m_textIndicatorWindow.get() setOpaque:NO];
+    [m_textIndicatorWindow.get() setIgnoresMouseEvents:YES];
 
-    m_textIndicatorView = adoptNS([[WebTextIndicatorView alloc] initWithFrame:NSMakeRect(0, 0, [m_textIndicatorWindow frame].size.width, [m_textIndicatorWindow frame].size.height)
+    m_textIndicatorView = adoptNS([[WebTextIndicatorView alloc] initWithFrame:NSMakeRect(0, 0, [m_textIndicatorWindow.get() frame].size.width, [m_textIndicatorWindow.get() frame].size.height)
         textIndicator:*m_textIndicator margin:NSMakeSize(horizontalMargin, verticalMargin) offset:fractionalTextOffset]);
-    [m_textIndicatorWindow setContentView:m_textIndicatorView.get()];
+    [m_textIndicatorWindow.get() setContentView:m_textIndicatorView.get()];
 
     [[m_targetView window] addChildWindow:m_textIndicatorWindow.get() ordered:NSWindowAbove];
-    [m_textIndicatorWindow setReleasedWhenClosed:NO];
+    [m_textIndicatorWindow.get() setReleasedWhenClosed:NO];
 
     if (m_textIndicator->presentationTransition() != TextIndicatorPresentationTransition::None)
-        [m_textIndicatorView present];
+        [m_textIndicatorView.get() present];
 
     if (lifetime == TextIndicatorWindowLifetime::Temporary)
         m_temporaryTextIndicatorTimer.startOneShot(1_s * timeBeforeFadeStarts);
@@ -484,24 +549,33 @@ void TextIndicatorWindow::closeWindow()
     if (!m_textIndicatorWindow)
         return;
 
-    if ([m_textIndicatorView isFadingOut])
+    if ([m_textIndicatorView.get() isFadingOut])
         return;
 
     m_temporaryTextIndicatorTimer.stop();
 
-    [[m_textIndicatorWindow parentWindow] removeChildWindow:m_textIndicatorWindow.get()];
-    [m_textIndicatorWindow close];
+    [[m_textIndicatorWindow.get() parentWindow] removeChildWindow:m_textIndicatorWindow.get()];
+    [m_textIndicatorWindow.get() close];
     m_textIndicatorWindow = nullptr;
 }
 
 void TextIndicatorWindow::startFadeOut()
 {
-    [m_textIndicatorView setFadingOut:YES];
+    [m_textIndicatorView.get() setFadingOut:YES];
     RetainPtr<NSWindow> indicatorWindow = m_textIndicatorWindow;
-    [m_textIndicatorView hideWithCompletionHandler:[indicatorWindow] {
-        [[indicatorWindow parentWindow] removeChildWindow:indicatorWindow.get()];
-        [indicatorWindow close];
-    }];
+    [m_textIndicatorView.get() hideWithCompletionHandler:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+      [indicatorWindow] {
+#else
+      new std::function<void (void)>([=] {
+#endif
+        [[indicatorWindow.get() parentWindow] removeChildWindow:indicatorWindow.get()];
+        [indicatorWindow.get() close];
+      }
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+     )
+#endif
+    ];
 }
 
 } // namespace WebCore

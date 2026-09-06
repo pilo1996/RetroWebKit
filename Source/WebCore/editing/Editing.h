@@ -215,8 +215,6 @@ inline bool deprecatedIsCollapsibleWhitespace(UChar c)
     return c == ' ' || c == '\n';
 }
 
-bool isAmbiguousBoundaryCharacter(UChar);
-
 inline bool editingIgnoresContent(const Node& node)
 {
     return !node.canContainRangeEndPoint();

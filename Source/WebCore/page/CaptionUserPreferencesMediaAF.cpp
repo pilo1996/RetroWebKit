@@ -84,14 +84,16 @@
 SOFT_LINK_AVF_FRAMEWORK(CoreMedia)
 SOFT_LINK_AVF_FRAMEWORK_IMPORT_OPTIONAL(CoreMedia, MTEnableCaption2015Behavior, Boolean, ())
 
-#else
-
-SOFT_LINK_FRAMEWORK(MediaToolbox)
-SOFT_LINK_OPTIONAL(MediaToolbox, MTEnableCaption2015Behavior, Boolean, (), ())
-
 #endif // PLATFORM(WIN)
 
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+
+#if !HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK) || !PLATFORM(WIN)
+
+SOFT_LINK_FRAMEWORK_OPTIONAL(MediaToolbox)
+SOFT_LINK_OPTIONAL(MediaToolbox, MTEnableCaption2015Behavior, Boolean, (), ())
+
+#endif
 
 namespace WebCore {
 

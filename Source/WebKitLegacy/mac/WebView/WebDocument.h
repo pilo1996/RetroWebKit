@@ -31,8 +31,8 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKitLegacy/WAKAppKitStubs.h>
-#import <WebKitLegacy/WAKView.h>
+#import <WebKit/WAKAppKitStubs.h>
+#import <WebKit/WAKView.h>
 #endif
 
 @class NSError;

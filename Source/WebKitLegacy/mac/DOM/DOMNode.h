@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMObject.h>
-#import <WebKitLegacy/DOMEventTarget.h>
+#import <WebKit/DOMObject.h>
+#import <WebKit/DOMEventTarget.h>
 
 @class DOMDocument;
 @class DOMElement;
@@ -59,20 +59,20 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @property (readonly, copy) NSString *nodeName;
 @property (copy) NSString *nodeValue;
 @property (readonly) unsigned short nodeType;
-@property (readonly, strong) DOMNode *parentNode;
-@property (readonly, strong) DOMNodeList *childNodes;
-@property (readonly, strong) DOMNode *firstChild;
-@property (readonly, strong) DOMNode *lastChild;
-@property (readonly, strong) DOMNode *previousSibling;
-@property (readonly, strong) DOMNode *nextSibling;
-@property (readonly, strong) DOMDocument *ownerDocument;
+@property (readonly, retain) DOMNode *parentNode;
+@property (readonly, retain) DOMNodeList *childNodes;
+@property (readonly, retain) DOMNode *firstChild;
+@property (readonly, retain) DOMNode *lastChild;
+@property (readonly, retain) DOMNode *previousSibling;
+@property (readonly, retain) DOMNode *nextSibling;
+@property (readonly, retain) DOMDocument *ownerDocument;
 @property (readonly, copy) NSString *namespaceURI;
 @property (copy) NSString *prefix;
 @property (readonly, copy) NSString *localName;
-@property (readonly, strong) DOMNamedNodeMap *attributes;
+@property (readonly, retain) DOMNamedNodeMap *attributes;
 @property (readonly, copy) NSString *baseURI WEBKIT_AVAILABLE_MAC(10_5);
 @property (copy) NSString *textContent WEBKIT_AVAILABLE_MAC(10_5);
-@property (readonly, strong) DOMElement *parentElement WEBKIT_AVAILABLE_MAC(10_5);
+@property (readonly, retain) DOMElement *parentElement WEBKIT_AVAILABLE_MAC(10_5);
 @property (readonly) BOOL isContentEditable WEBKIT_AVAILABLE_MAC(10_5);
 
 - (DOMNode *)insertBefore:(DOMNode *)newChild refChild:(DOMNode *)refChild WEBKIT_AVAILABLE_MAC(10_5);
@@ -89,7 +89,7 @@ WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 - (NSString *)lookupPrefix:(NSString *)namespaceURI WEBKIT_AVAILABLE_MAC(10_5);
 - (NSString *)lookupNamespaceURI:(NSString *)prefix WEBKIT_AVAILABLE_MAC(10_5);
 - (BOOL)isDefaultNamespace:(NSString *)namespaceURI WEBKIT_AVAILABLE_MAC(10_5);
-- (unsigned short)compareDocumentPosition:(DOMNode *)other WEBKIT_AVAILABLE_MAC(10_6);
+- (unsigned short)compareDocumentPosition:(DOMNode *)other WEBKIT_AVAILABLE_MAC(10_5);
 - (BOOL)contains:(DOMNode *)other WEBKIT_AVAILABLE_MAC(10_5);
 @end
 

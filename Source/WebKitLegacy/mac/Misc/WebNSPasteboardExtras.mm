@@ -44,8 +44,8 @@
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/RenderAttachment.h>
 #import <WebCore/RenderImage.h>
-#import <WebKitLegacy/DOMExtensions.h>
-#import <WebKitLegacy/DOMPrivate.h>
+#import <WebKit/DOMExtensions.h>
+#import <WebKit/DOMPrivate.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/Assertions.h>
 #import <wtf/RetainPtr.h>
@@ -200,7 +200,7 @@ static NSArray *_writableTypesForImageWithArchive (void)
     NSAttributedString *string = [NSAttributedString attributedStringWithAttachment:attachment];
     [attachment release];
     
-    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:@{ }];
+    NSData *RTFDData = [string RTFDFromRange:NSMakeRange(0, [string length]) documentAttributes:[NSDictionary dictionary]];
     [self setData:RTFDData forType:NSRTFDPboardType];
 }
 
@@ -290,14 +290,14 @@ static CachedImage* imageFromElement(DOMElement *domElement)
                 extension = image->image()->filenameExtension();
                 if (![extension length])
                     return nullptr;
-                [types addObjectsFromArray:[NSPasteboard _web_writableTypesForImageIncludingArchive:(archive != nil)]];
+                [types.get() addObjectsFromArray:[NSPasteboard _web_writableTypesForImageIncludingArchive:(archive != nil)]];
                 [self declareTypes:types.get() owner:source];
             }
         }
 #if ENABLE(ATTACHMENT_ELEMENT)
         else if (is<RenderAttachment>(*renderer)) {
-            extension = URL.pathExtension;
-            [types addObjectsFromArray:[NSPasteboard _web_dragTypesForURL]];
+            extension = [[URL path] pathExtension];
+            [types.get() addObjectsFromArray:[NSPasteboard _web_dragTypesForURL]];
             [self declareTypes:types.get() owner:source];
             RetainPtr<NSMutableArray> paths = adoptNS([[NSMutableArray alloc] init]);
             [paths.get() addObject:title];

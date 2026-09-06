@@ -25,6 +25,7 @@
 
 #pragma once
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 #include <dispatch/dispatch.h>
 #include <os/object.h>
 
@@ -160,3 +161,5 @@ void xpc_release(xpc_object_t);
 #endif
 
 WTF_EXTERN_C_END
+
+#endif

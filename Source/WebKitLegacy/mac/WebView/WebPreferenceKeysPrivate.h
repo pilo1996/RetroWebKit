@@ -208,6 +208,12 @@
 #define WebKitBackspaceKeyNavigationEnabledKey @"WebKitBackspaceKeyNavigationEnabled"
 #define WebKitIncrementalRenderingSuppressionTimeoutInSecondsKey @"WebKitIncrementalRenderingSuppressionTimeoutInSeconds"
 #define WebKitWantsBalancedSetDefersLoadingBehaviorKey @"WebKitWantsBalancedSetDefersLoadingBehavior"
+
+// CoreGraphics deferred updates are disabled if WebKitEnableCoalescedUpdatesPreferenceKey is set
+// to NO, or has no value.  For compatibility with Mac OS X 10.4.6, deferred updates are OFF by
+// default.
+#define WebKitEnableDeferredUpdatesPreferenceKey @"WebKitEnableDeferredUpdates"
+
 #define WebKitDebugFullPageZoomPreferenceKey @"WebKitDebugFullPageZoomPreferenceKey"
 #define WebKitMinimumZoomFontSizePreferenceKey @"WebKitMinimumZoomFontSizePreferenceKey"
 #define WebKitTextAutosizingEnabledPreferenceKey @"WebKitTextAutosizingEnabled"
@@ -245,3 +251,6 @@
 #define WebKitMediaContentTypesRequiringHardwareSupportPreferenceKey @"WebKitMediaContentTypesRequiringHardwareSupport"
 #define WebKitLegacyEncryptedMediaAPIEnabledKey @"WebKitLegacyEncryptedMediaAPIEnabled"
 #define WebKitAllowMediaContentTypesRequiringHardwareSupportAsFallbackKey @"WebKitAllowMediaContentTypesRequiringHardwareSupportAsFallback"
+
+#define WebKitLargeAnimatedImageFrameCachingEnabledPreferenceKey @"WebKitLargeAnimatedImageFrameCachingEnabledPreferenceKey"
+#define WebKitResourceUsageOverlayVisiblePreferenceKey @"WebKitResourceUsageOverlayVisible"

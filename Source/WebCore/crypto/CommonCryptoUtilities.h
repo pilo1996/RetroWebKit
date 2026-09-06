@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(SUBTLE_CRYPTO) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 #include "CryptoAlgorithmIdentifier.h"
 #include <CommonCrypto/CommonCryptor.h>

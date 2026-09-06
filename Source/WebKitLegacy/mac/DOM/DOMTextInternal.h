@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMText.h>
+#import <WebKit/DOMText.h>
 
 namespace WebCore {
 class Text;

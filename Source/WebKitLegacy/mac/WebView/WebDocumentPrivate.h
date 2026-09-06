@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/WebDocument.h>
-#import <WebKitLegacy/WebHTMLView.h>
+#import <WebKit/WebDocument.h>
+#import <WebKit/WebHTMLView.h>
 
 @class DOMDocument;
 @class PDFDocument;

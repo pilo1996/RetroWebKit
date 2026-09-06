@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMHTMLTextAreaElement.h>
+#import <WebKit/DOMHTMLTextAreaElement.h>
 
 namespace WebCore {
 class HTMLTextAreaElement;

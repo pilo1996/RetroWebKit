@@ -159,7 +159,9 @@ private:
     void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength) final;
     String getAutoCorrectSuggestionForMisspelledWord(const String&) final;
     void checkGrammarOfString(StringView, Vector<WebCore::GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength) final;
+#if USE(UNIFIED_TEXT_CHECKING)
     Vector<WebCore::TextCheckingResult> checkTextOfParagraph(StringView, WebCore::TextCheckingTypeMask checkingTypes, const WebCore::VisibleSelection& currentSelection) final;
+#endif
     void updateSpellingUIWithGrammarString(const String&, const WebCore::GrammarDetail&) final;
     void updateSpellingUIWithMisspelledWord(const String&) final;
     void showSpellingUI(bool show) final;

@@ -70,7 +70,7 @@ endif
 .PHONY : all
 all : $(HEADERS)
 
-WEBCORE_HEADER_REPLACE_RULES = -e 's/<WebCore\//<WebKitLegacy\//' -e "s/(^ *)WEBCORE_EXPORT /\1/"
+WEBCORE_HEADER_REPLACE_RULES = -e 's/<WebCore\//<$(PRODUCT_NAME)\//' -e "s/(^ *)WEBCORE_EXPORT /\1/"
 WEBCORE_HEADER_MIGRATE_CMD = sed -E $(WEBCORE_HEADER_REPLACE_RULES) $< > $@; touch $(PRIVATE_HEADERS_DIR)
 
 $(PRIVATE_HEADERS_DIR)/% : % MigrateHeaders.make

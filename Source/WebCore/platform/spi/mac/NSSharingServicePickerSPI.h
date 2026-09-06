@@ -27,7 +27,7 @@
 
 #import <AppKit/NSSharingService_Private.h>
 
-#else
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 
 #import <AppKit/NSSharingService.h>
 

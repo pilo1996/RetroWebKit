@@ -41,9 +41,41 @@ inline ReturnType wtfObjcMsgSend(id target, SEL selector, ArgumentTypes... argum
 template<typename ReturnType, typename... ArgumentTypes>
 inline ReturnType wtfCallIMP(IMP implementation, id target, SEL selector, ArgumentTypes... arguments)
 {
+#if CPU(PPC)
+    __asm__ __volatile__ (
+         "mr r12,%0"
+    :
+    : "r"(implementation)
+    : "r12", "memory");
+#endif
     return reinterpret_cast<ReturnType (*)(id, SEL, ArgumentTypes...)>(implementation)(target, selector, arguments...);
 }
 
 #endif // __cplusplus
+
+#ifdef __OBJC__
+#import <CoreFoundation/CFBase.h>
+#import <Foundation/NSObject.h>
+
+#if !__has_feature(objc_arc)
+#define __bridge
+#endif
+
+// Use CFBridgingRelease to return an object made by a Core Foundation
+// "create" or "copy" function as an autoreleased and garbage collected
+// object. CF objects need to be "made collectable" for autorelease to work
+// properly under GC.
+inline id CFBridgingRelease(CFTypeRef object)
+{
+#ifndef OBJC_NO_GC
+    if (object)
+        CFMakeCollectable(object);
+#endif
+#if !__has_feature(objc_arc)
+    [(const objc_object*)object autorelease];
+#endif
+    return (const objc_object *)object;
+}
+#endif // __OBJC__
 
 #endif // WTF_ObjcRuntimeExtras_h

@@ -25,7 +25,29 @@
 
 #pragma once
 
-#include <ImageIO/ImageIOBase.h> 
+#if !defined(IMAGEIO_EXTERN)
+#   if defined(__WIN32__)
+#       if defined(IMAGEIO_BUILDING_IMAGEIO)
+#           if defined(__cplusplus)
+#               define IMAGEIO_EXTERN extern "C" __declspec(dllexport)
+#           else /* !defined(__cplusplus) */
+#               define IMAGEIO_EXTERN extern __declspec(dllexport)
+#           endif /* !defined(__cplusplus) */
+#       else /* !defined(IMAGEIO_BUILDING_IMAGEIO) */
+#           if defined(__cplusplus)
+#               define IMAGEIO_EXTERN extern "C" __declspec(dllimport) 
+#           else /* !defined(__cplusplus) */
+#               define IMAGEIO_EXTERN extern __declspec(dllimport)
+#           endif /* !defined(__cplusplus) */
+#       endif /* !defined(IMAGEIO_BUILDING_IMAGEIO) */
+#   else /* !defined(__WIN32__) */
+#       if defined(__cplusplus)
+#           define IMAGEIO_EXTERN extern "C"
+#       else /* !defined(__cplusplus) */
+#           define IMAGEIO_EXTERN extern
+#       endif /* !defined(__cplusplus) */
+#   endif /* !defined(__WIN32__) */
+#endif /* !defined(IMAGEIO_EXTERN) */
 
 #if USE(APPLE_INTERNAL_SDK)
 #include <ImageIO/CGImageSourcePrivate.h>

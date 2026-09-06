@@ -72,8 +72,8 @@
 #import <WebCore/WebCoreURLResponse.h>
 #import <WebCore/npruntime_impl.h>
 #import <WebCore/runtime_root.h>
-#import <WebKitLegacy/DOMPrivate.h>
-#import <WebKitLegacy/WebUIDelegate.h>
+#import <WebKit/DOMPrivate.h>
+#import <WebKit/WebUIDelegate.h>
 #import <objc/runtime.h>
 #import <runtime/InitializeThreading.h>
 #import <runtime/JSLock.h>
@@ -86,6 +86,7 @@
 #define LoginWindowDidSwitchFromUserNotification    @"WebLoginWindowDidSwitchFromUserNotification"
 #define LoginWindowDidSwitchToUserNotification      @"WebLoginWindowDidSwitchToUserNotification"
 #define WKNVSupportsCompositingCoreAnimationPluginsBool 74656  /* TRUE if the browser supports hardware compositing of Core Animation plug-ins  */
+static const int WKNVSilverlightFullscreenPerformanceIssueFixed = 7288546; /* TRUE if Siverlight addressed its underlying  bug in <rdar://problem/7288546> */
 
 using namespace WebCore;
 using namespace WebKit;
@@ -193,6 +194,7 @@ typedef struct {
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
+    WebCoreObjCFinalizeOnMainThread(self);
     WKSendUserChangeNotifications();
 }
 
@@ -681,6 +683,16 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     return acceptedEvent;
 }
 
+- (WebFrame *)webFrame
+{
+    return [super webFrame];
+}
+ 
+- (WebView *)webView
+{
+    return [super webView];
+}
+
 - (void)windowFocusChanged:(BOOL)hasFocus
 {
     _eventHandler->windowFocusChanged(hasFocus);
@@ -1088,6 +1100,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
             accleratedCompositingEnabled = [[[self webView] preferences] acceleratedCompositingEnabled];
             if (accleratedCompositingEnabled) {
                 // FIXME: This code can be shared between WebHostedNetscapePluginView and WebNetscapePluginView.
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
                 // Since this layer isn't going to be inserted into a view, we need to create another layer and flip its geometry
                 // in order to get the coordinate system right.
                 RetainPtr<CALayer> realPluginLayer = adoptNS(_pluginLayer.leakRef());
@@ -1098,6 +1111,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
 
                 realPluginLayer.get().autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
                 [_pluginLayer.get() addSublayer:realPluginLayer.get()];
+#endif
 
                 // Eagerly enter compositing mode, since we know we'll need it. This avoids firing invalidateStyle()
                 // for iframes that contain composited plugins at bad times. https://bugs.webkit.org/show_bug.cgi?id=39033
@@ -1178,7 +1192,9 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     for (auto& stream: streamsCopy)
         stream->stop();
 
-    for (WebFrame *frame in [_pendingFrameLoads keyEnumerator])
+    NSEnumerator *enumerator = [_pendingFrameLoads.get() keyEnumerator];
+    WebFrame *frame;
+    while ((frame = [enumerator nextObject]) != nil)
         [frame _setInternalLoadDelegate:nil];
     [NSObject cancelPreviousPerformRequestsWithTarget:self];
 
@@ -1309,6 +1325,15 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     [self fini];
 
     [super dealloc];
+}
+
+- (void)finalize
+{
+    ASSERT(!_isStarted);
+
+    [self fini];
+
+    [super finalize];
 }
 
 - (void)drawRect:(NSRect)rect
@@ -1529,7 +1554,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
 {
     ASSERT(_isStarted);
     
-    WebPluginRequest *pluginRequest = [_pendingFrameLoads objectForKey:webFrame];
+    WebPluginRequest *pluginRequest = [_pendingFrameLoads.get() objectForKey:webFrame];
     ASSERT(pluginRequest != nil);
     ASSERT([pluginRequest sendNotification]);
         
@@ -1540,7 +1565,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     }
     [self didCallPlugInFunction];
     
-    [_pendingFrameLoads removeObjectForKey:webFrame];
+    [_pendingFrameLoads.get() removeObjectForKey:webFrame];
     [webFrame _setInternalLoadDelegate:nil];
 }
 
@@ -1606,7 +1631,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
                 ASSERT([view isKindOfClass:[WebNetscapePluginView class]]);
                 [view webFrame:frame didFinishLoadWithReason:NPRES_USER_BREAK];
             }
-            [_pendingFrameLoads setObject:pluginRequest forKey:frame];
+            [_pendingFrameLoads.get() setObject:pluginRequest forKey:frame];
             [frame _setInternalLoadDelegate:self];
         }
     }
@@ -2235,6 +2260,39 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     return NO;
 }
 
+// Work around Silverlight full screen performance issue by maintaining an accelerated GL pixel format.
+// We can safely remove it at some point in the future when both:
+// 1) Microsoft releases a genuine fix for 7288546.
+// 2) Enough Silverlight users update to the new Silverlight.
+// For now, we'll distinguish older broken versions of Silverlight by asking the plug-in if it resolved its full screen badness.
+- (void)_workaroundSilverlightFullscreenBug:(BOOL)initializedPlugin
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    ASSERT(_isSilverlight);
+    NPBool isFullscreenPerformanceIssueFixed = 0;
+    NPPluginFuncs *pluginFuncs = [_pluginPackage.get() pluginFuncs];
+    if (pluginFuncs->getvalue && pluginFuncs->getvalue(plugin, static_cast<NPPVariable>(WKNVSilverlightFullscreenPerformanceIssueFixed), &isFullscreenPerformanceIssueFixed) == NPERR_NO_ERROR && isFullscreenPerformanceIssueFixed)
+        return;
+    
+    static CGLPixelFormatObj pixelFormatObject = 0;
+    static unsigned refCount = 0;
+    
+    if (initializedPlugin) {
+        refCount++;
+        if (refCount == 1) {
+            const CGLPixelFormatAttribute attributes[] = { kCGLPFAAccelerated, static_cast<CGLPixelFormatAttribute>(0) };
+            GLint npix;
+            CGLChoosePixelFormat(attributes, &pixelFormatObject, &npix);
+        }  
+    } else {
+        ASSERT(pixelFormatObject);
+        refCount--;
+        if (!refCount) 
+            CGLReleasePixelFormat(pixelFormatObject);
+    }
+#endif
+}
+
 - (NPError)_createPlugin
 {
     plugin = (NPP)calloc(1, sizeof(NPP_t));
@@ -2251,12 +2309,17 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     [[self class] setCurrentPluginView:self];
     NPError npErr = [_pluginPackage.get() pluginFuncs]->newp((char *)[_MIMEType.get() cString], plugin, _mode, argsCount, cAttributes, cValues, NULL);
     [[self class] setCurrentPluginView:nil];
+    if (_isSilverlight)
+        [self _workaroundSilverlightFullscreenBug:YES];
     LOG(Plugins, "NPP_New: %d", npErr);
     return npErr;
 }
 
 - (void)_destroyPlugin
 {
+    if (_isSilverlight)
+        [self _workaroundSilverlightFullscreenBug:NO];
+    
     NPError npErr;
     npErr = ![_pluginPackage.get() pluginFuncs]->destroy(plugin, NULL);
     LOG(Plugins, "NPP_Destroy: %d", npErr);

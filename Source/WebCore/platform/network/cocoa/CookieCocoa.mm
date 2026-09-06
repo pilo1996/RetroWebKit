@@ -26,14 +26,19 @@
 #import "config.h"
 #import "Cookie.h"
 
+#import "CFNetworkSPI.h"
+#import <wtf/text/StringBuilder.h>
+
 namespace WebCore {
 
-static Vector<uint16_t> portVectorFromList(NSArray<NSNumber *> *portList)
+static Vector<uint16_t> portVectorFromList(NSArray *portList)
 {
     Vector<uint16_t> ports;
     ports.reserveInitialCapacity(portList.count);
 
-    for (NSNumber *port : portList)
+    NSEnumerator *enumerator = [portList objectEnumerator];
+    NSNumber *port;
+    while ((port = [enumerator nextObject]))
         ports.uncheckedAppend(port.unsignedShortValue);
 
     return ports;
@@ -97,10 +102,10 @@ Cookie::operator NSHTTPCookie *() const
         [properties setObject:portString forKey:NSHTTPCookiePort];
 
     if (secure)
-        [properties setObject:@YES forKey:NSHTTPCookieSecure];
+        [properties setObject:[NSNumber numberWithBool:YES] forKey:NSHTTPCookieSecure];
 
     if (session)
-        [properties setObject:@YES forKey:NSHTTPCookieDiscard];
+        [properties setObject:[NSNumber numberWithBool:YES] forKey:NSHTTPCookieDiscard];
 
     [properties setObject:@"1" forKey:NSHTTPCookieVersion];
 

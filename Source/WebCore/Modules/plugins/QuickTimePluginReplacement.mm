@@ -48,7 +48,9 @@
 #import "Settings.h"
 #import "ShadowRoot.h"
 #import "UserAgentScripts.h"
+#if USE(AVFOUNDATION)
 #import <AVFoundation/AVMetadataItem.h>
+#endif
 #import <Foundation/NSString.h>
 #import <JavaScriptCore/APICast.h>
 #import <JavaScriptCore/JavaScriptCore.h>
@@ -56,12 +58,14 @@
 #import <runtime/CatchScope.h>
 #import <wtf/text/Base64.h>
 
+#if USE(AVFOUNDATION)
 #import "CoreMediaSoftLink.h"
 
 typedef AVMetadataItem AVMetadataItemType;
 SOFT_LINK_FRAMEWORK_OPTIONAL(AVFoundation)
 SOFT_LINK_CLASS(AVFoundation, AVMetadataItem)
 #define AVMetadataItem getAVMetadataItemClass()
+#endif
 
 namespace WebCore {
 
@@ -90,7 +94,10 @@ bool QuickTimePluginReplacement::supportsMimeType(const String& mimeType)
 {
     static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> typeHash = []() {
         static const char* const types[] = {
-            "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/3gpp", "audio/3gpp2", "audio/aac", "audio/aiff",
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+            "application/vnd.apple.mpegurl", "application/x-mpegurl",
+#endif
+            "audio/3gpp", "audio/3gpp2", "audio/aac", "audio/aiff",
             "audio/amr", "audio/basic", "audio/mp3", "audio/mp4", "audio/mpeg", "audio/mpeg3", "audio/mpegurl", "audio/scpls",
             "audio/wav", "audio/x-aac", "audio/x-aiff", "audio/x-caf", "audio/x-m4a", "audio/x-m4b", "audio/x-m4p",
             "audio/x-m4r", "audio/x-mp3", "audio/x-mpeg", "audio/x-mpeg3", "audio/x-mpegurl", "audio/x-scpls", "audio/x-wav",
@@ -109,7 +116,10 @@ bool QuickTimePluginReplacement::supportsFileExtension(const String& extension)
     static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> extensionSet = []() {
         static const char* const extensions[] = {
             "3g2", "3gp", "3gp2", "3gpp", "aac", "adts", "aif", "aifc", "aiff", "AMR", "au", "bwf", "caf", "cdda", "m3u",
-            "m3u8", "m4a", "m4b", "m4p", "m4r", "m4v", "mov", "mp3", "mp3", "mp4", "mpeg", "mpg", "mqv", "pls", "qt",
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+            "m3u8",
+#endif
+            "m4a", "m4b", "m4p", "m4r", "m4v", "mov", "mp3", "mp3", "mp4", "mpeg", "mpg", "mqv", "pls", "qt",
             "snd", "swa", "ts", "ulw", "wav"
         };
         HashSet<String, ASCIICaseInsensitiveHash> set;

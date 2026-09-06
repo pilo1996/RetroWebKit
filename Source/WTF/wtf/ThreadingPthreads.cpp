@@ -72,6 +72,17 @@
 
 #endif
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+#include <objc/objc-auto.h>
+#elif OS(MAC_OS_X) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+#include <malloc/malloc.h>
+#include <objc/objc-auto.h>
+typedef malloc_zone_t auto_zone_t;
+
+extern "C" auto_zone_t *auto_zone(void);
+extern "C" void auto_zone_register_thread(auto_zone_t *zone);
+#endif
+
 namespace WTF {
 
 Thread::Thread()
@@ -220,7 +231,11 @@ RefPtr<Thread> Thread::createInternal(ThreadFunction entryPoint, void* data, con
 #if HAVE(QOS_CLASSES)
     pthread_attr_set_qos_class_np(&attr, adjustedQOSClass(QOS_CLASS_USER_INITIATED), 0);
 #endif
+#if OS(DARWIN)
+    int error = pthread_create_suspended_np(&threadHandle, &attr, wtfThreadEntryPoint, invocation.get());
+#else
     int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, invocation.get());
+#endif
     pthread_attr_destroy(&attr);
     if (error) {
         LOG_ERROR("Failed to create pthread at entry point %p with data %p", wtfThreadEntryPoint, invocation.get());
@@ -232,6 +247,19 @@ RefPtr<Thread> Thread::createInternal(ThreadFunction entryPoint, void* data, con
     UNUSED_PARAM(leakedInvocation);
 
     thread->establish(threadHandle);
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
+    // All threads that potentially use APIs above the BSD layer must be registered with the Objective-C
+    // garbage collector in case API implementations use garbage-collected memory.
+    objc_registerThreadWithCollector();
+#elif PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+    if (objc_collectingEnabled()) auto_zone_register_thread(auto_zone());
+#endif
+
+#if OS(DARWIN)
+    thread->resume();
+#endif
+
     return thread;
 }
 
@@ -552,6 +580,73 @@ void ThreadCondition::broadcast()
 {
     int result = pthread_cond_broadcast(&m_condition);
     ASSERT_UNUSED(result, !result);
+}
+
+#if PLATFORM(MAC) || PLATFORM(WIN)
+
+// For ABI compatibility with Safari on Mac / Windows: Safari uses the private
+// createThread() and waitForThreadCompletion() functions directly and we need
+// to keep the old ABI compatibility until it's been rebuilt.
+
+static void compatEntryPoint(void* param)
+{
+    // Balanced by .release() in createThread.
+    auto invocation = std::unique_ptr<ThreadFunctionWithReturnValueInvocation>(static_cast<ThreadFunctionWithReturnValueInvocation*>(param));
+    invocation->function(invocation->data);
+}
+
+ThreadIdentifier createThread(ThreadFunctionWithReturnValue entryPoint, void* data, const char* name)
+{
+    auto invocation = std::make_unique<ThreadFunctionWithReturnValueInvocation>(entryPoint, data);
+
+    // Balanced by std::unique_ptr constructor in compatEntryPoint.
+    return Thread::createInternal(compatEntryPoint, invocation.release(), name)->id();
+}
+
+WTF_EXPORT_PRIVATE int waitForThreadCompletion(ThreadIdentifier, void**);
+
+int waitForThreadCompletion(ThreadIdentifier threadID, void**)
+{
+    // This function is implemented based on the old Threading implementation.
+    // It remains only due to the support library using old Threading APIs and
+    // it should not be used in new code. 
+    ASSERT(threadID);
+ 
+    RefPtr<Thread> thread = ThreadHolder::get(threadID);
+    if (!thread) {
+        LOG_ERROR("ThreadIdentifier %u did not correspond to an active thread when trying to quit", threadID);
+        return ESRCH;
+    }
+    return thread->waitForCompletion();
+}
+
+// This function is deprecated but needs to be kept around for backward
+// compatibility. Use the 3-argument version of createThread above.
+
+ThreadIdentifier createThread(ThreadFunctionWithReturnValue entryPoint, void* data)
+{
+    auto invocation = std::make_unique<ThreadFunctionWithReturnValueInvocation>(entryPoint, data);
+
+    // Balanced by adoptPtr() in compatEntryPoint.
+    return Thread::createInternal(compatEntryPoint, invocation.release(), 0)->id();
+}
+#endif
+
+WTF_EXPORT_PRIVATE void detachThread(ThreadIdentifier);
+
+void detachThread(ThreadIdentifier threadID)
+{
+    // This function is implemented based on the old Threading implementation.
+    // It remains only due to the support library using old Threading APIs and
+    // it should not be used in new code.
+    ASSERT(threadID);
+ 
+    RefPtr<Thread> thread = ThreadHolder::get(threadID);
+    // never mind if we don't know the identifier; most probably the thread has already exited
+    if (!thread)
+        return;
+
+    thread->detach();
 }
 
 } // namespace WTF

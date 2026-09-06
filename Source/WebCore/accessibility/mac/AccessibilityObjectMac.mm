@@ -55,10 +55,10 @@ void AccessibilityObject::overrideAttachmentParent(AccessibilityObject* parent)
         parentWrapper = parent->wrapper();
     }
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     [[wrapper() attachmentView] accessibilitySetOverrideValue:parentWrapper forAttribute:NSAccessibilityParentAttribute];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 }
     
 bool AccessibilityObject::accessibilityIgnoreAttachment() const
@@ -69,11 +69,11 @@ bool AccessibilityObject::accessibilityIgnoreAttachment() const
     if (isAttachment() && (widget = widgetForAttachmentView()) && widget->isFrameView())
         return true;
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
     if ([wrapper() attachmentView])
         return [[wrapper() attachmentView] accessibilityIsIgnored];
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
     // Attachments are ignored by default (unless we determine that we should expose them).
     return true;

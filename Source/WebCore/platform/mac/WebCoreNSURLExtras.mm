@@ -812,9 +812,9 @@ NSURL *URLByTruncatingOneCharacterBeforeComponent(NSURL *URL, CFURLComponentType
     } else
         urlBytes = buffer;
         
-    NSURL *result = (NSURL *)CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingUTF8, NULL);
+    NSURL *result = (const NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingUTF8, NULL));
     if (!result)
-        result = (NSURL *)CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingISOLatin1, NULL);
+        result = (const NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, fragRg.location - 1, kCFStringEncodingISOLatin1, NULL));
         
     if (urlBytes != buffer)
         free(urlBytes);
@@ -1011,9 +1011,9 @@ static NSURL *URLByRemovingComponentAndSubsequentCharacter(NSURL *URL, CFURLComp
         
     memmove(urlBytes + range.location, urlBytes + range.location + range.length, numBytes - range.location + range.length);
     
-    NSURL *result = (NSURL *)CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, NULL);
+    NSURL *result = (const NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingUTF8, NULL));
     if (!result)
-        result = (NSURL *)CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, NULL);
+        result = (const NSURL *)CFMakeCollectable(CFURLCreateWithBytes(NULL, urlBytes, numBytes - range.length, kCFStringEncodingISOLatin1, NULL));
                 
     return result ? [result autorelease] : URL;
 }
@@ -1054,7 +1054,7 @@ NSData *originalURLData(NSURL *URL)
     // buffer is adopted by the NSData
     NSData *data = [NSData dataWithBytesNoCopy:buffer length:bytesFilled freeWhenDone:YES];
     
-    NSURL *baseURL = (NSURL *)CFURLGetBaseURL((CFURLRef)URL);
+    const NSURL *baseURL = (const NSURL *)CFURLGetBaseURL((CFURLRef)URL);
     if (baseURL)
         return originalURLData(URLWithData(data, baseURL));
     return data;
@@ -1091,7 +1091,7 @@ static CFStringRef createStringWithEscapedUnsafeCharacters(CFStringRef string)
             CFIndex offset = 0;
             UBool failure = false;
             U16_APPEND(utf16Buffer, offset, 2, c, failure)
-            ASSERT(!failure);
+            ASSERT_UNUSED(failure, !failure);
             for (CFIndex j = 0; j < offset; ++j)
                 outBuffer.append(utf16Buffer[j]);
         }

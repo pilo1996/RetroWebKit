@@ -21,19 +21,26 @@
 #ifndef FontCustomPlatformData_h
 #define FontCustomPlatformData_h
 
+#include "FontPlatformData.h"
 #include "TextFlags.h"
 #include <CoreFoundation/CFBase.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <wtf/RefCounted.h>
+#endif
 
-typedef struct CGFont* CGFontRef;
 typedef const struct __CTFontDescriptor* CTFontDescriptorRef;
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+typedef struct CGFont* CGFontRef;
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+typedef const struct __CTFont* CTFontRef;
+#endif
 
 namespace WebCore {
 
 class FontDescription;
-class FontPlatformData;
 struct FontSelectionSpecifiedCapabilities;
 class SharedBuffer;
 
@@ -43,8 +50,17 @@ typedef FontTaggedSettings<int> FontFeatureSettings;
 struct FontCustomPlatformData {
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData); WTF_MAKE_FAST_ALLOCATED;
 public:
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     explicit FontCustomPlatformData(CTFontDescriptorRef fontDescriptor)
         : m_fontDescriptor(fontDescriptor)
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+    explicit FontCustomPlatformData(CGFontRef cgFont)
+        : m_cgFont(cgFont)
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    explicit FontCustomPlatformData(ATSFontContainerRefWrapper& container, CTFontRef ctFont)
+        : m_ctFont(ctFont)
+        , m_atsContainer(container)
+#endif
     {
     }
 
@@ -54,7 +70,14 @@ public:
 
     static bool supportsFormat(const String&);
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+    RetainPtr<CGFontRef> m_cgFont;
+#elif __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    RetainPtr<CTFontRef> m_ctFont;
+    Ref<ATSFontContainerRefWrapper> m_atsContainer;
+#else
     RetainPtr<CTFontDescriptorRef> m_fontDescriptor;
+#endif
 };
 
 std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&);

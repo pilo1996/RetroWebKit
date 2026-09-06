@@ -33,7 +33,11 @@
 #include "CryptoKeyAES.h"
 #include "ExceptionCode.h"
 #include "ScriptExecutionContext.h"
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #include <CommonCrypto/CommonCrypto.h>
+#else
+#include <CommonCrypto/CommonCryptor.h>
+#endif
 
 namespace WebCore {
 
@@ -42,7 +46,12 @@ namespace WebCore {
 static ExceptionOr<Vector<uint8_t>> transformAES_CBC(CCOperation operation, const uint8_t* iv, const Vector<uint8_t>& key, const uint8_t* data, size_t dataLength)
 {
     CCCryptorRef cryptor;
-    CCCryptorStatus status = CCCryptorCreate(operation, kCCAlgorithmAES, kCCOptionPKCS7Padding, key.data(), key.size(), iv, &cryptor);
+#if PLATFORM(COCOA) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
+    CCAlgorithm aesAlgorithm = kCCAlgorithmAES;
+#else
+    CCAlgorithm aesAlgorithm = kCCAlgorithmAES128;
+#endif
+    CCCryptorStatus status = CCCryptorCreate(operation, aesAlgorithm, kCCOptionPKCS7Padding, key.data(), key.size(), iv, &cryptor);
     if (status)
         return Exception { OperationError };
 

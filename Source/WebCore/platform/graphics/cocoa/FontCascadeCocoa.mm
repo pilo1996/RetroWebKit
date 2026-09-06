@@ -32,6 +32,7 @@
 #import "GraphicsContext.h"
 #import "LayoutRect.h"
 #import "Logging.h"
+#import "NSFontSPI.h"
 #import "WebCoreSystemInterface.h"
 #if USE(APPKIT)
 #import <AppKit/AppKit.h>
@@ -66,6 +67,18 @@ bool FontCascade::canReturnFallbackFontsForComplexText()
 bool FontCascade::canExpandAroundIdeographsInComplexText()
 {
     return true;
+}
+
+// CTFontGetVerticalTranslationsForGlyphs is different on Snow Leopard.  It returns values for a font-size of 1
+// without unitsPerEm applied.  We have to apply a transform that scales up to the point size and that also 
+// divides by unitsPerEm.
+static bool hasBrokenCTFontGetVerticalTranslationsForGlyphs()
+{
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
+    return true;
+#else
+    return false;
+#endif
 }
 
 static inline void fillVectorWithHorizontalGlyphPositions(Vector<CGPoint, 256>& positions, CGContextRef context, const CGSize* advances, unsigned count)
@@ -135,6 +148,33 @@ static void showLetterpressedGlyphsWithAdvances(const FloatPoint& point, const F
 #endif
 }
 
+class RenderingStyleSaver {
+public:
+#if !PLATFORM(MAC) || __MAC_OS_X_VERSION_MIN_REQUIRED <= 101000
+    RenderingStyleSaver(CTFontRef, CGContextRef) { }
+#else
+    RenderingStyleSaver(CTFontRef font, CGContextRef context)
+        : m_context(context)
+    {
+        m_changed = CTFontSetRenderingStyle(font, context, &m_originalStyle, &m_originalDilation);
+    }
+
+    ~RenderingStyleSaver()
+    {
+        if (!m_changed)
+            return;
+        CGContextSetFontRenderingStyle(m_context, m_originalStyle);
+        CGContextSetFontDilation(m_context, m_originalDilation);
+    }
+
+private:
+    bool m_changed;
+    CGContextRef m_context;
+    CGFontRenderingStyle m_originalStyle;
+    CGSize m_originalDilation;
+#endif
+};
+
 static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, unsigned count)
 {
     if (!count)
@@ -150,6 +190,15 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
         CGAffineTransform runMatrix = CGAffineTransformConcat(textMatrix, rotateLeftTransform);
         ScopedTextMatrix savedMatrix(runMatrix, context);
 
+        CGAffineTransform translationsTransform;
+        if (hasBrokenCTFontGetVerticalTranslationsForGlyphs()) {
+            translationsTransform = CGAffineTransformMake(platformData.size(), 0, 0, platformData.size(), 0, 0);
+            translationsTransform = CGAffineTransformConcat(translationsTransform, rotateLeftTransform);
+            CGFloat unitsPerEm = CGFontGetUnitsPerEm(platformData.cgFont());
+            translationsTransform = CGAffineTransformConcat(translationsTransform, CGAffineTransformMakeScale(1 / unitsPerEm, 1 / unitsPerEm));
+        } else
+            translationsTransform = rotateLeftTransform;
+
         Vector<CGSize, 256> translations(count);
         CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
 
@@ -157,15 +206,28 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CG
 
         CGPoint position = FloatPoint(point.x(), point.y() + font.fontMetrics().floatAscent(IdeographicBaseline) - font.fontMetrics().floatAscent());
         for (unsigned i = 0; i < count; ++i) {
-            CGSize translation = CGSizeApplyAffineTransform(translations[i], rotateLeftTransform);
+            CGSize translation = CGSizeApplyAffineTransform(translations[i], translationsTransform);
             positions[i] = CGPointApplyAffineTransform(CGPointMake(position.x - translation.width, position.y + translation.height), transform);
             position.x += advances[i].width;
             position.y += advances[i].height;
         }
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
+#else
+        {
+            RenderingStyleSaver saver(platformData.ctFont(), context);
+            CGContextShowGlyphsAtPositions(context, glyphs, positions.data(), count);
+        }
+        CGContextSetTextMatrix(context, textMatrix);
+#endif
     } else {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         fillVectorWithHorizontalGlyphPositions(positions, context, advances, count);
         CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
+#else
+        RenderingStyleSaver saver(platformData.ctFont(), context);
+        CGContextShowGlyphsWithAdvances(context, glyphs, advances, count);
+#endif
     }
 }
 
@@ -231,6 +293,10 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
         CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
     }
+#endif
+
+#if PLATFORM(MAC) || __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+    CGContextSetFont(cgContext, platformData.cgFont());
 #endif
 
     bool useLetterpressEffect = shouldUseLetterpressEffect(context);
@@ -487,8 +553,21 @@ DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const 
 
 bool FontCascade::primaryFontIsSystemFont() const
 {
+#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED > 1090
     const auto& fontData = primaryFont();
     return CTFontDescriptorIsSystemUIFont(adoptCF(CTFontCopyFontDescriptor(fontData.platformData().ctFont())).get());
+#else
+/*
+    const String& firstFamily = this->firstFamily();
+    return equalIgnoringASCIICase(firstFamily, "-webkit-system-font")
+        || equalIgnoringASCIICase(firstFamily, "-apple-system-font")
+        || equalIgnoringASCIICase(firstFamily, "-apple-system")
+        || equalIgnoringASCIICase(firstFamily, "-apple-menu")
+        || equalIgnoringASCIICase(firstFamily, "-apple-status-bar");
+*/
+    const auto& fontData = primaryFont();
+    return [toNSFont(fontData.platformData().ctFont()) __isSystemFont];
+#endif
 }
 
 void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, unsigned from, unsigned to) const

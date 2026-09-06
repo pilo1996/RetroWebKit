@@ -905,6 +905,12 @@ MediaPlayer::SupportsType MediaPlayer::supportsType(const MediaEngineSupportPara
             && (containerType.startsWith("video/webm", false) || containerType.startsWith("video/x-flv", false)))
             return IsNotSupported;
     }
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    // HTTP Live Streaming is not supported on 10.5, so don't report "audio/mpegurl" as supported for <video> elements,
+    // but do report it for <audio> elements, as m3u playlists for audio files are supported
+    if (containerType.startsWith("audio/mpegurl", false) && client->mediaPlayerIsVideo())
+        return IsNotSupported;
+#endif
 #else
     UNUSED_PARAM(client);
 #endif

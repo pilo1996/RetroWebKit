@@ -31,8 +31,8 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKitLegacy/WAKAppKitStubs.h>
-#import <WebKitLegacy/WAKView.h>
+#import <WebKit/WAKAppKitStubs.h>
+#import <WebKit/WAKView.h>
 #endif
 
 @class WebDataSource;
@@ -54,14 +54,14 @@
     @property webFrame
     @abstract The WebFrame associated with this WebFrameView
 */
-@property (nonatomic, readonly, strong) WebFrame *webFrame;
+@property (nonatomic, readonly, retain) WebFrame *webFrame;
 
 /*!
     @property documentView
     @abstract The WebFrameView's document subview
     @discussion The subview that renders the WebFrameView's contents
 */
-@property (nonatomic, readonly, strong) NSView<WebDocumentView> *documentView;
+@property (nonatomic, readonly, retain) NSView<WebDocumentView> *documentView;
 
 /*!
     @property allowsScrolling

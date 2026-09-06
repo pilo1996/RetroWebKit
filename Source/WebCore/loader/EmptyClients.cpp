@@ -594,6 +594,8 @@ RefPtr<SearchPopupMenu> EmptyChromeClient::createSearchPopupMenu(PopupMenuClient
 
 #if ENABLE(INPUT_TYPE_COLOR)
 
+#warn DEFINED
+
 std::unique_ptr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient&, const Color&)
 {
     return nullptr;

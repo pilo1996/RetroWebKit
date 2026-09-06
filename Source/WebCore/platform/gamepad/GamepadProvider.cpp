@@ -45,6 +45,8 @@ GamepadProvider& GamepadProvider::singleton()
     return *sharedProvider;
 }
 
+GamepadProvider::~GamepadProvider() {}
+
 void GamepadProvider::setSharedProvider(GamepadProvider& newProvider)
 {
     sharedProvider = &newProvider;

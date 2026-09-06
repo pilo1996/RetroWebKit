@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCDATASection.h>
+#import <WebKit/DOMCDATASection.h>
 
 namespace WebCore {
 class CDATASection;

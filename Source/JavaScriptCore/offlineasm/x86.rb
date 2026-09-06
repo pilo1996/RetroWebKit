@@ -826,14 +826,14 @@ class Instruction
                 $asm.puts "fucomi #{floatingPointCompareImplicitOperand}#{operands[1].x87Operand(0)}"
             else
                 $asm.puts "fld #{operands[0].x87Operand(0)}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[1].x87Operand(1)}"
+                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[1].x87Operand(1)}, %st"
             end
         when :reverse
             if (operands[1].x87DefaultStackPosition == 0)
                 $asm.puts "fucomi #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(0)}"
             else
                 $asm.puts "fld #{operands[1].x87Operand(0)}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}"
+                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}, %st"
             end
         else
             raise mode.inspect
@@ -1146,7 +1146,7 @@ class Instruction
                 $asm.puts "test#{x86Suffix(:int)} #{operands[1].x86Operand(:int)}, #{operands[1].x86Operand(:int)}"
                 $asm.puts "je #{operands[2].asmLabel}"
                 $asm.puts "fild#{x86Suffix(:int)} #{getSizeString(:int)}#{offsetRegister(-4, sp.x86Operand(:ptr))}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}"
+                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}, %st"
                 $asm.puts "jp #{operands[2].asmLabel}"
                 $asm.puts "jne #{operands[2].asmLabel}"
             else
@@ -1507,7 +1507,7 @@ class Instruction
                 $asm.puts "fstp #{operands[1].x87Operand(1)}"
             else
                 if !isIntelSyntax
-                    $asm.puts "movq #{operands[0].x86Operand(:quad)}, #{operands[1].x86Operand(:double)}"
+                    $asm.puts "movd #{operands[0].x86Operand(:quad)}, #{operands[1].x86Operand(:double)}"
                 else
                     # MASM does not accept register operands with movq.
                     # Debugging shows that movd actually moves a qword when using MASM.
@@ -1526,7 +1526,7 @@ class Instruction
                 $asm.puts "movq -8(#{sp.x86Operand(:ptr)}), #{operands[1].x86Operand(:quad)}"
             else
                 if !isIntelSyntax
-                    $asm.puts "movq #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:quad)}"
+                    $asm.puts "movd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:quad)}"
                 else
                     # MASM does not accept register operands with movq.
                     # Debugging shows that movd actually moves a qword when using MASM.

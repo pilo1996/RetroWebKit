@@ -27,7 +27,6 @@
 #include "RunLoop.h"
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <dispatch/dispatch.h>
 #include <wtf/AutodrainedPool.h>
 
 namespace WTF {
@@ -70,8 +69,28 @@ void RunLoop::run()
 
 void RunLoop::stop()
 {
-    ASSERT(m_runLoop == CFRunLoopGetCurrent());
     CFRunLoopStop(m_runLoop.get());
+}
+
+void RunLoop::timerFired(CFRunLoopTimerRef timer, void* context)
+{
+    Function<void ()>* function = reinterpret_cast<Function<void ()>*>(context);
+
+    AutodrainedPool pool;
+    (*function)();
+
+    CFRunLoopTimerInvalidate(timer);
+    CFRelease(timer);
+    delete function;
+}
+
+void RunLoop::dispatchAfter(Seconds delay, Function<void ()>&& function)
+{
+    double nextFireInterval = delay.value();
+
+    CFRunLoopTimerContext context = { 0, new Function<void ()>(WTFMove(function)), 0, 0, 0 };
+    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(kCFAllocatorDefault, CFAbsoluteTimeGetCurrent() + nextFireInterval, 0, 0, 0, timerFired, &context);
+    CFRunLoopAddTimer(m_runLoop.get(), timer, kCFRunLoopCommonModes);
 }
 
 // RunLoop::Timer

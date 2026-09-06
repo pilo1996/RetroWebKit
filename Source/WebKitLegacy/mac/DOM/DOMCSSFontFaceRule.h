@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import <WebKitLegacy/DOMCSSRule.h>
+#import <WebKit/DOMCSSRule.h>
 
 @class DOMCSSStyleDeclaration;
 
 WEBKIT_CLASS_AVAILABLE_MAC(10_4)
 @interface DOMCSSFontFaceRule : DOMCSSRule
-@property (readonly, strong) DOMCSSStyleDeclaration *style;
+@property (readonly, retain) DOMCSSStyleDeclaration *style;
 @end

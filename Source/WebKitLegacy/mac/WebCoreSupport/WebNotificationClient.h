@@ -25,6 +25,7 @@
 
 #if ENABLE(NOTIFICATIONS)
 
+#import "WebAllowDenyPolicyListener.h"
 #import <WebCore/Notification.h>
 #import <WebCore/NotificationClient.h>
 #import <wtf/HashMap.h>
@@ -32,8 +33,28 @@
 #import <wtf/RetainPtr.h>
 
 @class WebNotification;
-@class WebNotificationPolicyListener;
 @class WebView;
+
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
+@interface WebNotificationPolicyListener : NSObject <WebAllowDenyPolicyListener>
+{
+#if ENABLE(NOTIFICATIONS)
+    RefPtr<WebCore::NotificationPermissionCallback> _callback;
+#endif
+#if ENABLE(LEGACY_NOTIFICATIONS)
+    RefPtr<WebCore::VoidCallback> _voidCallback;
+    bool _isLegacyRequest;
+#endif
+}
+#if ENABLE(NOTIFICATIONS)
+- (id)initWithCallback:(RefPtr<WebCore::NotificationPermissionCallback>&&)callback;
+#endif
+#if ENABLE(LEGACY_NOTIFICATIONS)
+- (id)initWithVoidCallback:(RefPtr<WebCore::VoidCallback>&&)callback;
+#endif
+
+@end
+#endif
 
 class WebNotificationClient : public WebCore::NotificationClient {
 public:

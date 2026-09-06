@@ -31,7 +31,7 @@
 #if !TARGET_OS_IPHONE
 #import <AppKit/AppKit.h>
 #else
-#import <WebKitLegacy/WAKAppKitStubs.h>
+#import <WebKit/WAKAppKitStubs.h>
 #endif
 
 @class DOMCSSStyleDeclaration;
@@ -39,11 +39,12 @@
 @class DOMRange;
 @class WebView;
 
-typedef NS_ENUM(NSInteger, WebViewInsertAction) {
+enum {
     WebViewInsertActionTyped,
     WebViewInsertActionPasted,
     WebViewInsertActionDropped,
 };
+typedef NSInteger WebViewInsertAction;
 
 @protocol WebEditingDelegate <NSObject>
 

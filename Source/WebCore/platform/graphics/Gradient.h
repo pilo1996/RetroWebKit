@@ -37,6 +37,10 @@
 
 #if USE(CG)
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+#include <CoreGraphics/CGFunction.h>
+#endif
+
 typedef struct CGContext* CGContextRef;
 
 typedef struct CGGradient* CGGradientRef;
@@ -175,7 +179,11 @@ namespace WebCore {
         WEBCORE_EXPORT Gradient(const FloatPoint& p0, const FloatPoint& p1);
         Gradient(const FloatPoint& p0, float r0, const FloatPoint& p1, float r1, float aspectRatio);
 
+#if USE(CG) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        void platformInit() { m_gradient = nullptr; m_gradientFunction = nullptr; }
+#else
         void platformInit() { m_gradient = nullptr; }
+#endif
         void platformDestroy();
 
         void sortStopsIfNecessary();
@@ -202,6 +210,10 @@ namespace WebCore {
 
 #if USE(CAIRO)
         float m_platformGradientAlpha;
+#endif
+
+#if USE(CG) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+        CGFunctionRef m_gradientFunction;
 #endif
 
     };

@@ -27,12 +27,14 @@
 #include "WOFFFileFormat.h"
 #include <zlib.h>
 
+#if !USE(OPENTYPE_SANITIZER)
+
 #include "SharedBuffer.h"
 #include <wtf/ByteOrder.h>
 
 #if USE(WOFF2)
-#include "woff2_common.h"
-#include "woff2_dec.h"
+#include <woff2/decode.h>
+static const uint32_t kWoff2Signature = 0x774f4632; // "wOF2"
 #endif
 
 namespace WebCore {
@@ -84,7 +86,7 @@ bool isWOFF(SharedBuffer& buffer)
         return false;
 
 #if USE(WOFF2)
-    return signature == woffSignature || signature == woff2::kWoff2Signature;
+    return signature == woffSignature || signature == kWoff2Signature;
 #else
     return signature == woffSignature;
 #endif
@@ -140,7 +142,7 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
     }
 
 #if USE(WOFF2)
-    if (signature == woff2::kWoff2Signature) {
+    if (signature == kWoff2Signature) {
         const uint8_t* woffData = reinterpret_cast_ptr<const uint8_t*>(woff.data());
         const size_t woffSize = woff.size();
         const size_t sfntSize = woff2::ComputeWOFF2FinalSize(woffData, woffSize);
@@ -284,3 +286,5 @@ bool convertWOFFToSfnt(SharedBuffer& woff, Vector<char>& sfnt)
 }
     
 } // namespace WebCore
+
+#endif // !USE(OPENTYPE_SANITIZER)

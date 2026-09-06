@@ -30,7 +30,9 @@
 #import "URL.h"
 #import <Security/SecAsn1Coder.h>
 #import <Security/SecAsn1Templates.h>
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #import <Security/SecEncodeTransform.h>
+#endif
 #import <wtf/RetainPtr.h>
 #import <wtf/Scope.h>
 #import <wtf/spi/cocoa/SecuritySPI.h>
@@ -38,8 +40,8 @@
 
 namespace WebCore {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+CLANG_PRAGMA(diagnostic push)
+CLANG_PRAGMA(diagnostic ignored "-Wdeprecated-declarations")
 
 struct PublicKeyAndChallenge {
     CSSM_X509_SUBJECT_PUBLIC_KEY_INFO subjectPublicKeyInfo;
@@ -138,7 +140,7 @@ static String signedPublicKeyAndChallengeString(unsigned keySize, const CString&
         return String();
     RetainPtr<CFArrayRef> acls = adoptCF(aclsRef);
 
-    SecACLRef acl = (SecACLRef)(CFArrayGetValueAtIndex(acls.get(), 0));
+    SecACLRef acl = (SecACLRef)const_cast<void*>(CFArrayGetValueAtIndex(acls.get(), 0));
 
     // Passing nullptr to SecTrustedApplicationCreateFromPath tells that function to assume the application bundle.
     SecTrustedApplicationRef trustedAppRef { nullptr };
@@ -149,7 +151,7 @@ static String signedPublicKeyAndChallengeString(unsigned keySize, const CString&
     const CSSM_ACL_KEYCHAIN_PROMPT_SELECTOR defaultSelector = {
         CSSM_ACL_KEYCHAIN_PROMPT_CURRENT_VERSION, 0
     };
-    if (SecACLSetSimpleContents(acl, (__bridge CFArrayRef)@[ (__bridge id)trustedApp.get() ], keyDescription.createCFString().get(), &defaultSelector) != noErr)
+    if (SecACLSetSimpleContents(acl, (__bridge CFArrayRef)[NSArray arrayWithObject:(__bridge id)trustedApp.get()], keyDescription.createCFString().get(), &defaultSelector) != noErr)
         return String();
 
     SecKeyRef publicKeyRef { nullptr };
@@ -184,7 +186,7 @@ static String signedPublicKeyAndChallengeString(unsigned keySize, const CString&
 
     // Length needs to account for the null terminator.
     signedPublicKeyAndChallenge.publicKeyAndChallenge.challenge.Length = challenge.length() + 1;
-    signedPublicKeyAndChallenge.publicKeyAndChallenge.challenge.Data = (uint8_t*)challenge.data();
+    signedPublicKeyAndChallenge.publicKeyAndChallenge.challenge.Data = const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(challenge.data()));
 
     CSSM_DATA encodedPublicKeyAndChallenge { 0, nullptr };
     if (SecAsn1EncodeItem(coder, &signedPublicKeyAndChallenge.publicKeyAndChallenge, publicKeyAndChallengeTemplate, &encodedPublicKeyAndChallenge) != noErr)
@@ -217,7 +219,7 @@ static String signedPublicKeyAndChallengeString(unsigned keySize, const CString&
     return base64Encode(encodedSignedPublicKeyAndChallenge.Data, encodedSignedPublicKeyAndChallenge.Length);
 }
 
-#pragma clang diagnostic pop
+CLANG_PRAGMA(diagnostic pop)
 
 void getSupportedKeySizes(Vector<String>& supportedKeySizes)
 {

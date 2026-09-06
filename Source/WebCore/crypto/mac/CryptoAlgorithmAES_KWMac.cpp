@@ -26,10 +26,11 @@
 #include "config.h"
 #include "CryptoAlgorithmAES_KW.h"
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(SUBTLE_CRYPTO) && !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060)
 
 #include "CryptoKeyAES.h"
 #include "ExceptionCode.h"
+#include "NotImplemented.h"
 #include <CommonCrypto/CommonCrypto.h>
 
 namespace WebCore {
@@ -112,7 +113,8 @@ ExceptionOr<void> CryptoAlgorithmAES_KW::platformDecrypt(const CryptoKeyAES& key
         return { };
     }
     callback(result.releaseReturnValue());
-    return { };}
+    return { };
+}
 
 } // namespace WebCore
 

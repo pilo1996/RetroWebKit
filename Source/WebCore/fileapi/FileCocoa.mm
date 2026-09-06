@@ -41,6 +41,7 @@ bool File::shouldReplaceFile(const String& path)
     if (path.isEmpty())
         return false;
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
     NSError *error;
     NSURL *pathURL = [NSURL URLByResolvingAliasFileAtURL:[NSURL fileURLWithPath:path isDirectory:NO] options:NSURLBookmarkResolutionWithoutUI error:&error];
     if (!pathURL) {
@@ -55,6 +56,26 @@ bool File::shouldReplaceFile(const String& path)
     }
 
     return UTTypeConformsTo((CFStringRef)uti, kUTTypePackage);
+#else
+    FSRef pathRef;
+    Boolean targetIsFolder;
+    Boolean wasAliased;
+    NSString *aliasedPath = path;
+
+    // Determine if the file is an alias, and if so, get the target path.
+    if (FSPathMakeRef((const UInt8 *)[(NSString*)path fileSystemRepresentation], &pathRef, NULL) == noErr) {
+        if (FSResolveAliasFileWithMountFlags(&pathRef, TRUE, &targetIsFolder, &wasAliased, kResolveAliasFileNoUI) == noErr && wasAliased) {
+            char pathFromPathRef[PATH_MAX + 1]; // +1 is for \0 
+            if (FSRefMakePath(&pathRef, (unsigned char *)pathFromPathRef, PATH_MAX) == noErr)
+                aliasedPath = [[NSFileManager defaultManager] stringWithFileSystemRepresentation:pathFromPathRef length:strlen(pathFromPathRef)];
+        }
+    }
+    
+    if (!aliasedPath)
+        return false;
+
+    return [[NSWorkspace sharedWorkspace] isFilePackageAtPath:aliasedPath];
+#endif
 }
 
 void File::computeNameAndContentTypeForReplacedFile(const String& path, const String& nameOverride, String& effectiveName, String& effectiveContentType)
