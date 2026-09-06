@@ -6,9 +6,9 @@ on PowerPC; Leopard i386 follows, and Tiger support is deliberately deferred.
 
 ## Status
 
-The repository is in its bootstrap and source-provenance phase. No WebKit engine
-source has been imported yet. The intended baseline is the upstream WebKit tag
-`Safari-604.5.6` plus the Leopard WebKit `Patches_604.5.6` patch set.
+The engine import is available on `codex/engine-webkit-604-import`. It contains
+the upstream WebKit tag `Safari-604.5.6`, the historical Leopard WebKit
+`Patches_604.5.6` patch set, LZ4 1.8.0, and OpenType Sanitizer 6.1.1.
 
 The `_2` suffix in the final Leopard WebKit binary release describes a later
 packaging/stability release. SourceForge exposes `Patches_604.5.6.tar.bz2`, not a
@@ -33,13 +33,19 @@ Release configuration
 
 ## Current commands
 
+Verify the imported historical inputs with:
+
+```sh
+./Scripts/verify-source.sh
+```
+
 On a target Mac, inspect the environment with:
 
 ```sh
 ./Scripts/bootstrap.sh --target leopard --arch ppc
 ```
 
-After the source baseline is imported, build it with:
+Build it with:
 
 ```sh
 ./Scripts/build.sh --target leopard --arch ppc --configuration release
