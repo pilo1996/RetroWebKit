@@ -9,6 +9,8 @@
 | WebKit annotated tag object | `4ba61fea6db30297bd111e11a6701b66817cd0a8` | verified in official mirror |
 | WebKit SVN | tag created by changeset `r226724` | identified |
 | Leopard port | `Patches_604.5.6.tar.bz2` | archived; main WebKit patch applied |
+| OpenType Sanitizer | tag `v6.1.1`, commit `9b02386589f7d00a694984d5a5cd0a7512d04e88` | imported |
+| LZ4 | tag `v1.8.0`, commit `c10863b98e1503af90616ae99725ecd120265dfb` | embedded by main patch |
 | Final binary | `WebKit-604.5.6_2-Leopard-PowerPC.dmg` | identified, not imported |
 
 WebKit's `Safari-604.5.6` tag was created on 11 January 2018 as SVN changeset
@@ -34,17 +36,24 @@ has SHA-256:
 `LayoutTests` is intentionally excluded, matching the historical project's advice
 that the test-suite checkout is unnecessary for a framework build.
 
+The OpenType Sanitizer `v6.1.1` source is imported from its official Git tag. A
+Git archive of commit `9b02386589f7d00a694984d5a5cd0a7512d04e88` has SHA-256:
+
+```text
+8f7097c6a88d1e96aba8d2301012f3a9a833a89a97d5cc80deb76ee8a5059346
+```
+
 ## Leopard patch application
 
 `WebKit_604.5.6.diff` applies cleanly to the pinned baseline with Git's binary
 patch support. The applied source state omits `Source/ThirdParty/lz4/.svn`, a set
 of 111 Subversion working-copy administration files embedded by the historical
-patch. The corresponding LZ4 source, build files, and license are retained; only
-the redundant checkout database and pristine cache are excluded.
+patch, as well as its `.DS_Store`. The corresponding LZ4 source, build files, and
+license are retained; only redundant checkout/Finder metadata is excluded.
 
-The separate OTS and LZ4 patch files remain archived but unapplied. Their paths
-target external `tags/v6.1.1` and `tags/v1.8.0` repository layouts, so their exact
-upstream inputs must be pinned before use.
+The separate OTS patch is applied only after importing its pinned upstream tag.
+The LZ4 patch remains archived because the main WebKit patch already embeds the
+LZ4 source and Xcode integration; it is retained as corroborating provenance.
 
 ## Import policy
 
