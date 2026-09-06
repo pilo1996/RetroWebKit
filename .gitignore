@@ -1,0 +1,21 @@
+.DS_Store
+
+# Local build products
+WebKitBuild/
+Build/
+DerivedData/
+
+# Generated diagnostics and packages
+Artifacts/
+
+# Downloaded source archives and mounted images
+Downloads/
+*.dmg
+*.tar
+*.tar.gz
+*.tar.bz2
+*.zip
+
+# Editor state
+*.swp
+*~
