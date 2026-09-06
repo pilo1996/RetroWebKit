@@ -4,7 +4,7 @@
 
 | Layer | Upstream identity | Status |
 | --- | --- | --- |
-| WebKit | tag `Safari-604.5.6` | identified, not imported |
+| WebKit | tag `Safari-604.5.6` | imported on the engine import branch |
 | WebKit Git commit | `3f76b1214e0deb75a2f813be9bd96b56d9da84df` | verified in official mirror |
 | WebKit annotated tag object | `4ba61fea6db30297bd111e11a6701b66817cd0a8` | verified in official mirror |
 | WebKit SVN | tag created by changeset `r226724` | identified |
@@ -19,8 +19,20 @@ file area exposes no separate `_2` source patch set.
 
 The official WebKit Git mirror resolves the tag to annotated tag object
 `4ba61fea6db30297bd111e11a6701b66817cd0a8`, which points to commit
-`3f76b1214e0deb75a2f813be9bd96b56d9da84df`. This immutable commit is the proposed
-input for a deterministic source import.
+`3f76b1214e0deb75a2f813be9bd96b56d9da84df`. This immutable commit is the input
+used for the deterministic source import.
+
+The imported vendor subset contains `Source`, `Tools`, `WebKitLibraries`, and the
+root build files `CMakeLists.txt`, `Makefile`, `Makefile.shared`, `ChangeLog`, and
+`ChangeLog-2012-05-22`. A Git archive of exactly those paths from the pinned commit
+has SHA-256:
+
+```text
+6e86730dc6edc287721da3fea4e8d5f8982f364da63197fd90502662e0ef7a6a
+```
+
+`LayoutTests` is intentionally excluded, matching the historical project's advice
+that the test-suite checkout is unnecessary for a framework build.
 
 ## Import policy
 
