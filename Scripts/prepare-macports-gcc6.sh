@@ -32,6 +32,7 @@ script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
 repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
 source_overlay="$repo_root/Tools/MacPortsOverlay/ports-2017-gcc6"
 compatibility_patch="$repo_root/Tools/MacPortsOverlay/patches/macports-2.12-cpp-env.diff"
+isl_patch="$repo_root/Tools/MacPortsOverlay/patches/use-compatible-isl14.diff"
 generated_dir="$repo_root/Artifacts/macports"
 work_overlay="$generated_dir/ports-2017-gcc6"
 sources_conf="$generated_dir/sources.conf"
@@ -66,6 +67,7 @@ cp -R "$source_overlay"/. "$work_overlay"/
 (
     cd "$work_overlay"
     /usr/bin/patch -p0 < "$compatibility_patch"
+    /usr/bin/patch -p0 < "$isl_patch"
 )
 (
     cd "$work_overlay"

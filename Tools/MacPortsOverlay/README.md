@@ -20,6 +20,7 @@ b22946ebb6e6a44dbe5d8c251e8d1c3802220c1358635d8b5fa0d1de3e33ef65  lang/gcc6/Port
 6d2f0eaa4fe4beba0686b68102dc4ed3d829f912f66480e6b95a7e5c1f6185f6  lang/gcc6/files/mp-gcc6
 cc7dfbd00c2eb94f76c1277e75a9769bdbfc75e7c7179ca3383741fa7ad03f1d  _resources/port1.0/group/compiler_blacklist_versions-1.0.tcl
 529be470b4262ccf0c4de2a25dcd59163c2bdef7c9852316b4dc9653efaa778e  ../patches/macports-2.12-cpp-env.diff
+77664260f6e71dd1140693c3c9561872d49c44ac4cf7a7b8bfcbedcf19bc0981  ../patches/use-compatible-isl14.diff
 ```
 
 Run `Scripts/prepare-macports-gcc6.sh` on Leopard after `sudo port sync`.
@@ -31,6 +32,11 @@ entries and discards the second one. During preparation, the script applies
 `patches/macports-2.12-cpp-env.diff` to the generated copy. This only changes the
 Tcl quoting to pass `CPP=/usr/bin/gcc-4.2 -E` as one value; the checked-in
 historical Portfile remains byte-for-byte identical to the official source.
+
+The current default `isl` port is 0.24, whose headers no longer expose APIs
+used by GCC 6.3. The `use-compatible-isl14.diff` patch selects MacPorts'
+parallel-installable `isl14` subport and its isolated prefix. GCC 6.3's own
+configure script explicitly supports the deprecated ISL 0.14 API.
 
 This overlay is the unmodified MacPorts GCC 6.3 baseline. It does not claim to
 contain the additional Xcode and Objective-C++ patches described by the Leopard

@@ -1,0 +1,19 @@
+--- lang/gcc6/Portfile.orig	2017-01-07 00:00:00.000000000 +0000
++++ lang/gcc6/Portfile	2026-09-06 00:00:00.000000000 +0000
+@@ -35,6 +35,6 @@
+ depends_lib         port:cctools \
+                     port:gmp \
+-                    path:lib/pkgconfig/isl.pc:isl \
++                    port:isl14 \
+                     port:ld64 \
+                     path:lib/libgcc/libgcc_s.1.dylib:libgcc \
+                     port:libiconv \
+@@ -67,7 +67,7 @@
+                     --with-gmp=${prefix} \
+                     --with-mpfr=${prefix} \
+                     --with-mpc=${prefix} \
+-                    --with-isl=${prefix} \
++                    --with-isl=${prefix}/libexec/isl14 \
+                     --enable-stage1-checking \
+                     --disable-multilib \
+                     --enable-lto \
