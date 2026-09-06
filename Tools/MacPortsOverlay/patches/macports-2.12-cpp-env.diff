@@ -1,0 +1,13 @@
+--- lang/gcc6/Portfile.orig	2017-01-07 00:00:00.000000000 +0000
++++ lang/gcc6/Portfile	2026-09-06 00:00:00.000000000 +0000
+@@ -237,8 +237,8 @@
+     configure.args-delete --disable-multilib
+ }
+ # the generated compiler doesn't accept -arch
+-configure.env-append CPP="${configure.cc} -E"
+-build.env-append CPP="${configure.cc} -E"
++configure.env-append "CPP=${configure.cc} -E"
++build.env-append "CPP=${configure.cc} -E"
+ configure.cc-append [get_canonical_archflags]
+ configure.cc_archflags
+ configure.cxx-append ${configure.cxx_archflags}
