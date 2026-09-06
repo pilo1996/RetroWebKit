@@ -1,0 +1,8 @@
+--- configure.orig	2016-12-21 07:50:40.000000000 +0000
++++ configure	2026-09-06 00:00:00.000000000 +0000
+@@ -6011,1 +6011,1 @@
+-  isllibs="${isllibs} -lisl"
++  isllibs="${isllibs} -lisl.13"
+@@ -6022,1 +6022,1 @@
+-    LIBS="${_isl_saved_LIBS} -lisl -lgmp"
++    LIBS="${_isl_saved_LIBS} -lisl.13 -lgmp"

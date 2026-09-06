@@ -1,6 +1,6 @@
 --- lang/gcc6/Portfile.orig	2017-01-07 00:00:00.000000000 +0000
 +++ lang/gcc6/Portfile	2026-09-06 00:00:00.000000000 +0000
-@@ -35,6 +35,6 @@
+@@ -34,7 +34,7 @@
  depends_lib         port:cctools \
                      port:gmp \
 -                    path:lib/pkgconfig/isl.pc:isl \
@@ -8,7 +8,17 @@
                      port:ld64 \
                      path:lib/libgcc/libgcc_s.1.dylib:libgcc \
                      port:libiconv \
-@@ -67,7 +67,7 @@
+                     port:libmpc \
+@@ -46,1 +46,8 @@
++patchfiles-append patch-isl14-library.diff
++
++post-extract {
++    xinstall -d -m 0755 ${build.dir}/gcc
++    ln -s ${prefix}/libexec/isl14/include/isl ${build.dir}/gcc
++}
++
+ set major           [lindex [split ${version} .-] 0]
+@@ -65,7 +70,7 @@
                      --with-gmp=${prefix} \
                      --with-mpfr=${prefix} \
                      --with-mpc=${prefix} \
