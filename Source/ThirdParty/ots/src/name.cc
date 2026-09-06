@@ -226,6 +226,11 @@ bool OpenTypeNAME::Parse(const uint8_t* data, size_t length) {
     if (!mac_name[i] && !win_name[i]) {
       NameRecord mac_rec(1 /* platform_id */, 0 /* encoding_id */,
                          0 /* language_id */ , i /* name_id */);
+if (i == 6) {
+  char uniqueName[sizeof(kStdNames[6]) + 1 + sizeof(size_t) * 2];
+  sprintf(uniqueName, "%s-%zx", kStdNames[6], std::_Hash_impl::hash(data, length));
+  mac_rec.text.assign(uniqueName);
+} else
       mac_rec.text.assign(kStdNames[i]);
 
       NameRecord win_rec(3 /* platform_id */, 1 /* encoding_id */,
