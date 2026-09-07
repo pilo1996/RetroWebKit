@@ -25,6 +25,10 @@
 
 #include "JSExportMacros.h"
 
+#ifndef JSC_OBJC_API_ENABLED
+#define JSC_OBJC_API_ENABLED 0
+#endif
+
 #ifdef __cplusplus
 #undef new
 #undef delete

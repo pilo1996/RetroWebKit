@@ -64,7 +64,7 @@ echo "1" > "$status_file"
 
 (
     cd "$repo_root" || exit 1
-    if [ -x /opt/local/bin/gcc-mp-6 ] && [ -x /opt/local/bin/g++-mp-6 ]; then
+    if [ -x /opt/local/bin/gcc-mp-6 ] && [ -x /opt/local/bin/g++-mp-6 ] && [ -x /opt/local/bin/python2.7 ]; then
         PATH="$compiler_wrappers:$PATH"
         export PATH
         "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
@@ -73,8 +73,8 @@ echo "1" > "$status_file"
             CPLUSPLUS="$compiler_wrappers/g++-mp" \
             LDPLUSPLUS="$compiler_wrappers/g++-mp"
     else
-        echo "error: MacPorts GCC 6.3 is required at /opt/local/bin/gcc-mp-6" >&2
-        echo "Run ./Scripts/prepare-macports-gcc6.sh and install gcc6 first." >&2
+        echo "error: MacPorts GCC 6.3 and Python 2.7 are required" >&2
+        echo "Run ./Scripts/prepare-macports-gcc6.sh and install gcc6 and python27 first." >&2
         exit 3
     fi
     echo "$?" > "$status_file"

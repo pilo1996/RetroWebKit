@@ -75,6 +75,9 @@ include roots derived from the paths stored in each map.
 For Objective-C++ invocations they explicitly enable Objective-C exceptions and
 demote warnings emitted by GCC 6's incomplete Objective-C type encoder; ordinary
 C and C++ builds retain the project's `-Werror` policy.
+The same wrapper directory exposes MacPorts Python 2.7 as `python`, because the
+JavaScriptCore derived-source generators require Python 2.6 syntax while
+Leopard's system Python is 2.5. System interpreter selections remain unchanged.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

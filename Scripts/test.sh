@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -40,6 +40,13 @@ mkdir -p "$diagnostics_dir"
             failures=$((failures + 1))
         fi
     done
+
+    if sh -n Tools/CompilerWrappers/python; then
+        echo "PASS syntax Tools/CompilerWrappers/python"
+    else
+        echo "FAIL syntax Tools/CompilerWrappers/python"
+        failures=$((failures + 1))
+    fi
 
     echo "failures=$failures"
     echo "$failures" > "$status_file"

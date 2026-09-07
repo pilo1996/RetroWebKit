@@ -36,7 +36,14 @@
 
 #if OS(DARWIN) && defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
 namespace std {
+using ::acosh;
+using ::asinh;
+using ::atanh;
+using ::cbrt;
+using ::expm1;
+using ::log2;
 using ::round;
+using ::trunc;
 }
 #endif
 
