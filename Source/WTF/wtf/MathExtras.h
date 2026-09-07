@@ -34,6 +34,12 @@
 #include <stdlib.h>
 #include <wtf/StdLibExtras.h>
 
+#if OS(DARWIN) && defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+namespace std {
+using ::round;
+}
+#endif
+
 #if OS(SOLARIS)
 #include <ieeefp.h>
 #endif

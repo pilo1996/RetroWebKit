@@ -72,6 +72,9 @@ not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
 `-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
 binary format is supported by Apple GCC but not upstream GCC, into ordinary
 include roots derived from the paths stored in each map.
+For Objective-C++ invocations they explicitly enable Objective-C exceptions and
+demote warnings emitted by GCC 6's incomplete Objective-C type encoder; ordinary
+C and C++ builds retain the project's `-Werror` policy.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

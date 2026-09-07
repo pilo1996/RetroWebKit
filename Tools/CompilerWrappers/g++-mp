@@ -6,6 +6,7 @@ use warnings;
 my $compiler = $ENV{RETROWEBKIT_GXX} || '/opt/local/bin/g++-mp-6';
 my @arguments;
 my %header_roots;
+my $is_objective_cxx = 0;
 
 sub add_header_map_roots
 {
@@ -53,6 +54,7 @@ sub add_header_map_roots
 
 while (@ARGV) {
     my $argument = shift @ARGV;
+    $is_objective_cxx = 1 if $argument eq 'objective-c++' && @arguments && $arguments[-1] eq '-x';
     next if $argument eq '-fpascal-strings'
         || $argument eq '-Wnewline-eof'
         || $argument eq '-Wshorten-64-to-32';
@@ -67,6 +69,7 @@ while (@ARGV) {
     push @arguments, $argument;
 }
 push @arguments, map { "-I$_" } sort keys %header_roots;
+push @arguments, '-fobjc-exceptions', '-Wno-error' if $is_objective_cxx;
 
 exec {$compiler} $compiler, @arguments;
 die "error: could not execute $compiler: $!\n";
