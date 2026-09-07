@@ -64,6 +64,18 @@ The script prints separate dry-run and installation commands. It writes only to
 ignored `Artifacts/macports/`; selecting or installing the compiler remains an
 explicit operation.
 
+`Scripts/build.sh` exposes the installed `gcc-mp-6` and `g++-mp-6` to Xcode
+3.1.4 through repository-local wrappers. Xcode is told to use its GCC 4.2
+compiler specification while the compiler executable settings point to GCC 6.
+The wrappers discard Apple-specific or obsolete flags which upstream GCC 6 does
+not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
+`-Wshorten-64-to-32`. They also remove
+Xcode header-map arguments, whose binary format is supported by Apple GCC but
+not upstream GCC; the generated and product include directories remain intact.
+This avoids
+installing an unverified compiler plugin under `/Developer` or replacing system
+compiler links.
+
 Inspection of the final PowerPC application confirms that its bundled
 `libgcc_s.1.dylib` and `libstdc++.6.dylib` use `/opt/local/lib/libgcc` install
 names. The latter has compatibility version 7.0.0 and corresponds to the

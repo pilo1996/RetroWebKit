@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -28,6 +28,15 @@ mkdir -p "$diagnostics_dir"
             echo "PASS syntax $script"
         else
             echo "FAIL syntax $script"
+            failures=$((failures + 1))
+        fi
+    done
+
+    for wrapper in Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp; do
+        if perl -c "$wrapper" >/dev/null 2>&1; then
+            echo "PASS syntax $wrapper"
+        else
+            echo "FAIL syntax $wrapper"
             failures=$((failures + 1))
         fi
     done

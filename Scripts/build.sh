@@ -43,6 +43,7 @@ case "$configuration" in debug|release) ;; *) echo "error: configuration must be
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
 repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
 build_script="$repo_root/Tools/Scripts/build-webkit"
+compiler_wrappers="$repo_root/Tools/CompilerWrappers"
 diagnostics_dir="$repo_root/Artifacts/diagnostics"
 mkdir -p "$diagnostics_dir"
 
@@ -63,7 +64,19 @@ echo "1" > "$status_file"
 
 (
     cd "$repo_root" || exit 1
-    "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO
+    if [ -x /opt/local/bin/gcc-mp-6 ] && [ -x /opt/local/bin/g++-mp-6 ]; then
+        PATH="$compiler_wrappers:$PATH"
+        export PATH
+        "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
+            GCC_VERSION=4.2 \
+            CC="$compiler_wrappers/gcc-mp" \
+            CPLUSPLUS="$compiler_wrappers/g++-mp" \
+            LDPLUSPLUS="$compiler_wrappers/g++-mp"
+    else
+        echo "error: MacPorts GCC 6.3 is required at /opt/local/bin/gcc-mp-6" >&2
+        echo "Run ./Scripts/prepare-macports-gcc6.sh and install gcc6 first." >&2
+        exit 3
+    fi
     echo "$?" > "$status_file"
 ) 2>&1 | tee "$build_log"
 

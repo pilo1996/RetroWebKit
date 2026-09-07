@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+my $compiler = $ENV{RETROWEBKIT_GCC} || '/opt/local/bin/gcc-mp-6';
+my @arguments;
+while (@ARGV) {
+    my $argument = shift @ARGV;
+    next if $argument eq '-fpascal-strings'
+        || $argument eq '-Wnewline-eof'
+        || $argument eq '-Wshorten-64-to-32';
+    if (($argument eq '-I' || $argument eq '-iquote') && @ARGV && $ARGV[0] =~ /\.hmap$/) {
+        shift @ARGV;
+        next;
+    }
+    next if $argument =~ /^-I.*\.hmap$/ || $argument =~ /^-iquote.*\.hmap$/;
+    push @arguments, $argument;
+}
+
+exec {$compiler} $compiler, @arguments;
+die "error: could not execute $compiler: $!\n";
