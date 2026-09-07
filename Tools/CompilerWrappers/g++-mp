@@ -5,18 +5,68 @@ use warnings;
 
 my $compiler = $ENV{RETROWEBKIT_GXX} || '/opt/local/bin/g++-mp-6';
 my @arguments;
+my %header_roots;
+
+sub add_header_map_roots
+{
+    my ($path) = @_;
+    open my $file, '<', $path or return;
+    binmode $file;
+    local $/;
+    my $data = <$file>;
+    close $file;
+    return unless defined $data && length($data) >= 24;
+
+    my ($magic, $version, $reserved, $strings_offset, $entries, $buckets) =
+        unpack('NnnNNN', substr($data, 0, 20));
+    return unless $magic == 0x686d6170 && $version == 1 && $reserved == 0;
+    return unless 24 + $buckets * 12 <= length($data) && $strings_offset < length($data);
+
+    my $string_at = sub {
+        my ($offset) = @_;
+        return '' unless $offset;
+        my $start = $strings_offset + $offset;
+        return '' if $start >= length($data);
+        my $end = index($data, "\0", $start);
+        return '' if $end < 0;
+        return substr($data, $start, $end - $start);
+    };
+
+    for my $index (0 .. $buckets - 1) {
+        my ($key_offset, $prefix_offset, $suffix_offset) =
+            unpack('N3', substr($data, 24 + $index * 12, 12));
+        next unless $key_offset;
+        my $key = $string_at->($key_offset);
+        my $value = $string_at->($prefix_offset) . $string_at->($suffix_offset);
+        next unless length($key) && length($value);
+        my $root;
+        if (length($value) >= length($key)
+            && lc(substr($value, -length($key))) eq lc($key)) {
+            $root = substr($value, 0, length($value) - length($key));
+            $root =~ s!/$!!;
+        } else {
+            ($root = $value) =~ s!/[^/]+$!!;
+        }
+        $header_roots{$root} = 1 if length($root) && -d $root;
+    }
+}
+
 while (@ARGV) {
     my $argument = shift @ARGV;
     next if $argument eq '-fpascal-strings'
         || $argument eq '-Wnewline-eof'
         || $argument eq '-Wshorten-64-to-32';
     if (($argument eq '-I' || $argument eq '-iquote') && @ARGV && $ARGV[0] =~ /\.hmap$/) {
-        shift @ARGV;
+        add_header_map_roots(shift @ARGV);
         next;
     }
-    next if $argument =~ /^-I.*\.hmap$/ || $argument =~ /^-iquote.*\.hmap$/;
+    if ($argument =~ /^-I(.*\.hmap)$/ || $argument =~ /^-iquote(.*\.hmap)$/) {
+        add_header_map_roots($1);
+        next;
+    }
     push @arguments, $argument;
 }
+push @arguments, map { "-I$_" } sort keys %header_roots;
 
 exec {$compiler} $compiler, @arguments;
 die "error: could not execute $compiler: $!\n";

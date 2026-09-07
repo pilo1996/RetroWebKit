@@ -69,9 +69,9 @@ explicit operation.
 compiler specification while the compiler executable settings point to GCC 6.
 The wrappers discard Apple-specific or obsolete flags which upstream GCC 6 does
 not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
-`-Wshorten-64-to-32`. They also remove
-Xcode header-map arguments, whose binary format is supported by Apple GCC but
-not upstream GCC; the generated and product include directories remain intact.
+`-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
+binary format is supported by Apple GCC but not upstream GCC, into ordinary
+include roots derived from the paths stored in each map.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.
