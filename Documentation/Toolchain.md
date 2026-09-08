@@ -81,6 +81,9 @@ Leopard's system Python is 2.5. System interpreter selections remain unchanged.
 The two Ruby generators used during the Xcode build retain compatibility with
 Leopard's Ruby 1.8 by avoiding `IO#getbyte` and the post-1.8 `String#[index]`
 return type.
+The Leopard build also disables JavaScriptCore's `Intl` feature. WebKit 604's
+implementation requires ICU entry points newer than those exported by Leopard's
+system `libicucore`; JavaScriptCore's existing non-Intl fallback remains in use.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

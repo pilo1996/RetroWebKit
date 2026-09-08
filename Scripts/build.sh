@@ -69,6 +69,7 @@ echo "1" > "$status_file"
         export PATH
         "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
             GCC_VERSION=4.2 \
+            ENABLE_INTL= \
             CC="$compiler_wrappers/gcc-mp" \
             CPLUSPLUS="$compiler_wrappers/g++-mp" \
             LDPLUSPLUS="$compiler_wrappers/g++-mp"

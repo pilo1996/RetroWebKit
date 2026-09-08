@@ -48,6 +48,13 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
+    if grep -q 'ENABLE_INTL=' "$repo_root/Scripts/build.sh"; then
+        echo "PASS Leopard build disables unsupported modern ICU APIs"
+    else
+        echo "FAIL Leopard build does not disable unsupported modern ICU APIs"
+        failures=$((failures + 1))
+    fi
+
     echo "failures=$failures"
     echo "$failures" > "$status_file"
 } 2>&1 | tee "$results"
