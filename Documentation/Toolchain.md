@@ -84,6 +84,8 @@ return type.
 The Leopard build also disables JavaScriptCore's `Intl` feature. WebKit 604's
 implementation requires ICU entry points newer than those exported by Leopard's
 system `libicucore`; JavaScriptCore's existing non-Intl fallback remains in use.
+`String.prototype.normalize`, which is independent of `Intl`, uses ICU's legacy
+`unorm_normalize` API when compiling against the Leopard SDK.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

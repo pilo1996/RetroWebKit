@@ -1757,6 +1757,25 @@ static JSValue normalize(ExecState* exec, const UChar* source, size_t sourceLeng
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     UErrorCode status = U_ZERO_ERROR;
+#if OS(DARWIN) && defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+    UNormalizationMode mode = UNORM_NFC;
+    switch (form) {
+    case NormalizationForm::CanonicalComposition:
+        mode = UNORM_NFC;
+        break;
+    case NormalizationForm::CanonicalDecomposition:
+        mode = UNORM_NFD;
+        break;
+    case NormalizationForm::CompatibilityComposition:
+        mode = UNORM_NFKC;
+        break;
+    case NormalizationForm::CompatibilityDecomposition:
+        mode = UNORM_NFKD;
+        break;
+    }
+
+    int32_t normalizedStringLength = unorm_normalize(source, sourceLength, mode, 0, nullptr, 0, &status);
+#else
     // unorm2_get*Instance() documentation says: "Returns an unmodifiable singleton instance. Do not delete it."
     const UNormalizer2* normalizer = nullptr;
     switch (form) {
@@ -1778,6 +1797,7 @@ static JSValue normalize(ExecState* exec, const UChar* source, size_t sourceLeng
         return throwTypeError(exec, scope);
 
     int32_t normalizedStringLength = unorm2_normalize(normalizer, source, sourceLength, nullptr, 0, &status);
+#endif
 
     if (U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR) {
         // The behavior is not specified when normalize fails.
@@ -1791,7 +1811,11 @@ static JSValue normalize(ExecState* exec, const UChar* source, size_t sourceLeng
         return throwOutOfMemoryError(exec, scope);
 
     status = U_ZERO_ERROR;
+#if OS(DARWIN) && defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED < 1060
+    unorm_normalize(source, sourceLength, mode, 0, buffer, normalizedStringLength, &status);
+#else
     unorm2_normalize(normalizer, source, sourceLength, buffer, normalizedStringLength, &status);
+#endif
     if (U_FAILURE(status))
         return throwTypeError(exec, scope);
 
