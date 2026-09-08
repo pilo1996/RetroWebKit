@@ -72,6 +72,10 @@ not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
 `-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
 binary format is supported by Apple GCC but not upstream GCC, into ordinary
 include roots derived from the paths stored in each map.
+For C++ compilation the wrapper injects a small Leopard compatibility header.
+Leopard exports the C99 math functions used by JavaScriptCore, ANGLE, OTS,
+WebCore, and WebKit, but its `<cmath>` does not expose them in `std` as later
+SDKs do; the header supplies that namespace bridge once for the whole tree.
 For Objective-C++ invocations they explicitly enable Objective-C exceptions and
 demote warnings emitted by GCC 6's incomplete Objective-C type encoder; ordinary
 C and C++ builds retain the project's `-Werror` policy.
@@ -89,6 +93,8 @@ system `libicucore`; JavaScriptCore's existing non-Intl fallback remains in use.
 The JavaScriptCore header postprocessing steps avoid `unifdef -B`, `unifdef -o`,
 and Ruby enumerator chaining, none of which is available in Leopard's system
 tools.
+The same portable output handling is applied proactively to the corresponding
+WebKit and WebKitLegacy header phases.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

@@ -43,7 +43,7 @@ postProcessInDirectory()
     fi
 
     for header in $(find . -name '*.h' -type f); do
-        unifdef -B ${unifdefOptions} -o ${header}.unifdef ${header}
+        unifdef ${unifdefOptions} ${header} > ${header}.unifdef
         case $? in
         0)
             rm ${header}.unifdef

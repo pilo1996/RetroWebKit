@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use FindBin qw($Bin);
 
 my $compiler = $ENV{RETROWEBKIT_GXX} || '/opt/local/bin/g++-mp-6';
 my @arguments;
@@ -69,6 +70,9 @@ while (@ARGV) {
     push @arguments, $argument;
 }
 push @arguments, map { "-I$_" } sort keys %header_roots;
+if (grep { $_ eq '-c' || $_ eq '-E' || $_ eq '-S' } @arguments) {
+    push @arguments, '-include', "$Bin/LeopardMathCompatibility.h";
+}
 push @arguments, '-fobjc-exceptions', '-Wno-error' if $is_objective_cxx;
 
 exec {$compiler} $compiler, @arguments;

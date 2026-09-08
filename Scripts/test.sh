@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -40,6 +40,16 @@ mkdir -p "$diagnostics_dir"
             failures=$((failures + 1))
         fi
     done
+
+    compile_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -c probe.cpp 2>/dev/null)
+    link_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" probe.o 2>/dev/null)
+    if echo "$compile_arguments" | grep -q 'LeopardMathCompatibility.h' \
+        && ! echo "$link_arguments" | grep -q 'LeopardMathCompatibility.h'; then
+        echo "PASS Leopard math compatibility is compile-only"
+    else
+        echo "FAIL Leopard math compatibility wrapper behavior"
+        failures=$((failures + 1))
+    fi
 
     if sh -n Tools/CompilerWrappers/python; then
         echo "PASS syntax Tools/CompilerWrappers/python"
