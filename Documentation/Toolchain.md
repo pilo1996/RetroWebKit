@@ -71,11 +71,17 @@ The wrappers discard Apple-specific or obsolete flags which upstream GCC 6 does
 not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
 `-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
 binary format is supported by Apple GCC but not upstream GCC, into ordinary
-include roots derived from the paths stored in each map.
+include roots derived from the paths stored in each map. These roots replace
+each map in place so include precedence remains identical to Xcode's ordering.
 For C++ compilation the wrapper injects a small Leopard compatibility header.
 Leopard exports the C99 math functions used by JavaScriptCore, ANGLE, OTS,
 WebCore, and WebKit, but its `<cmath>` does not expose them in `std` as later
 SDKs do; the header supplies that namespace bridge once for the whole tree.
+The wrappers also expose Leopard SDK's `libxml2` include root and demote only
+GCC 6's strict-aliasing and multichar diagnostics, both triggered by deliberate
+WebKit idioms accepted by the historical Apple compiler.
+WebCore's shared `config.h` uses source-relative export-macro includes so the
+PAL target does not depend on cross-project header-map entries.
 For Objective-C++ invocations they explicitly enable Objective-C exceptions and
 demote warnings emitted by GCC 6's incomplete Objective-C type encoder; ordinary
 C and C++ builds retain the project's `-Werror` policy.

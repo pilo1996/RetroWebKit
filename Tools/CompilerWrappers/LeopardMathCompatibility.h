@@ -19,6 +19,8 @@ using ::log2;
 using ::lround;
 using ::nextafter;
 using ::round;
+inline float round(float value) { return ::roundf(value); }
+inline long double round(long double value) { return ::roundl(value); }
 using ::trunc;
 }
 #endif

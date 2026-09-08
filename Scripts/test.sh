@@ -51,6 +51,16 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
+    if echo "$compile_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
+        && echo "$compile_arguments" | grep -q -- '-Wno-error=multichar' \
+        && ! echo "$link_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
+        && ! echo "$link_arguments" | grep -q -- '-Wno-error=multichar'; then
+        echo "PASS Leopard source-warning exceptions are compile-only"
+    else
+        echo "FAIL Leopard source-warning wrapper behavior"
+        failures=$((failures + 1))
+    fi
+
     if sh -n Tools/CompilerWrappers/python; then
         echo "PASS syntax Tools/CompilerWrappers/python"
     else

@@ -33,9 +33,9 @@
 #include "WebCoreHeaderDetection.h"
 #endif
 
-#include "PlatformExportMacros.h"
+#include "platform/PlatformExportMacros.h"
 #include <pal/ExportMacros.h>
-#include <runtime/JSExportMacros.h>
+#include "../JavaScriptCore/runtime/JSExportMacros.h"
 
 #ifdef __APPLE__
 #define HAVE_FUNC_USLEEP 1
