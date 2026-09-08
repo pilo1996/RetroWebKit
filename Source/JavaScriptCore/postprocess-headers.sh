@@ -4,8 +4,8 @@ UNIFDEF_OPTIONS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=${TARGET_MAC_OS_X_VERSION_MAJ
 
 for ((i = 0; i < ${SCRIPT_INPUT_FILE_COUNT}; ++i)); do
     eval HEADER=\${SCRIPT_INPUT_FILE_${i}};
-    # Leopard's unifdef predates the formatting-only -B option.
-    unifdef ${UNIFDEF_OPTIONS} -o "${HEADER}".unifdef "${HEADER}"
+    # Leopard's unifdef predates the formatting-only -B option and -o.
+    unifdef ${UNIFDEF_OPTIONS} "${HEADER}" > "${HEADER}".unifdef
     case $? in
     0)
         rm "${HEADER}".unifdef
