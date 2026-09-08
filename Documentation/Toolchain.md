@@ -86,6 +86,8 @@ implementation requires ICU entry points newer than those exported by Leopard's
 system `libicucore`; JavaScriptCore's existing non-Intl fallback remains in use.
 `String.prototype.normalize`, which is independent of `Intl`, uses ICU's legacy
 `unorm_normalize` API when compiling against the Leopard SDK.
+The JavaScriptCore header postprocessing steps avoid `unifdef -B` and Ruby
+enumerator chaining, neither of which is available in Leopard's system tools.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

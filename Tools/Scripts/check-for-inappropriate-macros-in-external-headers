@@ -53,13 +53,15 @@ end
 
 def verify_macros_in_header(header)
   File.open(header) do |file|
-    file.each_line.with_index do |line, index|
+    index = 0
+    file.each_line do |line|
       # Check for the common macros from Platform.h and Compiler.h.
       # Require a '(' immediately after the macro name to prevent matching things like "defined(__OS2__)".
       # NOTE: Negative lookahead (?!error) prevents matching "#error WebKit was not available prior to Mac OS X 10.2".
       if match = /^\s*#(?!error).*?\b(PLATFORM|CPU|HAVE|OS|USE|ENABLE|COMPILER)\(/.match(line)
         print_error "'#{header}:#{index+1}' included forbidden macro '#{match[1]}' => '#{line.chomp}'"
       end
+      index += 1
     end
   end
 end
