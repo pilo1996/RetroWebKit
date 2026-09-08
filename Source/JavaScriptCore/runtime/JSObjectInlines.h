@@ -27,6 +27,7 @@
 #include "Error.h"
 #include "JSObject.h"
 #include "Lookup.h"
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 

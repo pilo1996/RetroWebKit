@@ -108,9 +108,9 @@ def offsetsAndConfigurationIndex(file)
     File.open(file, "rb") {
         | inp |
         loop {
-            byte = inp.getbyte
+            byte = inp.read(1)
             break unless byte
-            fileBytes << byte
+            fileBytes << byte.unpack('C')[0]
         }
     }
     
@@ -191,4 +191,3 @@ def buildOffsetsMap(ast, offsetsList)
     }
     [offsetsMap, sizesMap]
 end
-

@@ -39,7 +39,7 @@ class Opcode
     end
 
     def masmName
-        name[0].downcase + name[1..-1]
+        name[0, 1].downcase + name[1..-1]
     end
 end
 
@@ -1243,4 +1243,3 @@ writeH("OpcodeGenerated") {
 
     outp.puts "} } } // namespace JSC::B3::Air"
 }
-

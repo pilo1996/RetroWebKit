@@ -42,6 +42,7 @@ using ::atanh;
 using ::cbrt;
 using ::expm1;
 using ::log2;
+using ::log1p;
 using ::round;
 using ::trunc;
 }

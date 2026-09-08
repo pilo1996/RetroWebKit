@@ -78,6 +78,9 @@ C and C++ builds retain the project's `-Werror` policy.
 The same wrapper directory exposes MacPorts Python 2.7 as `python`, because the
 JavaScriptCore derived-source generators require Python 2.6 syntax while
 Leopard's system Python is 2.5. System interpreter selections remain unchanged.
+The two Ruby generators used during the Xcode build retain compatibility with
+Leopard's Ruby 1.8 by avoiding `IO#getbyte` and the post-1.8 `String#[index]`
+return type.
 This avoids
 installing an unverified compiler plugin under `/Developer` or replacing system
 compiler links.

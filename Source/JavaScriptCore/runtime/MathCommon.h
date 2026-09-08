@@ -26,6 +26,7 @@
 #pragma once
 
 #include <cmath>
+#include <wtf/MathExtras.h>
 #include <wtf/Optional.h>
 
 namespace JSC {
