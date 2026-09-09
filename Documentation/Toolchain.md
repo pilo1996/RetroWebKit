@@ -71,11 +71,13 @@ The wrappers discard Apple-specific or obsolete flags which upstream GCC 6 does
 not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
 `-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
 binary format is supported by Apple GCC but not upstream GCC, into cached
-include overlays. Each overlay contains redirect headers for the map's exact
+include overlays. Each overlay contains symbolic links for the map's exact
 keys and destinations, avoiding the extra header visibility caused by adding
-whole source directories while retaining the real header's relative-include
-context. The overlay replaces its map in place so include precedence remains
-identical to Xcode's ordering.
+whole source directories while retaining the real header's identity and
+relative-include context. Preserving identity is required for Objective-C
+`#import` when both qualified and unqualified keys name the same header. The
+overlay replaces its map in place so include precedence remains identical to
+Xcode's ordering.
 For C++ compilation the wrapper injects a small Leopard compatibility header.
 Leopard exports the C99 math functions used by JavaScriptCore, ANGLE, OTS,
 WebCore, and WebKit, but its `<cmath>` does not expose them in `std` as later

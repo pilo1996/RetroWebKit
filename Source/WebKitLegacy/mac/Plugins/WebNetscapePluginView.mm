@@ -1097,7 +1097,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
             _pluginLayer = adoptNS((CALayer *)value);
 
             BOOL accleratedCompositingEnabled = false;
-            accleratedCompositingEnabled = [[[self webView] preferences] acceleratedCompositingEnabled];
+            accleratedCompositingEnabled = !![[[self webView] preferences] acceleratedCompositingEnabled];
             if (accleratedCompositingEnabled) {
                 // FIXME: This code can be shared between WebHostedNetscapePluginView and WebNetscapePluginView.
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
@@ -2027,7 +2027,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
 
         case WKNVSupportsCompositingCoreAnimationPluginsBool:
         {
-            *(NPBool *)value = [[[self webView] preferences] acceleratedCompositingEnabled];
+            *(NPBool *)value = !![[[self webView] preferences] acceleratedCompositingEnabled];
             return NPERR_NO_ERROR;
         }
 

@@ -41,6 +41,16 @@ mkdir -p "$diagnostics_dir"
         fi
     done
 
+    if grep -q 'gcc6-v3-' "$repo_root/Tools/CompilerWrappers/gcc-mp" \
+        && grep -q 'symlink($value, $destination)' "$repo_root/Tools/CompilerWrappers/gcc-mp" \
+        && grep -q 'gcc6-v3-' "$repo_root/Tools/CompilerWrappers/g++-mp" \
+        && grep -q 'symlink($value, $destination)' "$repo_root/Tools/CompilerWrappers/g++-mp"; then
+        echo "PASS header-map overlays preserve header identity"
+    else
+        echo "FAIL header-map overlays do not preserve header identity"
+        failures=$((failures + 1))
+    fi
+
     compile_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -c probe.cpp 2>/dev/null)
     link_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" probe.o 2>/dev/null)
     if echo "$compile_arguments" | grep -q 'LeopardMathCompatibility.h' \
@@ -81,6 +91,16 @@ mkdir -p "$diagnostics_dir"
         echo "PASS Leopard WebCore uses legacy IDNA and power APIs"
     else
         echo "FAIL Leopard WebCore legacy API fallbacks missing"
+        failures=$((failures + 1))
+    fi
+
+    if [ -f "$repo_root/WebKitLibraries/Growl.framework/Versions/A/Growl" ] \
+        && [ -f "$repo_root/WebKitLibraries/Growl.framework/Versions/A/Headers/GrowlApplicationBridge.h" ] \
+        && [ -f "$repo_root/WebKitLibraries/Growl-LICENSE.txt" ] \
+        && grep -q '../../WebKitLibraries/Growl.framework' "$repo_root/Source/WebKitLegacy/WebKitLegacy.xcodeproj/project.pbxproj"; then
+        echo "PASS WebKitLegacy Growl dependency is vendored"
+    else
+        echo "FAIL WebKitLegacy Growl dependency is incomplete"
         failures=$((failures + 1))
     fi
 

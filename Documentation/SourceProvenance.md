@@ -11,6 +11,7 @@
 | Leopard port | `Patches_604.5.6.tar.bz2` | archived; main WebKit patch applied |
 | OpenType Sanitizer | tag `v6.1.1`, commit `9b02386589f7d00a694984d5a5cd0a7512d04e88` | imported |
 | LZ4 | tag `v1.8.0`, commit `c10863b98e1503af90616ae99725ecd120265dfb` | embedded by main patch |
+| Growl | official `Growl-1.2.2-SDK.dmg` | universal framework imported for WebKitLegacy notifications |
 | Final binary | `WebKit-604.5.6_2-Leopard-PowerPC.dmg` | identified, not imported |
 
 WebKit's `Safari-604.5.6` tag was created on 11 January 2018 as SVN changeset
@@ -42,6 +43,18 @@ Git archive of commit `9b02386589f7d00a694984d5a5cd0a7512d04e88` has SHA-256:
 ```text
 8f7097c6a88d1e96aba8d2301012f3a9a833a89a97d5cc80deb76ee8a5059346
 ```
+
+The historical Leopard patch adds Growl-backed desktop notifications but does
+not carry the required framework. `WebKitLibraries/Growl.framework` is copied
+unchanged from the official Growl 1.2.2 SDK image. The downloaded image has
+SHA-256:
+
+```text
+bc9359bd9d49152b7f867c195637b396cacf544a9626929959ffc7e82f59b100
+```
+
+Its binary contains `ppc`, `i386`, and `x86_64` slices. The accompanying BSD
+license is retained in `WebKitLibraries/Growl-LICENSE.txt`.
 
 ## Leopard patch application
 

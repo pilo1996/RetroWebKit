@@ -28,7 +28,7 @@ sub add_header_map_overlay
 
     my @metadata = stat($path);
     return unless @metadata;
-    my $overlay = "$path.gcc6-v2-$metadata[1]-$metadata[7]-$metadata[9]";
+    my $overlay = "$path.gcc6-v3-$metadata[1]-$metadata[7]-$metadata[9]";
     if (-d $overlay) {
         push @arguments, "-I$overlay";
         return;
@@ -58,6 +58,11 @@ sub add_header_map_overlay
         next if $key =~ m!^/! || $key =~ m!(?:^|/)\.\.(?:/|$)!;
         my $destination = "$temporary_overlay/$key";
         mkpath(dirname($destination));
+        # Preserve #import's once-only behavior when one physical header has
+        # multiple header-map keys (for example Foo.h and WebKit/Foo.h).
+        # Separate redirect files make GCC treat those aliases as distinct.
+        next if symlink($value, $destination);
+
         my $escaped_value = $value;
         $escaped_value =~ s!([\\"])!\\$1!g;
         if (open my $redirect, '>', $destination) {
