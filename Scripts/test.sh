@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h Tools/CompilerWrappers/MacPortsHeaders/sqlite3.h; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -72,6 +72,14 @@ mkdir -p "$diagnostics_dir"
         echo "PASS Leopard build disables unsupported modern ICU APIs"
     else
         echo "FAIL Leopard build does not disable unsupported modern ICU APIs"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q 'ENABLE_DASHBOARD_SUPPORT=ENABLE_DASHBOARD_SUPPORT' "$repo_root/Scripts/build.sh" \
+        && grep -q 'ENABLE_FULLSCREEN_API=ENABLE_FULLSCREEN_API' "$repo_root/Scripts/build.sh"; then
+        echo "PASS Leopard derived-source features are explicit"
+    else
+        echo "FAIL Leopard derived-source feature overrides missing"
         failures=$((failures + 1))
     fi
 

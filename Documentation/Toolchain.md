@@ -70,9 +70,12 @@ compiler specification while the compiler executable settings point to GCC 6.
 The wrappers discard Apple-specific or obsolete flags which upstream GCC 6 does
 not accept, including `-fpascal-strings`, `-Wnewline-eof`, and
 `-Wshorten-64-to-32`. They also translate Xcode header-map arguments, whose
-binary format is supported by Apple GCC but not upstream GCC, into ordinary
-include roots derived from the paths stored in each map. These roots replace
-each map in place so include precedence remains identical to Xcode's ordering.
+binary format is supported by Apple GCC but not upstream GCC, into cached
+include overlays. Each overlay contains redirect headers for the map's exact
+keys and destinations, avoiding the extra header visibility caused by adding
+whole source directories while retaining the real header's relative-include
+context. The overlay replaces its map in place so include precedence remains
+identical to Xcode's ordering.
 For C++ compilation the wrapper injects a small Leopard compatibility header.
 Leopard exports the C99 math functions used by JavaScriptCore, ANGLE, OTS,
 WebCore, and WebKit, but its `<cmath>` does not expose them in `std` as later
@@ -80,6 +83,11 @@ SDKs do; the header supplies that namespace bridge once for the whole tree.
 The wrappers also expose Leopard SDK's `libxml2` include root and demote only
 GCC 6's strict-aliasing and multichar diagnostics, both triggered by deliberate
 WebKit idioms accepted by the historical Apple compiler.
+They select the MacPorts SQLite 3 header and library explicitly because
+Leopard's system SQLite predates APIs required by WebKit 604. Old libxml2 keeps
+its native library and treats the optional `XML_PARSE_HUGE` flag as unavailable.
+The build also pins dashboard and fullscreen feature settings for every Xcode
+target so their generated CSS sources match WebCore's compiler definitions.
 WebCore's shared `config.h` uses source-relative export-macro includes so the
 PAL target does not depend on cross-project header-map entries.
 For Objective-C++ invocations they explicitly enable Objective-C exceptions and

@@ -3,15 +3,15 @@
 use strict;
 use warnings;
 use FindBin qw($Bin);
+use File::Basename qw(dirname);
+use File::Path qw(mkpath rmtree);
 
 my $compiler = $ENV{RETROWEBKIT_GXX} || '/opt/local/bin/g++-mp-6';
 my @arguments;
-my %header_roots;
-my %emitted_header_roots;
 my @sdk_include_roots;
 my $is_objective_cxx = 0;
 
-sub add_header_map_roots
+sub add_header_map_overlay
 {
     my ($path) = @_;
     open my $file, '<', $path or return;
@@ -25,6 +25,18 @@ sub add_header_map_roots
         unpack('NnnNNN', substr($data, 0, 20));
     return unless $magic == 0x686d6170 && $version == 1 && $reserved == 0;
     return unless 24 + $buckets * 12 <= length($data) && $strings_offset < length($data);
+
+    my @metadata = stat($path);
+    return unless @metadata;
+    my $overlay = "$path.gcc6-v2-$metadata[1]-$metadata[7]-$metadata[9]";
+    if (-d $overlay) {
+        push @arguments, "-I$overlay";
+        return;
+    }
+
+    my $temporary_overlay = "$overlay.$$";
+    rmtree($temporary_overlay) if -e $temporary_overlay;
+    mkpath($temporary_overlay);
 
     my $string_at = sub {
         my ($offset) = @_;
@@ -43,21 +55,22 @@ sub add_header_map_roots
         my $key = $string_at->($key_offset);
         my $value = $string_at->($prefix_offset) . $string_at->($suffix_offset);
         next unless length($key) && length($value);
-        my $root;
-        if (length($value) >= length($key)
-            && lc(substr($value, -length($key))) eq lc($key)) {
-            $root = substr($value, 0, length($value) - length($key));
-            $root =~ s!/$!!;
-        } else {
-            ($root = $value) =~ s!/[^/]+$!!;
+        next if $key =~ m!^/! || $key =~ m!(?:^|/)\.\.(?:/|$)!;
+        my $destination = "$temporary_overlay/$key";
+        mkpath(dirname($destination));
+        my $escaped_value = $value;
+        $escaped_value =~ s!([\\"])!\\$1!g;
+        if (open my $redirect, '>', $destination) {
+            print {$redirect} "#include \"$escaped_value\"\n";
+            close $redirect;
         }
-        $header_roots{$root} = 1 if length($root) && -d $root;
     }
 
-    for my $root (sort keys %header_roots) {
-        next if $emitted_header_roots{$root}++;
-        push @arguments, "-I$root";
+    unless (rename($temporary_overlay, $overlay)) {
+        rmtree($temporary_overlay);
+        return unless -d $overlay;
     }
+    push @arguments, "-I$overlay";
 }
 
 while (@ARGV) {
@@ -66,6 +79,10 @@ while (@ARGV) {
     next if $argument eq '-fpascal-strings'
         || $argument eq '-Wnewline-eof'
         || $argument eq '-Wshorten-64-to-32';
+    if ($argument eq '-lsqlite3' && -f '/opt/local/lib/libsqlite3.dylib') {
+        push @arguments, '/opt/local/lib/libsqlite3.dylib';
+        next;
+    }
     if ($argument eq '-isysroot' && @ARGV) {
         my $sdk_root = shift @ARGV;
         push @arguments, $argument, $sdk_root;
@@ -74,17 +91,18 @@ while (@ARGV) {
         next;
     }
     if (($argument eq '-I' || $argument eq '-iquote') && @ARGV && $ARGV[0] =~ /\.hmap$/) {
-        add_header_map_roots(shift @ARGV);
+        add_header_map_overlay(shift @ARGV);
         next;
     }
     if ($argument =~ /^-I(.*\.hmap)$/ || $argument =~ /^-iquote(.*\.hmap)$/) {
-        add_header_map_roots($1);
+        add_header_map_overlay($1);
         next;
     }
     push @arguments, $argument;
 }
 if (grep { $_ eq '-c' || $_ eq '-E' || $_ eq '-S' } @arguments) {
     push @arguments, map { "-I$_" } @sdk_include_roots;
+    push @arguments, "-I$Bin/MacPortsHeaders" if -f '/opt/local/include/sqlite3.h';
     push @arguments, '-include', "$Bin/LeopardMathCompatibility.h";
     push @arguments, '-Wno-error=strict-aliasing', '-Wno-error=multichar';
 }

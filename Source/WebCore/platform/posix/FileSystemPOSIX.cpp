@@ -213,7 +213,12 @@ bool getFileCreationTime(const String& path, time_t& result)
     if (stat(fsRep.data(), &fileInfo))
         return false;
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED <= 1050
+    // The 32-bit inode ABI exposed by Leopard has no birth-time member.
+    result = fileInfo.st_ctime;
+#else
     result = fileInfo.st_birthtime;
+#endif
     return true;
 #else
     UNUSED_PARAM(path);

@@ -70,6 +70,8 @@ echo "1" > "$status_file"
         "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
             GCC_VERSION=4.2 \
             ENABLE_INTL= \
+            ENABLE_DASHBOARD_SUPPORT=ENABLE_DASHBOARD_SUPPORT \
+            ENABLE_FULLSCREEN_API=ENABLE_FULLSCREEN_API \
             CC="$compiler_wrappers/gcc-mp" \
             CPLUSPLUS="$compiler_wrappers/g++-mp" \
             LDPLUSPLUS="$compiler_wrappers/g++-mp"

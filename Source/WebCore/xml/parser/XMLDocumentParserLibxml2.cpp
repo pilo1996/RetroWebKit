@@ -56,6 +56,10 @@
 #include <wtf/StringExtras.h>
 #include <wtf/unicode/UTF8.h>
 
+#ifndef XML_PARSE_HUGE
+#define XML_PARSE_HUGE 0
+#endif
+
 #if ENABLE(XSLT)
 #include "XMLTreeViewer.h"
 #include <libxslt/xslt.h>
