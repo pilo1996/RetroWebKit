@@ -75,6 +75,15 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
+    if grep -q 'uidna_IDNToASCII' "$repo_root/Source/WebCore/platform/URLParser.cpp" \
+        && grep -q 'uidna_IDNToUnicode' "$repo_root/Source/WebCore/platform/mac/WebCoreNSURLExtras.mm" \
+        && grep -q 'IOPMAssertionCreate(assertionType' "$repo_root/Source/WebCore/platform/cocoa/SleepDisablerCocoa.cpp"; then
+        echo "PASS Leopard WebCore uses legacy IDNA and power APIs"
+    else
+        echo "FAIL Leopard WebCore legacy API fallbacks missing"
+        failures=$((failures + 1))
+    fi
+
     if grep -q 'ENABLE_DASHBOARD_SUPPORT=ENABLE_DASHBOARD_SUPPORT' "$repo_root/Scripts/build.sh" \
         && grep -q 'ENABLE_FULLSCREEN_API=ENABLE_FULLSCREEN_API' "$repo_root/Scripts/build.sh"; then
         echo "PASS Leopard derived-source features are explicit"

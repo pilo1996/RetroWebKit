@@ -104,6 +104,10 @@ implementation requires ICU entry points newer than those exported by Leopard's
 system `libicucore`; JavaScriptCore's existing non-Intl fallback remains in use.
 `String.prototype.normalize`, which is independent of `Intl`, uses ICU's legacy
 `unorm_normalize` API when compiling against the Leopard SDK.
+WebCore's URL conversion follows the same compatibility rule: Leopard uses the
+system ICU's IDNA2003 entry points because its `libicucore` does not export the
+newer UTS #46 API. Sleep assertions likewise use Leopard's documented
+`IOPMAssertionCreate` entry point instead of newer named assertions.
 The JavaScriptCore header postprocessing steps avoid `unifdef -B`, `unifdef -o`,
 and Ruby enumerator chaining, none of which is available in Leopard's system
 tools.

@@ -545,9 +545,27 @@ static NSString *mapHostNameWithRange(NSString *string, NSRange range, BOOL enco
     [string getCharacters:sourceBuffer range:range];
     
     UErrorCode uerror = U_ZERO_ERROR;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    UParseError parseError;
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    int32_t numCharactersConverted = encode
+        ? uidna_IDNToASCII(sourceBuffer, length, destinationBuffer, HOST_NAME_BUFFER_LENGTH, UIDNA_ALLOW_UNASSIGNED, &parseError, &uerror)
+        : uidna_IDNToUnicode(sourceBuffer, length, destinationBuffer, HOST_NAME_BUFFER_LENGTH, UIDNA_ALLOW_UNASSIGNED, &parseError, &uerror);
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic pop
+#endif
+#else
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
     int32_t numCharactersConverted = (encode ? uidna_nameToASCII : uidna_nameToUnicode)(&URLParser::internationalDomainNameTranscoder(), sourceBuffer, length, destinationBuffer, HOST_NAME_BUFFER_LENGTH, &processingDetails, &uerror);
-    if (length && (U_FAILURE(uerror) || processingDetails.errors)) {
+#endif
+    if (length && (U_FAILURE(uerror)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+        || processingDetails.errors
+#endif
+    )) {
         *error = YES;
         return nil;
     }

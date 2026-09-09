@@ -45,7 +45,11 @@ SleepDisablerCocoa::SleepDisablerCocoa(const char* reason, Type type)
     , m_systemActivityTimer([] { UpdateSystemActivity(IdleActivity); })
 #endif
 {
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     RetainPtr<CFStringRef> reasonCF = adoptCF(CFStringCreateWithCString(kCFAllocatorDefault, reason, kCFStringEncodingUTF8));
+#else
+    UNUSED_PARAM(reason);
+#endif
 
     CFStringRef assertionType;
     switch (type) {
@@ -71,7 +75,7 @@ SleepDisablerCocoa::SleepDisablerCocoa(const char* reason, Type type)
 #if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     IOPMAssertionCreateWithDescription(assertionType, reasonCF.get(), nullptr, nullptr, nullptr, 0, nullptr, &m_sleepAssertion);
 #else
-    IOPMAssertionCreateWithName(assertionType, kIOPMAssertionLevelOn, reasonCF.get(), &m_sleepAssertion);
+    IOPMAssertionCreate(assertionType, kIOPMAssertionLevelOn, &m_sleepAssertion);
     m_systemActivityTimer.startRepeating(2_min);
 #endif
 }

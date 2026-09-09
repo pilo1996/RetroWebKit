@@ -2565,11 +2565,27 @@ std::optional<Vector<LChar, URLParser::defaultInlineBufferSize>> URLParser::doma
     
     UChar hostnameBuffer[defaultInlineBufferSize];
     UErrorCode error = U_ZERO_ERROR;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
+    UParseError parseError;
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+    int32_t numCharactersConverted = uidna_IDNToASCII(StringView(domain).upconvertedCharacters(), domain.length(), hostnameBuffer, defaultInlineBufferSize, UIDNA_ALLOW_UNASSIGNED, &parseError, &error);
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic pop
+#endif
+#else
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
     int32_t numCharactersConverted = uidna_nameToASCII(&internationalDomainNameTranscoder(), StringView(domain).upconvertedCharacters(), domain.length(), hostnameBuffer, defaultInlineBufferSize, &processingDetails, &error);
+#endif
     ASSERT(numCharactersConverted <= static_cast<int32_t>(defaultInlineBufferSize));
 
-    if (U_SUCCESS(error) && !processingDetails.errors) {
+    if (U_SUCCESS(error)
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
+        && !processingDetails.errors
+#endif
+    ) {
         for (int32_t i = 0; i < numCharactersConverted; ++i) {
             ASSERT(isASCII(hostnameBuffer[i]));
             ASSERT(!isASCIIUpper(hostnameBuffer[i]));
@@ -2851,6 +2867,7 @@ String URLParser::serialize(const URLEncodedForm& tuples)
     return String::adopt(WTFMove(output));
 }
 
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
 const UIDNA& URLParser::internationalDomainNameTranscoder()
 {
     static UIDNA* encoder;
@@ -2863,6 +2880,7 @@ const UIDNA& URLParser::internationalDomainNameTranscoder()
     });
     return *encoder;
 }
+#endif
 
 bool URLParser::allValuesEqual(const URL& a, const URL& b)
 {

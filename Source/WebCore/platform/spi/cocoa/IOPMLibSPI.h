@@ -51,9 +51,7 @@ WTF_EXTERN_C_END
 
 WTF_EXTERN_C_BEGIN
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050
-IOReturn IOPMAssertionCreateWithName(CFStringRef assertionType, IOPMAssertionLevel assertionLevel, CFStringRef name, IOPMAssertionID *assertionID);
-#else
+#if !(PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1050)
 IOReturn IOPMAssertionCreateWithDescription(CFStringRef assertionType, CFStringRef name, CFStringRef details, CFStringRef humanReadableReason,
                                                      CFStringRef localizationBundlePath, CFTimeInterval timeout, CFStringRef timeoutAction, IOPMAssertionID *);
 IOReturn IOPMAssertionRelease(IOPMAssertionID);
