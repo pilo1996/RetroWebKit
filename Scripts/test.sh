@@ -99,7 +99,8 @@ mkdir -p "$diagnostics_dir"
         && [ -f "$repo_root/WebKitLibraries/Growl-LICENSE.txt" ] \
         && grep -q '../../WebKitLibraries/Growl.framework' "$repo_root/Source/WebKitLegacy/WebKitLegacy.xcodeproj/project.pbxproj" \
         && grep -q 'FRAMEWORK_SEARCH_PATHS.*WebKitLibraries' "$repo_root/Source/WebKitLegacy/mac/Configurations/WebKitLegacy.xcconfig" \
-        && grep -q '\[\[ -e.*WebKitPluginHost.app.*|| -h' "$repo_root/Source/WebKitLegacy/WebKitLegacy.xcodeproj/project.pbxproj"; then
+        && grep -q '\[\[ -e.*WebKitPluginHost.app.*|| -h' "$repo_root/Source/WebKitLegacy/WebKitLegacy.xcodeproj/project.pbxproj" \
+        && grep -q '! -e.*Versions/A/WebKitPluginHost.app.*&& ! -h' "$repo_root/Source/WebKitLegacy/WebKitLegacy.xcodeproj/project.pbxproj"; then
         echo "PASS WebKitLegacy Growl dependency is vendored"
     else
         echo "FAIL WebKitLegacy Growl dependency is incomplete"
