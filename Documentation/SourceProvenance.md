@@ -53,8 +53,10 @@ SHA-256:
 bc9359bd9d49152b7f867c195637b396cacf544a9626929959ffc7e82f59b100
 ```
 
-Its binary contains `ppc`, `i386`, and `x86_64` slices. The accompanying BSD
-license is retained in `WebKitLibraries/Growl-LICENSE.txt`.
+The vendored binary retains the SDK's `ppc` and `i386` slices. Its `x86_64`
+slice is omitted because Leopard's Xcode 3 `strip` cannot parse one of its Mach-O
+load commands. The accompanying BSD license is retained in
+`WebKitLibraries/Growl-LICENSE.txt`.
 
 ## Leopard patch application
 
