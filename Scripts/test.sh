@@ -51,7 +51,7 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
-    compile_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -c probe.cpp 2>/dev/null)
+    compile_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -c -Wextra-tokens -Wexit-time-destructors -Wglobal-constructors -Wimplicit-fallthrough probe.cpp 2>/dev/null)
     link_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" probe.o 2>/dev/null)
     if echo "$compile_arguments" | grep -q 'LeopardMathCompatibility.h' \
         && ! echo "$link_arguments" | grep -q 'LeopardMathCompatibility.h'; then
@@ -63,6 +63,7 @@ mkdir -p "$diagnostics_dir"
 
     if echo "$compile_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
         && echo "$compile_arguments" | grep -q -- '-Wno-error=multichar' \
+        && ! echo "$compile_arguments" | grep -Eq -- '-W(extra-tokens|exit-time-destructors|global-constructors|implicit-fallthrough)' \
         && ! echo "$link_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
         && ! echo "$link_arguments" | grep -q -- '-Wno-error=multichar'; then
         echo "PASS Leopard source-warning exceptions are compile-only"
@@ -112,6 +113,33 @@ mkdir -p "$diagnostics_dir"
         echo "PASS Leopard derived-source features are explicit"
     else
         echo "FAIL Leopard derived-source feature overrides missing"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q '^SDKROOT_ = /Developer/SDKs/MacOSX10\.5\.sdk;' "$repo_root/Source/WebKit/Configurations/DebugRelease.xcconfig" \
+        && grep -q '^MACOSX_DEPLOYMENT_TARGET_macosx_1050 = 10\.5;' "$repo_root/Source/WebKit/Configurations/DebugRelease.xcconfig" \
+        && grep -q '^WEBKIT_SYSTEM_INTERFACE_LIBRARY_macosx_1050 = WebKitSystemInterfaceLeopard;' "$repo_root/Source/WebKit/Configurations/DebugRelease.xcconfig"; then
+        echo "PASS WebKit uses the Leopard SDK and system interface"
+    else
+        echo "FAIL WebKit Leopard SDK configuration is incomplete"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q 'findstring gcc-mp' "$repo_root/Source/WebKit/DerivedSources.make" \
+        && grep -q 'TEXT_PREPROCESSOR_FLAGS=-E -P -x c -std=gnu89 -w' "$repo_root/Source/WebKit/DerivedSources.make"; then
+        echo "PASS WebKit sandbox profiles avoid GCC traditional preprocessing"
+    else
+        echo "FAIL WebKit GCC sandbox preprocessing override is missing"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q '#if defined(__i386__)' "$repo_root/Source/WebKit/PluginProcess/mac/PluginProcessShim.mm" \
+        && grep -q 'pthread_once(&once, initializeFakeSHMDisabled)' "$repo_root/Source/WebKit/PluginProcess/mac/PluginProcessShim.mm" \
+        && grep -q '__MAC_OS_X_VERSION_MAX_ALLOWED >= 1060' "$repo_root/Source/WebKit/PluginProcess/mac/PluginProcessShim.mm" \
+        && ! grep -q 'dispatch_once' "$repo_root/Source/WebKit/PluginProcess/mac/PluginProcessShim.mm"; then
+        echo "PASS WebKit plugin shim is Leopard-compatible"
+    else
+        echo "FAIL WebKit plugin shim Leopard compatibility is missing"
         failures=$((failures + 1))
     fi
 

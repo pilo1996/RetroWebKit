@@ -34,6 +34,7 @@
 #import <WebKitSystemInterface.h>
 #import <mach/mach_vm.h>
 #import <objc/message.h>
+#import <pthread.h>
 #import <stdio.h>
 #import <sys/ipc.h>
 #import <sys/mman.h>
@@ -47,7 +48,7 @@ extern "C" void WebKitPluginProcessShimInitialize(const PluginProcessShimCallbac
 
 static PluginProcessShimCallbacks pluginProcessShimCallbacks;
 
-#ifndef __LP64__
+#if defined(__i386__)
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -136,7 +137,7 @@ DYLD_INTERPOSE(shimMachVMMap, mach_vm_map);
 
 #pragma clang diagnostic pop
 
-#endif
+#endif // defined(__i386__)
 
 // Simple Fake System V shared memory. This replacement API implements
 // usable system V shared memory for use within a single process. The memory
@@ -180,23 +181,27 @@ static FakeSharedMemoryDescriptor* findBySharedMemoryAddress(const void* mmapedA
     return descriptorPtr;
 }
 
+static Boolean isFakeSHMDisabled;
+
+static void initializeFakeSHMDisabled()
+{
+    Boolean keyExistsAndHasValidFormat = false;
+    Boolean prefValue = CFPreferencesGetAppBooleanValue(CFSTR("WebKitDisableFakeSYSVSHM"), kCFPreferencesCurrentApplication, &keyExistsAndHasValidFormat);
+
+    if (keyExistsAndHasValidFormat && prefValue)
+        isFakeSHMDisabled = true;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1060
+    else if (sandbox_check(getpid(), NULL, SANDBOX_FILTER_NONE) == 1)
+        isFakeSHMDisabled = false;  // Sandboxed
+#endif
+    else
+        isFakeSHMDisabled = true;   // Not Sandboxed
+}
+
 static Boolean shim_disabled(void)
 {
-    static Boolean isFakeSHMDisabled;
-
-    static dispatch_once_t once;
-    dispatch_once(&once, ^() {
-        Boolean keyExistsAndHasValidFormat = false;
-        Boolean prefValue = CFPreferencesGetAppBooleanValue(CFSTR("WebKitDisableFakeSYSVSHM"), kCFPreferencesCurrentApplication, &keyExistsAndHasValidFormat);
-
-        if (keyExistsAndHasValidFormat && prefValue)
-            isFakeSHMDisabled = true;
-        else if (sandbox_check(getpid(), NULL, SANDBOX_FILTER_NONE) == 1)
-            isFakeSHMDisabled = false;  // Sandboxed
-        else
-            isFakeSHMDisabled = true;   // Not Sandboxed
-
-    });
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    pthread_once(&once, initializeFakeSHMDisabled);
 
     return isFakeSHMDisabled;
 }

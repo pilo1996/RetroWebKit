@@ -204,8 +204,12 @@ all : \
 
 # Some versions of clang incorrectly strip out // comments in c89 code.
 # Use -traditional as a workaround, but only when needed since that causes
-# other problems with later versions of clang.
-ifeq ($(shell echo '//x' | $(CC) -E -P -x c -std=c89 - | grep x),)
+# other problems with later versions of clang. GCC 6 accepts those comments
+# in gnu89 mode and must not use -traditional: it leaves token-pasting macros
+# from WTF's Platform.h in preprocessor expressions.
+ifneq ($(findstring gcc-mp,$(CC)),)
+TEXT_PREPROCESSOR_FLAGS=-E -P -x c -std=gnu89 -w
+else ifeq ($(shell echo '//x' | $(CC) -E -P -x c -std=c89 - | grep x),)
 TEXT_PREPROCESSOR_FLAGS=-E -P -x c -traditional -w
 else
 TEXT_PREPROCESSOR_FLAGS=-E -P -x c -std=c89 -w
