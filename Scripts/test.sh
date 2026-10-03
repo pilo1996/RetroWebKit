@@ -83,6 +83,18 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
+    objcxx_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -x objective-c++ -c probe.mm 2>/dev/null)
+    objcxx_pch_arguments=$(RETROWEBKIT_GXX=/bin/echo "$repo_root/Tools/CompilerWrappers/g++-mp" -x objective-c++-header -c probe.h 2>/dev/null)
+    if echo "$objcxx_arguments" | grep -q -- '-Dinstancetype=id' \
+        && echo "$objcxx_pch_arguments" | grep -q -- '-Dinstancetype=id' \
+        && echo "$objcxx_arguments" | grep -q -- '-fobjc-exceptions' \
+        && echo "$objcxx_pch_arguments" | grep -q -- '-fobjc-exceptions'; then
+        echo "PASS Objective-C++ sources and precompiled headers use matching compatibility flags"
+    else
+        echo "FAIL Objective-C++ precompiled-header compatibility flags differ"
+        failures=$((failures + 1))
+    fi
+
     if sh -n Tools/CompilerWrappers/python; then
         echo "PASS syntax Tools/CompilerWrappers/python"
     else

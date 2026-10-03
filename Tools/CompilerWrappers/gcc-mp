@@ -80,7 +80,7 @@ sub add_header_map_overlay
 
 while (@ARGV) {
     my $argument = shift @ARGV;
-    $is_objective_cxx = 1 if $argument eq 'objective-c++' && @arguments && $arguments[-1] eq '-x';
+    $is_objective_cxx = 1 if $argument =~ /^objective-c\+\+(?:-header)?$/ && @arguments && $arguments[-1] eq '-x';
     next if $argument eq '-fpascal-strings'
         || $argument eq '-Wnewline-eof'
         || $argument eq '-Wshorten-64-to-32'
