@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h Tools/CompilerWrappers/MacPortsHeaders/sqlite3.h; do
+    for file in README.md Documentation/Architecture.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h Tools/CompilerWrappers/MacPortsHeaders/sqlite3.h Browser/RetroBrowser/main.m Browser/RetroBrowser/RetroBrowserAppDelegate.h Browser/RetroBrowser/RetroBrowserAppDelegate.m Browser/RetroBrowser/Info.plist Browser/RetroBrowser/build.sh Browser/RetroBrowser/run.sh Browser/RetroBrowser/smoke-test.sh; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -23,7 +23,7 @@ mkdir -p "$diagnostics_dir"
         fi
     done
 
-    for script in Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/test.sh Scripts/verify-source.sh; do
+    for script in Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/test.sh Scripts/verify-source.sh Browser/RetroBrowser/build.sh Browser/RetroBrowser/run.sh Browser/RetroBrowser/smoke-test.sh; do
         if sh -n "$repo_root/$script"; then
             echo "PASS syntax $script"
         else
@@ -112,6 +112,13 @@ mkdir -p "$diagnostics_dir"
         echo "PASS Leopard WebCore uses legacy IDNA and power APIs"
     else
         echo "FAIL Leopard WebCore legacy API fallbacks missing"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q 'HEADER_SEARCH_PATHS = "$(SRCROOT)" PAL' "$repo_root/Source/WebCore/Configurations/WebCore.xcconfig"; then
+        echo "PASS WebCore exposes its source root to Xcode 3 header lookup"
+    else
+        echo "FAIL WebCore source-root header lookup is missing"
         failures=$((failures + 1))
     fi
 
