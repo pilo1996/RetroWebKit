@@ -67,7 +67,7 @@ echo "1" > "$status_file"
     if [ -x /opt/local/bin/gcc-mp-6 ] && [ -x /opt/local/bin/g++-mp-6 ] && [ -x /opt/local/bin/python2.7 ]; then
         PATH="$compiler_wrappers:$PATH"
         export PATH
-        "$build_script" "--$configuration" ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
+        "$build_script" "--$configuration" --legacy-only ARCHS="$arch" ONLY_ACTIVE_ARCH=NO \
             GCC_VERSION=4.2 \
             ENABLE_INTL= \
             ENABLE_DASHBOARD_SUPPORT=ENABLE_DASHBOARD_SUPPORT \

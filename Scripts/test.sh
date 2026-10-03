@@ -63,12 +63,23 @@ mkdir -p "$diagnostics_dir"
 
     if echo "$compile_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
         && echo "$compile_arguments" | grep -q -- '-Wno-error=multichar' \
+        && echo "$compile_arguments" | grep -q -- '-Wno-error=deprecated' \
         && ! echo "$compile_arguments" | grep -Eq -- '-W(extra-tokens|exit-time-destructors|global-constructors|implicit-fallthrough)' \
         && ! echo "$link_arguments" | grep -q -- '-Wno-error=strict-aliasing' \
         && ! echo "$link_arguments" | grep -q -- '-Wno-error=multichar'; then
         echo "PASS Leopard source-warning exceptions are compile-only"
     else
         echo "FAIL Leopard source-warning wrapper behavior"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q '#define instancetype id' "$repo_root/Tools/CompilerWrappers/LeopardMathCompatibility.h" \
+        && grep -q '#define NS_RETURNS_RETAINED' "$repo_root/Tools/CompilerWrappers/LeopardMathCompatibility.h" \
+        && grep -q '#define CF_RETURNS_RETAINED' "$repo_root/Tools/CompilerWrappers/LeopardMathCompatibility.h" \
+        && grep -q "'-Dinstancetype=id'" "$repo_root/Tools/CompilerWrappers/g++-mp"; then
+        echo "PASS Leopard Objective-C compatibility annotations are defined"
+    else
+        echo "FAIL Leopard Objective-C compatibility annotations are missing"
         failures=$((failures + 1))
     fi
 
@@ -83,6 +94,15 @@ mkdir -p "$diagnostics_dir"
         echo "PASS Leopard build disables unsupported modern ICU APIs"
     else
         echo "FAIL Leopard build does not disable unsupported modern ICU APIs"
+        failures=$((failures + 1))
+    fi
+
+    if grep -q -- '--legacy-only' "$repo_root/Scripts/build.sh" \
+        && grep -q "'legacy-only' =>" "$repo_root/Tools/Scripts/build-webkit" \
+        && grep -q 'push @projects, ("Source/WebKit") unless \$legacyOnly' "$repo_root/Tools/Scripts/build-webkit"; then
+        echo "PASS Leopard build excludes WebKit2 and modern test tools"
+    else
+        echo "FAIL Leopard build does not enforce the WebKitLegacy-only architecture"
         failures=$((failures + 1))
     fi
 

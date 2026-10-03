@@ -113,9 +113,9 @@ if (grep { $_ eq '-c' || $_ eq '-E' || $_ eq '-S' } @arguments) {
     push @arguments, map { "-I$_" } @sdk_include_roots;
     push @arguments, "-I$Bin/MacPortsHeaders" if -f '/opt/local/include/sqlite3.h';
     push @arguments, '-include', "$Bin/LeopardMathCompatibility.h";
-    push @arguments, '-Wno-error=strict-aliasing', '-Wno-error=multichar';
+    push @arguments, '-Wno-error=strict-aliasing', '-Wno-error=multichar', '-Wno-error=deprecated';
 }
-push @arguments, '-fobjc-exceptions', '-Wno-error' if $is_objective_cxx;
+push @arguments, '-Dinstancetype=id', '-fobjc-exceptions', '-Wno-error' if $is_objective_cxx;
 
 exec {$compiler} $compiler, @arguments;
 die "error: could not execute $compiler: $!\n";
