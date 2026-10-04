@@ -127,6 +127,15 @@ mkdir -p "$diagnostics_dir"
         failures=$((failures + 1))
     fi
 
+    if grep -q '"platform/graphics/mac/VideoTrackPrivateQTKit.h"' "$repo_root/Source/WebCore/platform/graphics/mac/MediaPlayerPrivateQTKit.h" \
+        && grep -q '"platform/graphics/mac/AudioTrackPrivateQTKit.h"' "$repo_root/Source/WebCore/platform/graphics/mac/MediaPlayerPrivateQTKit.h" \
+        && grep -q '"platform/graphics/mac/InbandTextTrackPrivateQTKit.h"' "$repo_root/Source/WebCore/platform/graphics/mac/MediaPlayerPrivateQTKit.h"; then
+        echo "PASS QTKit track headers bypass Xcode 3 nested header-map lookup"
+    else
+        echo "FAIL QTKit track headers rely on Xcode 3 nested header-map lookup"
+        failures=$((failures + 1))
+    fi
+
     if grep -q 'HEADER_SEARCH_PATHS = "$(SRCROOT)" PAL' "$repo_root/Source/WebCore/Configurations/WebCore.xcconfig"; then
         echo "PASS WebCore exposes its source root to Xcode 3 header lookup"
     else

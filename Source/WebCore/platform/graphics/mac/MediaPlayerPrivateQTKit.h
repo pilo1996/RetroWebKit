@@ -34,9 +34,9 @@
 #include <wtf/RetainPtr.h>
 
 #if ENABLE(VIDEO_TRACK)
-#include "VideoTrackPrivateQTKit.h"
-#include "AudioTrackPrivateQTKit.h"
-#include "InbandTextTrackPrivateQTKit.h"
+#include "platform/graphics/mac/VideoTrackPrivateQTKit.h"
+#include "platform/graphics/mac/AudioTrackPrivateQTKit.h"
+#include "platform/graphics/mac/InbandTextTrackPrivateQTKit.h"
 #endif
 
 #ifdef __OBJC__
