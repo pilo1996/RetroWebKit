@@ -12,6 +12,7 @@
 | OpenType Sanitizer | tag `v6.1.1`, commit `9b02386589f7d00a694984d5a5cd0a7512d04e88` | imported |
 | LZ4 | tag `v1.8.0`, commit `c10863b98e1503af90616ae99725ecd120265dfb` | embedded by main patch |
 | Growl | official `Growl-1.2.2-SDK.dmg` | universal framework imported for WebKitLegacy notifications |
+| JSON::PP | CPAN `JSON-PP-2.27203` | vendored for WebCore code generation on Perl 5.8 |
 | Final binary | `WebKit-604.5.6_2-Leopard-PowerPC.dmg` | identified, not imported |
 
 WebKit's `Safari-604.5.6` tag was created on 11 January 2018 as SVN changeset
@@ -57,6 +58,16 @@ The vendored binary retains the SDK's `ppc` and `i386` slices. Its `x86_64`
 slice is omitted because Leopard's Xcode 3 `strip` cannot parse one of its Mach-O
 load commands. The accompanying BSD license is retained in
 `WebKitLibraries/Growl-LICENSE.txt`.
+
+WebCore's bindings generator requires `JSON::PP`, which did not enter the Perl
+core distribution until Perl 5.14 and is absent from Leopard's Perl 5.8.8.
+`Source/ThirdParty/JSON-PP-2.27203` is the unmodified CPAN distribution, selected
+because it supports Perl 5.8 and retains its original Perl license terms. The
+official CPAN archive has SHA-256:
+
+```text
+b7063939721d0be3b0d1ab33ed13c4a8bfaecc0b526036d94d2691e582f25c52
+```
 
 ## Leopard patch application
 

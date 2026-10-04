@@ -30,7 +30,7 @@
 
 use strict;
 use FindBin;
-use lib '.', $FindBin::Bin;
+use lib '.', $FindBin::Bin, "$FindBin::Bin/../../../ThirdParty/JSON-PP-2.27203/lib";
 
 use English;
 use File::Path;

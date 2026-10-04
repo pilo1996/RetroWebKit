@@ -14,7 +14,7 @@ mkdir -p "$diagnostics_dir"
     echo "date=$(date 2>/dev/null || echo unavailable)"
     failures=0
 
-    for file in README.md Documentation/Architecture.md Documentation/KnownGoodBuild.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h Tools/CompilerWrappers/MacPortsHeaders/sqlite3.h Browser/RetroBrowser/main.m Browser/RetroBrowser/RetroBrowserAppDelegate.h Browser/RetroBrowser/RetroBrowserAppDelegate.m Browser/RetroBrowser/Info.plist Browser/RetroBrowser/build.sh Browser/RetroBrowser/run.sh Browser/RetroBrowser/smoke-test.sh; do
+    for file in README.md Documentation/Architecture.md Documentation/KnownGoodBuild.md Documentation/Toolchain.md Documentation/Roadmap.md Documentation/SourceProvenance.md Scripts/bootstrap.sh Scripts/build.sh Scripts/collect-logs.sh Scripts/prepare-macports-gcc6.sh Scripts/verify-source.sh Tools/CompilerWrappers/gcc-mp Tools/CompilerWrappers/g++-mp Tools/CompilerWrappers/python Tools/CompilerWrappers/LeopardMathCompatibility.h Tools/CompilerWrappers/MacPortsHeaders/sqlite3.h Source/ThirdParty/JSON-PP-2.27203/lib/JSON/PP.pm Browser/RetroBrowser/main.m Browser/RetroBrowser/RetroBrowserAppDelegate.h Browser/RetroBrowser/RetroBrowserAppDelegate.m Browser/RetroBrowser/Info.plist Browser/RetroBrowser/build.sh Browser/RetroBrowser/run.sh Browser/RetroBrowser/smoke-test.sh; do
         if [ -f "$repo_root/$file" ]; then
             echo "PASS $file"
         else
@@ -133,6 +133,15 @@ mkdir -p "$diagnostics_dir"
         echo "PASS QTKit track headers bypass Xcode 3 nested header-map lookup"
     else
         echo "FAIL QTKit track headers rely on Xcode 3 nested header-map lookup"
+        failures=$((failures + 1))
+    fi
+
+    json_pp_version=$(/usr/bin/perl -I"$repo_root/Source/ThirdParty/JSON-PP-2.27203/lib" -MJSON::PP -e 'print $JSON::PP::VERSION' 2>/dev/null || true)
+    if [ "$json_pp_version" = "2.27203" ] \
+        && grep -q 'ThirdParty/JSON-PP-2.27203/lib' "$repo_root/Source/WebCore/bindings/scripts/generate-bindings.pl"; then
+        echo "PASS WebCore bindings use vendored JSON::PP $json_pp_version"
+    else
+        echo "FAIL WebCore bindings cannot load vendored JSON::PP with system Perl"
         failures=$((failures + 1))
     fi
 
