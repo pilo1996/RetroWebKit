@@ -56,6 +56,13 @@ Build it with:
 ./Scripts/build.sh --target leopard --arch ppc --configuration release
 ```
 
+From another terminal, inspect the build without mistaking a completed Xcode
+subproject for the end of the full build:
+
+```sh
+./Scripts/build-status.sh
+```
+
 Build and smoke-test the browser shell with:
 
 ```sh

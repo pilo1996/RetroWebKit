@@ -57,10 +57,12 @@ fi
 build_log="$diagnostics_dir/build.log"
 compiler_log="$diagnostics_dir/compiler-errors.log"
 status_file="$diagnostics_dir/build-status.txt"
+state_file="$diagnostics_dir/build-state.txt"
 
 echo "Building target=$target arch=$arch configuration=$configuration"
 echo "Full output: $build_log"
 echo "1" > "$status_file"
+echo "running" > "$state_file"
 
 (
     cd "$repo_root" || exit 1
@@ -99,8 +101,10 @@ else
 fi
 
 if [ "$status" -ne 0 ] || grep -Eq "BUILD FAILED|Build failed|fatal error:| error:" "$build_log"; then
+    echo "failed" > "$state_file"
     echo "Build appears to have failed. Run ./Scripts/collect-logs.sh" >&2
     exit 1
 fi
 
+echo "succeeded" > "$state_file"
 echo "Build command completed. Review $build_log for warnings."
