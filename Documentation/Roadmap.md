@@ -1,6 +1,6 @@
 # Roadmap
 
-## M0 — Repository bootstrap (current)
+## M0 — Repository bootstrap (complete)
 
 - establish project boundaries and directory layout;
 - identify the WebKit and Leopard WebKit baselines;
@@ -10,7 +10,7 @@
 Exit condition: repository checks pass and unresolved provenance questions are
 documented rather than guessed.
 
-## M1 — Reproduce Leopard WebKit 604 on PowerPC
+## M1 — Reproduce Leopard WebKit 604 on PowerPC (validation)
 
 - archive and checksum the official upstream tag and historical patch set;
 - import upstream source and licensing in a dedicated commit;
@@ -22,12 +22,20 @@ documented rather than guessed.
 Exit condition: a clean checkout builds twice on Leopard PowerPC using documented
 commands and produces equivalent framework outputs.
 
-## M2 — Minimal RetroBrowser shell
+Current state: the first generic `ppc` WebKitLegacy build and artifact
+verification succeeded on Mac OS X 10.5.8. A second build from a clean checkout
+and comparison with the recorded checksums remain.
+
+## M2 — Minimal RetroBrowser shell (initial implementation complete)
 
 - native Cocoa window and toolbar;
 - back, forward, reload, and address controls;
 - embedded WebKitLegacy `WebView`;
 - launch and smoke tests on Leopard PowerPC.
+
+Current state: the Cocoa shell builds against the project frameworks and its
+launch smoke test passes on Leopard PowerPC. Functional navigation and web
+compatibility testing continue under M4.
 
 ## M3 — Leopard architecture coverage
 

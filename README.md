@@ -10,6 +10,11 @@ The engine import is available on `codex/engine-webkit-604-import`. It contains
 the upstream WebKit tag `Safari-604.5.6`, the historical Leopard WebKit
 `Patches_604.5.6` patch set, LZ4 1.8.0, and OpenType Sanitizer 6.1.1.
 
+The generic 32-bit PowerPC WebKitLegacy stack now builds on Mac OS X 10.5.8,
+and the minimal RetroBrowser Cocoa shell builds and passes its launch smoke
+test against those frameworks. A second build from a clean checkout is still
+required before the engine build is considered reproducible.
+
 The `_2` suffix in the final Leopard WebKit binary release describes a later
 packaging/stability release. SourceForge exposes `Patches_604.5.6.tar.bz2`, not a
 separate `_2` engine patch archive.
@@ -25,7 +30,7 @@ Release configuration
 
 ## Repository layout
 
-- `Browser/RetroBrowser/` — the future minimal Cocoa browser shell.
+- `Browser/RetroBrowser/` — the minimal Cocoa WebKitLegacy browser shell.
 - `Compat/` — isolated Leopard, Tiger, and PowerPC compatibility work.
 - `Documentation/` — architecture, provenance, toolchain, and roadmap notes.
 - `Scripts/` — environment checks, builds, tests, and diagnostic collection.
@@ -51,6 +56,13 @@ Build it with:
 ./Scripts/build.sh --target leopard --arch ppc --configuration release
 ```
 
+Build and smoke-test the browser shell with:
+
+```sh
+./Browser/RetroBrowser/build.sh
+./Browser/RetroBrowser/smoke-test.sh
+```
+
 If a build fails, collect the reproducible diagnostics with:
 
 ```sh
@@ -59,6 +71,9 @@ If a build fails, collect the reproducible diagnostics with:
 
 See [Documentation/Toolchain.md](Documentation/Toolchain.md) before installing or
 replacing any compiler tools on Leopard.
+
+See [Documentation/KnownGoodBuild.md](Documentation/KnownGoodBuild.md) for the
+verified environment and artifact checksums from the first successful build.
 
 ## Scope
 
